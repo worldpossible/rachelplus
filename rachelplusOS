@@ -99,19 +99,19 @@
   sudo cp -r /media/CAP/english/* /media/RACHEL/.
   
 #ka lite exercises failing to download - in this example I have put data-khan (with assessmentitems.json) on a USB stick named CAP in the folder english
-  sudo cp -r /media/CAP/data-khan/assessmentitems.json /root/ka-lite/data/khan/.
+  sudo cp -r /media/RACHEL/otherkalite/data-khan/assessmentitems.json /root/ka-lite/data/khan/.
   
 #need to move the rest of the content into the right places
 
 #edit /etc/rc.local to boot ka-lite - above 'exit'
   sleep 20;
   /root/ka-lite/bin/kalite start
-  #when you go to kalite - currently, administrator account set=up is not working.  
+  #when you go to kalite - currently, administrator account set-up is not working.  
 
 #customize logos
-sudo cp /media/CAP/Logos/* /srv/easyconnect/customize_brand/customize_brand/.
-sudo cp /media/CAP/Logos/* /srv/easyconnect/customize_brand/.
-sudo cp /media/CAP/Logos/* /srv/easyconnect/customize_brand/customize_brand/default/.
+sudo cp /media/RACHEL/logos/* /srv/easyconnect/customize_brand/customize_brand/.
+sudo cp /media/RACHEL/logos/* /srv/easyconnect/customize_brand/.
+sudo cp /media/RACHEL/logos/* /srv/easyconnect/customize_brand/customize_brand/default/.
 
 #have logos in menu bar (just customized above) revert back to port :80 (RACHEL) from Intel's Content Management Portal
   sudo nano /srv/easyconnect/spa/templates/base.html
