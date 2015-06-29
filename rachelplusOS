@@ -107,18 +107,13 @@
   sleep 20;
   /root/ka-lite/bin/kalite start
   #when you go to kalite - currently, administrator account set=up is not working.  
-  
-#configure captive portal- replace my.content with my.content:8090
-#  sudo nano /www/redirect.shtml
-#  sudo nano /www/pass_ticket.shtml
-  
+
 #customize logos
 sudo cp /media/CAP/Logos/* /srv/easyconnect/customize_brand/customize_brand/.
 sudo cp /media/CAP/Logos/* /srv/easyconnect/customize_brand/.
 sudo cp /media/CAP/Logos/* /srv/easyconnect/customize_brand/customize_brand/default/.
 
-  
-#have logos in menu bar (just customized above) revert back to port :8090 (RACHEL) from Intel's Content Management Portal
+#have logos in menu bar (just customized above) revert back to port :80 (RACHEL) from Intel's Content Management Portal
   sudo nano /srv/easyconnect/spa/templates/base.html
   #edit href="#" class="headerLogoText brandLogoSide3"
   <a href="./" onclick="javascript:event.target.port=80" target="_blank" class="headerLogoLink brandLogo"></a>
