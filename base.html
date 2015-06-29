@@ -1,0 +1,434 @@
+{% load i18n %}
+
+{% load staticfiles %}
+
+{% load browse_extras %}
+
+{% load djangular_tags %}
+
+<!DOCTYPE html>
+
+<html {% if rtl %}dir="rtl"{% endif %}>
+
+<head>
+
+    
+
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" >
+
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1 maximum-scale=1"/>
+
+    
+
+    <link href="{% static 'stylesheets/jquery-ui-1.10.4.custom.min.css' %}" rel="stylesheet" type="text/css">
+
+    <link rel="stylesheet" href="{% static 'js/jstree/themes/default/style.min.css' %}" />
+
+    <link href="{% static 'stylesheets/ng-tags-input.min.css' %}" rel="stylesheet" type="text/css">
+
+    <link href="{% static 'stylesheets/branding.css' %}" rel="stylesheet" type="text/css" />
+
+    <link href="{% static 'stylesheets/style.css' %}" rel="stylesheet" type="text/css" />
+
+
+
+    <link href="{% static 'djangular/css/styles.css' %}" rel="stylesheet" />
+
+	
+
+	<link href="{% static 'angular-toaster/toaster.css' %}" rel="stylesheet" />
+
+	<link href="{% static 'angular-block-ui/angular-block-ui.min.css' %}" rel="stylesheet" />
+
+	<link href="{% static 'angularbusy/angular-busy.min.css' %}" rel="stylesheet" />
+
+	<link href="{% static 'stylesheets/xeditable.css' %}" rel="stylesheet" />
+
+	<link href="{% static 'stylesheets/toggle-switch.css' %}" rel="stylesheet" />
+
+
+
+    <script type="text/javascript" src="/jsi18n/" type="text/javascript"></script>
+
+
+
+    <style>
+
+
+
+        .custombusy-bg{
+
+            position: fixed !important;
+
+            top: 0px !important;
+
+            left: 0px !important;
+
+            /* right: 0px; */
+
+            /* bottom: 0px; */
+
+            background: black !important;
+
+            width: 100% !important;
+
+            height: 100% !important;
+
+        }
+
+
+
+        .busy-transparent-class {
+
+          /* IE 8 */
+
+          -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=50)";
+
+
+
+          /* IE 5-7 */
+
+          filter: alpha(opacity=10);
+
+
+
+          /* Netscape */
+
+          -moz-opacity: 0.1;
+
+
+
+          /* Safari 1.x */
+
+          -khtml-opacity: 0.5;
+
+
+
+          /* Good browsers */
+
+          opacity: 0.5;
+
+        }
+
+
+
+    </style>
+
+
+
+    <title>{% trans "Lesson Planner" %}</title>
+
+    <!--[if lt IE 9]>
+
+        <script src="{% static 'js/html5shiv.js' %}"></script>
+
+        <script src="{% static 'js/respond.min.js' %}"></script>
+
+        <script src="{% static 'js/rem.js' %}"></script>
+
+        <script src="{% static 'js/selectivizr-min.js' %}"></script>
+
+    <![endif]-->
+
+</head>
+
+<body ng-app="ecApp" ng-controller="MainCtrl" ng-cloak>
+
+<toaster-container toaster-options="{'position-class': 'toast-bottom-right'}"></toaster-container>
+
+<div ng-attr-id="{$ $location.path() !== '/login' ? 'container' : 'loginPage' $}"  ng-class="{ 'brandBgColor' : $location.path().indexOf('login') > -1 }" ng-controller="HeaderCtrl" ng-cloak>
+
+<div id="menuOverlay" ng-show="showSubManageMenu || showNavContainer" ng-click="hideManageMenu()" style="height:100%; width:100%; position:absolute; top:0;left:0;z-index:7"></div>
+
+    <!--- HEADER SECTION -->
+
+<header ng-if="$location.path() !== '/login'"  class="brandBgColor">
+
+    <section class="row headerContent">
+
+        <div class="col-l12" id="mainLogo">
+
+	    <a href="./" onclick="javascript:event.target.port=80" target="_blank" class="headerLogoLink brandLogo"></a>
+
+  	    <a href="./" onclick="javascript:event.target.port=80" target="_blank" class="headerLogoText brandLogoSide3"></a>
+
+            <div id="navToggle" ng-click="toggleNavContainer()" ng-class="{'active' : showNavContainer}"><span></span></div><!-- small size toggle button for navigation -->
+
+            <div id="navContainer" ng-show="showNavContainer">
+
+                <!-- end navTabs -->
+
+                <ul class="navLinks brandBgColor" ng-if="user.is_authenticated">
+
+                    <li>
+
+                        <ul class="navLinks manageheader">
+
+                            <li ng-show="user.isTeacher()" class="manage">
+
+                                <a ng-click="showManageMenu($event)"><span class="intelicon-tools brandBtnColor3"></span>{% trans "Manage" %}<span class="intelicon-down"></span></a>
+
+                                <ul ng-show="showSubManageMenu || showNavContainer">
+
+                                    <li ng-click="hideManageMenu()"><a href="#manage/tags">{% trans "Tags" %}</a></li>
+
+                                    <li ng-click="hideManageMenu()"><a href="#manage/categories">{% trans "Categories" %}</a></li>
+
+                                    <li ng-click="hideManageMenu()"><a href="#usb">{% trans "USB Import" %}</a></li>
+
+                                    <li ng-click="hideManageMenu()"><a href="/devicesettings" target="_blank">{% trans "Device Settings" %}</a></li>
+
+                                </ul>
+
+                                <!-- end manageList -->
+
+                            </li>
+
+                            <!-- end manage -->
+
+                        </ul>
+
+                    </li>
+
+                    <li ng-show="user.is_authenticated && user.isTeacher() == false" class="teacherViewLink"><a ng-click="switchUserView('teacher')"><i class="fa fa-mortar-board brandBtnColor3"></i>{% trans "Teacher View" %}</a></li>
+
+                    <li ng-show="user.is_authenticated && user.isTeacher()" class="studentViewLink "><a ng-click="switchUserView('student')"><i class="fa fa-child brandBtnColor3"></i>{% trans "Student View" %}</a></li>
+
+                    <li class="actions">
+
+                        <ul class="actionLinks">
+
+                            <li ng-show="user.isTeacher()"><a href="/angularviews/help.html" target="_blank"><span class="intelicon-help-outlined brandBtnColor3"></span>{% trans "Help" %}</a></li>
+
+                            <li ng-show="user.isTeacher()"><a class="logout" href="#logout"><i class="fa fa-sign-out brandBtnColor3"></i>{% trans "Logout" %}</a></li>
+
+                        </ul>
+
+                        <!-- end actionLinks -->
+
+                    </li>
+
+                    <!-- end actions -->
+
+                </ul><!-- end navLinks -->
+
+
+
+                <ul ng-if="user.is_authenticated == false" class="studentLinks" ng-switch="user.type">
+
+                    <li><a href="/angularviews/student_help.html" target="_blank"><span class="intelicon-help-outlined brandBtnColor3"></span>{% trans "Help" %}</a></li>
+
+                    <li><a class="logout" href="#login?next={$ $location.path() $}"><span class="intelicon-locked-solid brandBtnColor3"></span>{% trans "Teacher Login" %}</a></li>
+
+                </ul>
+
+                <!-- end studentLinks -->
+
+            </div><!-- end navContainer -->
+
+        </div>
+
+        <!-- end 12 columns -->
+
+    </section>
+
+    <!-- end row headerContent -->
+
+    <section class="navBar">
+
+        <div class="row">
+
+            <ul class="tabsNavBelow">
+
+                <li ng-class="{'tabActiveBelow' : tabActive('/')}"><a class="navHomeBelow brandBtnColor2" href="#"><span class="intelicon-home-solid"></span>{% trans "Home" %}</a></li>
+
+                <li ng-class="{'tabActiveBelow' : tabActive('/lessons')}"><a class="navLessonsBelow brandBtnColor2" href="#lessons"><span class="intelicon-bookmarks-solid"></span>{% trans "Lessons" %}</a></li>
+
+                <li ng-if="(libhidden == false && user.isTeacher() == false) || user.isTeacher()" ng-class="{'tabActiveBelow' : tabActive('/library')}"><a class="navLibraryBelow brandBtnColor2" href="#library"><span class="intelicon-document-solid"></span>{% trans "Library" %}</a></li>
+
+            </ul>
+
+            <ul class="searchTop">
+
+                 <li ng-if="user.isTeacher() || libhidden == false || $location.path().indexOf('lessons') > -1">
+
+                    <div style="float:left; clear:both;">
+
+	                    <form id="search" method="post" name="searchForm" novalidate>
+
+		                    <input id="search" name="term" type="text" ng-model="keywords.value" placeholder="{$ $location.path().indexOf('lessons') > -1 ? '{% trans "Search Lessons" %}' : '{% trans "Search Library" %}' $}..." required>
+
+		                    <button type="submit" ng-click="search(keywords.value, searchForm)" ng-disabled="searchForm.$invalid || searchForm.$pristine"><span class="intelicon-search"></span></button>
+
+                        </form>
+
+                    </div>
+
+                </li>
+
+            </ul>
+
+            <!-- end searchTop -->
+
+        </div>
+
+        <!-- end row -->
+
+    </section>
+
+    <!-- end navBar which is not in the row -->
+
+</header>
+
+
+
+{% block body %}
+
+
+
+    <!-- BODY GOES HERE -->
+
+
+
+{% endblock body %}
+
+
+
+<!--- FOOTER SECTION -->
+
+<div ng-if="$location.path() !== '/login'" class="footerBG">
+
+    <footer>
+
+            <p class="copyright left">{% trans "Copyright &copy; 2014. All rights reserved." %}</p>
+
+            <div class="batteryIndicator right"><span class="intelicon-battery-empty"></span> {% trans "Battery" %} <span ng-bind="battery"></span>% - {% trans "version" %}: {$ currentVersion $}</div>
+
+    </footer>
+
+</div>
+
+
+
+</div><!-- /end container -->
+
+
+
+<!--- jQuery SCRIPTS -->
+
+<script src="{% static 'js/jquery-1.11.1.min.js' %}"></script>
+
+<script src="{% static 'js/jquery-ui-1.10.4.custom.min.js' %}"></script>
+
+<script src="{% static 'js/jquery.touchPunch.js' %}"></script>
+
+<script src="{% static 'js/base64.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'js/jspatch.js' %}"></script>
+
+<script src="{% static 'js/jquery.tooltipster.min.js' %}"></script>
+
+<!-- dropdown touch script -->
+
+<script src="{% static 'js/runOnLoad-readystatechange.js' %}"></script>
+
+<script src="{% static 'js/jstree/jstree.js' %}" type="text/javascript"></script>
+
+
+
+<!-- angular / djangular -->
+
+
+
+<script src="{% static 'angular-file-upload/angular-file-upload-shim.min.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'angular-file-upload/angular-file-upload-html5-shim.min.js' %}" type="text/javascript"></script>
+
+
+
+<script src="{% static 'angularjs/angular.min.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'angularjs/angular-route.min.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'angularjs/angular-resource.min.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'angularjs/angular-animate.min.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'angularjs/angular-touch.min.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'angularjs/angular-cookies.min.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'angularjs/angular-sanitize.min.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'angular-file-upload/angular-file-upload.min.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'angular-file-upload/FileAPI.min.js' %}" type="text/javascript"></script>
+
+
+
+<!-- jQuery File Upload -->
+
+<script src="{% static 'jquery-file-upload/js/vendor/jquery.ui.widget.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'jquery-file-upload/js/jquery.iframe-transport.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'jquery-file-upload/js/jquery.fileupload.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'jquery-file-upload/js/jquery.fileupload-process.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'jquery-file-upload/js/jquery.fileupload-validate.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'jquery-file-upload/js/jquery.fileupload-angular.js' %}" type="text/javascript"></script>
+
+
+
+
+
+<script src="{% static 'djangular/js/django-angular.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'angular-toaster/toaster.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'angular-block-ui/angular-block-ui.min.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'js/angular-recursion.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'js/draganddrop.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'js/underscore-min.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'js/angular-local-storage.min.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'js/xeditable.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'js/ng-tags-input.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'js/app/app.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'js/app/constants.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'js/app/controllers/controllers.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'js/app/controllers/ContentItemCtrl.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'js/app/controllers/LessonCtrl.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'js/app/controllers/LibraryCtrl.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'js/app/controllers/UploadCtrl.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'js/app/filters.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'js/app/directives.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'js/common/controllers.js' %}" type="text/javascript"></script>
+
+<script src="{% static 'js/common/services.js' %}" type="text/javascript"></script>
+
+
+
+</body>
+
+</html>
+
