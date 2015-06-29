@@ -41,10 +41,11 @@
   cgi.fix_pathinfo = 1
   
 #Configure lighttpd
+#Later in this process we just copy over this step by copying the lightttpd.conf in github to /usr/local/etc/lighttpd.conf
   sudo nano /usr/local/etc/lighttpd.conf
   #add the following line at the end of file
 #RACHEL Server Configuration
-  $SERVER["socket"] == ":8090" {
+  $SERVER["socket"] == ":80" {
           server.document-root = "/media/RACHEL/rachel"
           index-file.names =("index.php", "index.html", "/_h5ai/server/php/index.php")
   		fastcgi.server = ( ".php" => ((
