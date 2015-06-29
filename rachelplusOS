@@ -95,7 +95,7 @@
   CONTENT_ROOT = "/media/RACHEL/kacontent/"
   cd /
   
-#upload videos - in this example I have put kacontent (with videos and images) on a USB stick named CAP in the folder english
+#upload videos - in this example I have put kacontent (with videos and images) on a USB stick named CAP 
   sudo cp -r /media/CAP/english/* /media/RACHEL/.
   
 #upload rachel framework - in this example I have put rachel (with sphider_pus; _h5ai; modules; index.php) on a USB stick named CAP in the folder english
