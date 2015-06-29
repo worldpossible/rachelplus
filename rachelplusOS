@@ -71,7 +71,7 @@
   EXIT
   
 #Import sphider_plus database - in this example, I have put sphider_plus on a USB stick named CAP in folder english and plugged it in
-  mysql -u root -proot sphider_plus < /media/CAP/english/sphider_plus.sql
+  mysql -u root -proot sphider_plus < /media/CAP/sphider_plus.sql
   
 #add MySQL password
 #  mysql -u root
@@ -96,7 +96,13 @@
   cd /
   
 #upload contnet - in this example I have put ka-lite videos, exercises, RACHEL-USB packages, Sphider_Plus.sql on a USB stick named CAP 
-  sudo cp -r /media/CAP/english/* /media/RACHEL/.
+  sudo cp -r /media/CAP/* /media/RACHEL/.
+  
+#kacontent has ka-lite videos and is properly located now in /media/RACHEL/.
+#logos will be copied in a later stage
+#rachel is properly located now in /media/RACHEL/.
+#otherkalite has kalite exercises.  The contents of this directory need to be moved, but I am unsure where.
+#sphider_plus.sql is probably unnecessarily copied here.  I'm leaving it as a backup for now.
   
 #ka lite exercises failing to download - in this example I have put data-khan (with assessmentitems.json) on a USB stick named CAP in the folder english
   sudo cp -r /media/CAP/data-khan/assessmentitems.json /root/ka-lite/data/khan/.
