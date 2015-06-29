@@ -1,0 +1,129 @@
+#get to at least firmeware 1.2.10_root
+#USB recovery to 1.2.4_root, MPT upgrade to 1.2.6_root, then MPT upgrade to 1.2.10_root
+
+#update CAP - do not use apt-get upgrade ever
+  sudo apt-get update
+  123lkj
+
+#repartition hard drives
+  #!/bin/sh
+  su
+  123lkj
+  sgdisk -p /dev/sda
+  sgdisk -o /dev/sda
+  parted -s /dev/sda mklabel gpt
+  sgdisk -n 1:2048:+20G -c 1:"preloaded" -u 1:77777777-7777-7777-7777-777777777777 -t 1:8300 /dev/sda
+  sgdisk -n 2:21G:+100G -c 2:"uploaded" -u 2:88888888-8888-8888-8888-888888888888 -t 2:8300 /dev/sda
+  sgdisk -n 3:122G:-1M -c 3:"RACHEL" -u 3:99999999-9999-9999-9999-999999999999 -t 3:8300 /dev/sda
+  sgdisk -p /dev/sda
+
+#add /dev/sda3 into /etc/fstab as well (match sda1 and sda2 for format) with /media/RACHEL
+  sudo nano /etc/fstab
+  sudo reboot
+  
+  su
+  123lkj
+  mkfs.ext4 -L "preloaded" -U 77777777-7777-7777-7777-777777777777 /dev/sda1
+  mkfs.ext4 -L "uploaded" -U 88888888-8888-8888-8888-888888888888 /dev/sda2
+  mkfs.ext4 -L "RACHEL" -U 99999999-9999-9999-9999-999999999999 /dev/sda3
+  reboot
+  
+#confirm new partitions
+  sudo df -h
+
+#install PHP
+  su
+  apt-get install php5-cgi git-core python-m2crypto
+  Y
+  
+  sudo nano /etc/php5/cgi/php.ini
+  #add the following line at the end of file
+  cgi.fix_pathinfo = 1
+  
+#Configure lighttpd
+  sudo nano /usr/local/etc/lighttpd.conf
+  #add the following line at the end of file
+#RACHEL Server Configuration
+  $SERVER["socket"] == ":8090" {
+          server.document-root = "/media/RACHEL/rachel"
+          index-file.names =("index.php", "index.html", "/_h5ai/server/php/index.php")
+  		fastcgi.server = ( ".php" => ((
+  			"bin-path" => "/usr/bin/php5-cgi",
+  			"socket" => "/tmp/php.socket"
+  			)))
+  }
+
+#install mysql client and server
+  su
+  cd /
+  chown root:root /tmp
+  chmod 1777 /tmp
+  exit
+  sudo apt-get remove --purge mysql-server mysql-client mysql-common
+  sudo apt-get install mysql-server mysql-client libapache2-mod-auth-mysql php5-mysql
+  #set password root three times
+
+#prepare MYSQL
+  mysql -u root -proot
+  CREATE DATABASE sphider_plus;
+  SHOW DATABASES;
+  EXIT
+  
+#Import sphider_plus database - in this example, I have put sphider_plus on a USB stick named CAP in folder english and plugged it in
+  mysql -u root -proot sphider_plus < /media/CAP/english/sphider_plus.sql
+  
+#add MySQL password
+#  mysql -u root
+#  mysql> SET PASSWORD FOR 'root'@'localhost' = PASSWORD('root');
+#  exit
+  
+#install ka-lite
+  su
+  git clone --recursive https://github.com/learningequality/ka-lite.git
+  cd ka-lite
+  ./setup_unix.sh
+  #user: rachel password (x2):rachel; name and describe server as desired
+  #yes - download exercise pack
+  #no - do not start at boot 
+  
+#configure ka-lite
+  su
+  cd /ka-lite/kalite
+  nano local_settings.py
+  #this file will be blank - put this in the file and save
+  CONTENT_ROOT = "/media/RACHEL/kacontent/"
+  cd /
+  
+#upload videos - in this example I have put kacontent (with videos and images) on a USB stick named CAP in the folder english
+  sudo cp -r /media/CAP/english/* /media/RACHEL/.
+  
+#upload rachel framework - in this example I have put rachel (with sphider_pus; _h5ai; modules; index.php) on a USB stick named CAP in the folder english
+#  sudo cp -r /media/CAP/english/rachel /media/RACHEL/.
+  
+#ka lite exercises failing to download - in this example I have put data-khan (with assessmentitems.json) on a USB stick named CAP in the folder english
+  sudo cp -r /media/CAP/data-khan/assessmentitems.json /root/ka-lite/data/khan/. 
+
+#edit /etc/rc.local to boot ka-lite - above 'exit'
+  sleep 20;
+  /root/ka-lite/bin/kalite start
+  #when you go to kalite - currently, administrator account set=up is not working.  
+  
+#configure captive portal- replace my.content with my.content:8090
+#  sudo nano /www/redirect.shtml
+#  sudo nano /www/pass_ticket.shtml
+  
+#customize logos
+sudo cp /media/CAP/Logos/* /srv/easyconnect/customize_brand/customize_brand/.
+sudo cp /media/CAP/Logos/* /srv/easyconnect/customize_brand/.
+sudo cp /media/CAP/Logos/* /srv/easyconnect/customize_brand/customize_brand/default/.
+
+  
+#have logos in menu bar (just customized above) revert back to port :8090 (RACHEL) from Intel's Content Management Portal
+  sudo nano /srv/easyconnect/spa/templates/base.html
+  #edit href="#" class="headerLogoText brandLogoSide3"
+  <a href="./" onclick="javascript:event.target.port=80" target="_blank" class="headerLogoLink brandLogo"></a>
+  <a href="./" onclick="javascript:event.target.port=80" target="_blank" class="headerLogoText brandLogoSide3"></a>
+
+#update /usr/local/etc/lighttpd.conf to mirror the version in this github folder
+
+#are there more places we need to edit?
