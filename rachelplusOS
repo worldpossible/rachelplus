@@ -60,7 +60,7 @@
   chmod 1777 /tmp
   exit
   sudo apt-get remove --purge mysql-server mysql-client mysql-common
-  sudo apt-get install mysql-server mysql-client libapache2-mod-auth-mysql php5-mysql
+  sudo apt-get -y install mysql-server mysql-client libapache2-mod-auth-mysql php5-mysql
   #set password root three times
 
 #prepare MYSQL
