@@ -33,8 +33,7 @@
 
 #install PHP
   su
-  apt-get install php5-cgi git-core python-m2crypto
-  Y
+  apt-get -y install php5-cgi git-core python-m2crypto
   
   sudo nano /etc/php5/cgi/php.ini
   #add the following line at the end of file
