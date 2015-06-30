@@ -99,9 +99,13 @@
   sudo cp -r /media/CAP/* /media/RACHEL/.
   
 #kacontent has ka-lite videos and is properly located now in /media/RACHEL/.
+
 #logos will be copied in a later stage
 #rachel is properly located now in /media/RACHEL/.
-#otherkalite has kalite exercises.  The contents of this directory need to be moved, but I am unsure where.
+
+#otherkalite has kalite exercises.
+  sudo cp -r /media/RACHEL/otherkalite/data-khan/* /root/ka-lite/data/khan
+
 #sphider_plus.sql is probably unnecessarily copied here.  I'm leaving it as a backup for now.
   
 #ka lite exercises failing to download - in this example I have put data-khan (with assessmentitems.json) on a USB stick named CAP in the folder english
