@@ -69,6 +69,9 @@
   SHOW DATABASES;
   EXIT
   
+#upload contnet - in this example I have put ka-lite videos, exercises, RACHEL-USB packages, Sphider_Plus.sql on a USB stick named CAP 
+  sudo cp -r /media/CAP/* /media/RACHEL/.
+  
 #Import sphider_plus database - in this example, I have put sphider_plus on a USB stick named CAP in folder english and plugged it in
   mysql -u root -proot sphider_plus < /media/CAP/sphider_plus.sql
   
