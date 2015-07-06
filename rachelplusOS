@@ -41,17 +41,17 @@
   
 #Configure lighttpd
 #Later in this process we just copy over this step by copying the lightttpd.conf in github to /usr/local/etc/lighttpd.conf
-  sudo nano /usr/local/etc/lighttpd.conf
-  #add the following line at the end of file
+#  sudo nano /usr/local/etc/lighttpd.conf
+#  #add the following line at the end of file
 #RACHEL Server Configuration
-  $SERVER["socket"] == ":80" {
-          server.document-root = "/media/RACHEL/rachel"
-          index-file.names =("index.php", "index.html", "/_h5ai/server/php/index.php")
-  		fastcgi.server = ( ".php" => ((
-  			"bin-path" => "/usr/bin/php5-cgi",
-  			"socket" => "/tmp/php.socket"
-  			)))
-  }
+#  $SERVER["socket"] == ":80" {
+#          server.document-root = "/media/RACHEL/rachel"
+#          index-file.names =("index.php", "index.html", "/_h5ai/server/php/index.php")
+#  		fastcgi.server = ( ".php" => ((
+#  			"bin-path" => "/usr/bin/php5-cgi",
+#  			"socket" => "/tmp/php.socket"
+#  			)))
+#  }
 
 #install mysql client and server
   su
@@ -96,9 +96,7 @@
   #this file will be blank - put this in the file and save
   CONTENT_ROOT = "/media/RACHEL/kacontent/"
   cd /
-  
-#upload contnet - in this example I have put ka-lite videos, exercises, RACHEL-USB packages, Sphider_Plus.sql on a USB stick named CAP 
-  sudo cp -r /media/CAP/* /media/RACHEL/.
+
   
 #kacontent has ka-lite videos and is properly located now in /media/RACHEL/.
 
@@ -116,9 +114,11 @@
 #need to move the rest of the content into the right places
 
 #edit /etc/rc.local to boot ka-lite - above 'exit'
+#needed a clean ka-lite start up first
+:~/ka-lite/kalite# ./manage.py createsuperuser
+
   sleep 20;
   /root/ka-lite/bin/kalite start
-  #when you go to kalite - currently, administrator account set-up is not working.  
 
 #customize logos
 sudo cp /media/RACHEL/logos/* /srv/easyconnect/customize_brand/customize_brand/.
