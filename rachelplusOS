@@ -139,7 +139,7 @@
   su
   123lkj
   cd $HOME
-  hwget http://rachelfriends.org/z-holding/kiwix-0.9-linux-i686.tar.bz2
+  wget http://rachelfriends.org/z-holding/kiwix-0.9-linux-i686.tar.bz2
   tar xjvf kiwix-0.9-linux-i686.tar.bz2
 
 #edit /etc/rc.local - MUST REPLACE $VERSION with actual_wikipedia_distribution.zim.xml
