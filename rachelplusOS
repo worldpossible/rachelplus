@@ -69,7 +69,7 @@
   SHOW DATABASES;
   EXIT
   
-#upload contnet - in this example I have put ka-lite videos, exercises, RACHEL-USB packages, Sphider_Plus.sql on a USB stick named CAP 
+#upload contnet - in this example I have put ka-lite videos, exercises, kiwix, RACHEL-USB packages, Sphider_Plus.sql on a USB stick named CAP 
   sudo cp -r /media/CAP/* /media/RACHEL/.
   
 #Import sphider_plus database
@@ -115,15 +115,15 @@
 
 #edit /etc/rc.local to boot ka-lite - above 'exit'
 #needed a clean ka-lite start up first
-:~/ka-lite/kalite# ./manage.py createsuperuser
+  :~/ka-lite/kalite# ./manage.py createsuperuser
 
   sleep 20;
   /root/ka-lite/bin/kalite start
 
 #customize logos
-sudo cp /media/RACHEL/logos/* /srv/easyconnect/customize_brand/customize_brand/.
-sudo cp /media/RACHEL/logos/* /srv/easyconnect/customize_brand/.
-sudo cp /media/RACHEL/logos/* /srv/easyconnect/customize_brand/customize_brand/default/.
+  sudo cp /media/RACHEL/logos/* /srv/easyconnect/customize_brand/customize_brand/.
+  sudo cp /media/RACHEL/logos/* /srv/easyconnect/customize_brand/.
+  sudo cp /media/RACHEL/logos/* /srv/easyconnect/customize_brand/customize_brand/default/.
 
 #have logos in menu bar (just customized above) revert back to port :80 (RACHEL) from Intel's Content Management Portal
   sudo nano /srv/easyconnect/spa/templates/base.html
@@ -134,3 +134,15 @@ sudo cp /media/RACHEL/logos/* /srv/easyconnect/customize_brand/customize_brand/d
 #update /usr/local/etc/lighttpd.conf to mirror the version in this github folder
 
 #are there more places we need to edit?
+
+#download kiwix
+  su
+  123lkj
+  cd $HOME
+  hwget http://rachelfriends.org/z-holding/kiwix-0.9-linux-i686.tar.bz2
+  tar xjvf kiwix-0.9-linux-i686.tar.bz2
+
+#edit /etc/rc.local - MUST REPLACE $VERSION with actual_wikipedia_distribution.zim.xml
+  ./root/kiwix/bin/kiwix-serve --library /media/RACHEL/kiwix/data/library/wikipedia$VERSION --port=8009 --daemon
+
+
