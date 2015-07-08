@@ -136,13 +136,10 @@
 #are there more places we need to edit?
 
 #download kiwix
-  su
-  123lkj
-  cd $HOME
-  wget http://rachelfriends.org/z-holding/kiwix-0.9-linux-i686.tar.bz2
-  tar xjvf kiwix-0.9-linux-i686.tar.bz2
+  sudo wget http://rachelfriends.org/z-holding/kiwix-0.9-linux-i686.tar.bz2
+  sudo tar xjvf kiwix-0.9-linux-i686.tar.bz2
 
 #edit /etc/rc.local - MUST REPLACE $VERSION with actual_wikipedia_distribution.zim.xml
-  ./root/kiwix/bin/kiwix-serve --library /media/RACHEL/kiwix/data/library/wikipedia$VERSION --port=8009 --daemon
-
+  /home/ken/kiwix/bin/kiwix-serve --library /media/RACHEL/kiwix/data/library/wikipedia_es_all_03_2012.zim.xml --port=8009 --daemon
+#this isn't working above.  Deferring to Bernd.
 
