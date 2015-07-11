@@ -1,6 +1,8 @@
 # rachelplus
 RACHEL Configuration on Intel CAP
 
+CAUTION - Work in progress
+
 ## Setting up RACHEL on a Intel CAP that is otherwise unconfigured 
 
 #### Update your Intel CAP with the latest firmware
@@ -12,3 +14,5 @@ RACHEL Configuration on Intel CAP
 1. cap-rachel-first-install-1.sh
 2. cap-rachel-first-install-2.sh
 3. cap-rachel-first-install-3.sh
+
+#### Add RACHEL content
