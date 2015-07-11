@@ -9,6 +9,6 @@ RACHEL Configuration on Intel CAP
 3. MPT upgrade to Firmware 1.2.10_root
 
 #### Run the following scripts in order
-cap-rachel-first-install-1.sh
-cap-rachel-first-install-2.sh
-cap-rachel-first-install-3.sh
+1. cap-rachel-first-install-1.sh
+2. cap-rachel-first-install-2.sh
+3. cap-rachel-first-install-3.sh
