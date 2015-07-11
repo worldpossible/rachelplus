@@ -1,7 +1,7 @@
 # rachelplus
 RACHEL Configuration on Intel CAP
 
-CAUTION - Work in progress
+CAUTION - Work in progress...the following scripts are still beta
 
 ## Setting up RACHEL on a Intel CAP that is otherwise unconfigured 
 
