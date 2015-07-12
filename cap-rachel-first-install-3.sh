@@ -32,6 +32,10 @@ sudo apt-get -y install php5-cgi git-core python-m2crypto
 sudo echo "cgi.fix_pathinfo = 1" >> /etc/php5/cgi/php.ini
 print_good "Done."
 
+echo; print_status "Updating lighttpd.conf to RACHEL version"
+sudo wget https://github.com/rachelproject/rachelplus/blob/master/lighttpd.conf -O /usr/local/etc/lighttpd.conf
+print_good "Done."
+
 echo; print_status "Installing mysql client and server"
 sudo cd /
 sudo chown root:root /tmp
