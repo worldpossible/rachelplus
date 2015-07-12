@@ -1,5 +1,6 @@
 #!/bin/sh
-# cap-rachel-first-install-2.sh
+# FILE: cap-rachel-first-install-2.sh
+# ONELINER Download/Install: wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-2.sh -O - | bash 
 
 function print_error () {
     echo -e "\x1B[01;31m[-]\x1B[0m $1"
@@ -15,11 +16,13 @@ if [ "$(id -u)" != "0" ]; then
   exit 1
 fi
 
-print_status "[+] Creating filesystems"
+echo; print_status "[+] Creating filesystems"
 mkfs.ext4 -L "preloaded" -U 77777777-7777-7777-7777-777777777777 /dev/sda1
 mkfs.ext4 -L "uploaded" -U 88888888-8888-8888-8888-888888888888 /dev/sda2
 mkfs.ext4 -L "RACHEL" -U 99999999-9999-9999-9999-999999999999 /dev/sda3
+print_good "Done."
 
-print_status "[+] I need to reboot; once rebooted, please run cap-rachel-first-install-3.sh"
-read -rsp $'Press any key to reboot...\n' -n1 key
+echo; print_status "[+] I need to reboot; once rebooted, please run the next download/install command."
+print_status "Rebooting in 10 seconds..." 
+sleep 10
 reboot
