@@ -1,5 +1,6 @@
 #!/bin/sh
-# cap-rachel-first-install-3.sh
+# FILE: cap-rachel-first-install-3.sh
+# ONELINER Download/Install: sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-3.sh -O - | bash 
 
 function print_good () {
     echo -e "\x1B[01;32m[+]\x1B[0m $1"
@@ -49,7 +50,7 @@ sudo echo "cgi.fix_pathinfo = 1" >> /etc/php5/cgi/php.ini
 print_good "Done."
 
 echo; print_status "Updating lighttpd.conf to RACHEL version"
-sudo wget https://github.com/rachelproject/rachelplus/blob/master/lighttpd.conf -O /usr/local/etc/lighttpd.conf
+sudo wget https://github.com/rachelproject/rachelplus/raw/master/lighttpd.conf -O /usr/local/etc/lighttpd.conf
 print_good "Done."
 
 echo; print_status "Installing mysql client and server"
