@@ -22,6 +22,22 @@ fi
 # Check partitions
 echo; print_status "Printing paritition table"
 df -h
+print_status "Example of correct partition scheme:"
+echo
+echo "    root@WRTD-303N-Server:~# df -h"
+echo "    Filesystem      Size  Used Avail Use% Mounted on"
+echo "    /dev/mmcblk0p4  5.3G  1.4G  3.7G  27% /"
+echo "    udev            943M   12K  943M   1% /dev"
+echo "    tmpfs           383M  456K  382M   1% /run"
+echo "    none            5.0M     0  5.0M   0% /run/lock"
+echo "    none            956M     0  956M   0% /run/shm"
+echo "    /dev/mmcblk0p3  181M  102M   71M  60% /boot"
+echo "    /dev/mmcblk0p5  992M  1.3M  940M   1% /recovery"
+echo "    /dev/sda1        20G   44M   19G   1% /media/preloaded"
+echo "    /dev/sda2        99G   60M   94G   1% /media/uploaded"
+echo "    /dev/sda3       339G   42G  280G  14% /media/RACHEL"
+echo "    /dev/mmcblk0p2   94M   54M   41M  57% /boot/efi"
+echo
 echo; read -rsp $'[?] Confirm new partitions are correct and then press any key to continue or Ctrl-C to exit...\n' -n1 key
 
 echo; print_good "Great! Moving on..."
