@@ -47,7 +47,7 @@ echo; print_status "Update mysql by copy & pasting the following commands into t
 echo "    CREATE DATABASE sphider_plus;"
 echo "    SHOW DATABASES;"
 echo "    EXIT"
-echo; print_status "If the script does not enter a mysql shell, please type 'mysql -u root -p root' and then enter the commands above."
+echo; print_status "If the script does not enter a mysql shell, please type 'mysql -u root -proot' and then enter the commands above."
 echo; print_status "You will also need to reboot once the mysql changes are complete."
 
 mysql -u root -proot
