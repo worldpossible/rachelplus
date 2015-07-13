@@ -1,0 +1,28 @@
+# Bernd 13 July 2015
+#download kiwix, let's put in /var/
+  cd /var 
+  sudo wget http://rachelfriends.org/z-holding/kiwix-0.9-linux-i686.tar.bz2
+  sudo tar xjvf kiwix-0.9-linux-i686.tar.bz2
+
+    #place zim, idx, and xml files in /media/RACHEL/kiwix/content and let it be owned by cap 
+  sudo mkdir -p /media/RACHEL/kiwix
+  sudo chown cap /media/RACHEL/kiwix
+  
+  # Download a test file  
+  cd /media/RACHEL/kiwix
+  #Test file still needs to be added to FTP server
+  wget http://rachelfriends.org/z-holding/Ray_Charles.tar.bz
+  tar xjvf Ray_Charles.tar.bz
+  
+   cp data/library/wikipedia_en_ray_charles_2015-06.zim.xml  data/library/library.xml
+
+ 
+  #test 
+  sudo /var/kiwix/bin/kiwix-serve --daemon --port=81 --library /media/RACHEL/kiwix/data/library/library.xml
+  
+  #access http://192.168.88.1:81
+  
+#add the following line to /etc/rc.local 
+    /var/kiwix/bin/kiwix-serve --daemon --port=81 --library /media/RACHEL/kiwix/data/library/library.xml
+	
+	sudo reboot
