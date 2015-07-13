@@ -10,7 +10,6 @@
   
   # Download a test file  
   cd /media/RACHEL/kiwix
-  #Test file still needs to be added to FTP server
   wget http://rachelfriends.org/z-holding/Ray_Charles.tar.bz
   tar xjvf Ray_Charles.tar.bz
   
