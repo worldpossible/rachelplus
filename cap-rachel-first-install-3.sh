@@ -35,6 +35,10 @@ echo; print_status "Updating lighttpd.conf to RACHEL version"
 sudo wget https://github.com/rachelproject/rachelplus/raw/master/lighttpd.conf -O /usr/local/etc/lighttpd.conf
 print_good "Done."
 
+echo; print_status "Adding setwanip.sh script to autorun at startup"
+sudo wget https://github.com/rachelproject/rachelplus/raw/master/setwanip-install.sh -O - | bash
+print_good "Done."
+
 echo; print_status "Installing mysql client and server"
 sudo cd /
 sudo chown root:root /tmp
