@@ -29,7 +29,7 @@ fi
 sudo sed -i '/cap-rachel/d' /etc/rc.local
 
 # Create the new filesystems so we can write files to them
-echo; print_status "[+] Creating filesystems"
+echo; print_status "Creating filesystems"
 mkfs.ext4 -L "preloaded" -U 77777777-7777-7777-7777-777777777777 /dev/sda1
 mkfs.ext4 -L "uploaded" -U 88888888-8888-8888-8888-888888888888 /dev/sda2
 mkfs.ext4 -L "RACHEL" -U 99999999-9999-9999-9999-999999999999 /dev/sda3
