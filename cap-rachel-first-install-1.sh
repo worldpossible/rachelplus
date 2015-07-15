@@ -25,16 +25,6 @@ if [ "$(id -u)" != "0" ]; then
   exit 1
 fi
 
-# Run the script cap-rachel-first-install.sh to start the setup
-
-# Download additional scripts to /root
-## cap-rachel-first-install-2.sh
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-2.sh -O /root/cap-rachel-first-install-2.sh
-## cap-rachel-first-install-3.sh
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-3.sh -O /root/cap-rachel-first-install-3.sh
-## cap-rachel-setwanip-install.sh
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-setwanip-install.sh -O /root/setwanip-install.sh
-
 # Delete previous setup commands from the /etc/rc.local
 sudo sed -i '/cap-rachel/d' /etc/rc.local
 
