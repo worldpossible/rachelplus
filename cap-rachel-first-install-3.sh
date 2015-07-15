@@ -34,7 +34,7 @@ df -h
 echo; print_status "The partition table for /dev/sda should look very similar to the following:"
 echo; print_status "     /dev/sda1        20G   44M   19G   1% /media/preloaded"
 echo; print_status "     /dev/sda2        99G   60M   94G   1% /media/uploaded"
-echo; print_status "     /dev/sda3       339G   42G  280G   1% /media/RACHEL"
+echo; print_status "     /dev/sda3       339G   67M  321G   1% /media/RACHEL"
 
 # Install packages
 echo; print_status "Installing PHP"
