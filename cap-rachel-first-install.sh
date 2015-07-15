@@ -43,12 +43,11 @@ echo; print_status "Location of RACHEL install log file:"
 echo "$RACHELLOG"
 
 # Ask if you are ready to install
-read -p "Are you ready to start the install? " -n 1 -r
-echo
+echo; read -p "Are you ready to start the install? " -n 1 -r
 if [[ $REPLY =~ ^[Yy]$ ]]; then
 	echo; print_status "Starting first install script..."
 	/root/cap-rachel-first-install-1.sh
 else
-  echo; print_error "Exiting...not installing.
-  exit 1
+	echo; print_error "User requests not to continue...not installing."
+	exit 1
 fi
