@@ -16,13 +16,21 @@ if [ "$(id -u)" != "0" ]; then
   exit 1
 fi
 
+# Delete previous setup commands from the /etc/rc.local
+sudo sed -i '/cap-rachel/d' /etc/rc.local
+
+# Create the new filesystems so we can write files to them
 echo; print_status "[+] Creating filesystems"
 mkfs.ext4 -L "preloaded" -U 77777777-7777-7777-7777-777777777777 /dev/sda1
 mkfs.ext4 -L "uploaded" -U 88888888-8888-8888-8888-888888888888 /dev/sda2
 mkfs.ext4 -L "RACHEL" -U 99999999-9999-9999-9999-999999999999 /dev/sda3
 print_good "Done."
 
-echo; print_status "[+] I need to reboot; once rebooted, please run the next download/install command."
+# Add lines to /etc/rc.local that will start the next script to run on reboot
+sudo sed -i '$e echo "bash \/root\/cap-rachel-first-install-3.sh&"' /etc/rc.local
+
+# Reboot
+echo; print_status "I need to reboot; once rebooted, please run the next download/install command."
 print_status "Rebooting in 10 seconds..." 
 sleep 10
 reboot
