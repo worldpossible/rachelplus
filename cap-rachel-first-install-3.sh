@@ -38,14 +38,17 @@ sudo apt-get -y install php5-cgi git-core python-m2crypto
 sudo echo "cgi.fix_pathinfo = 1" >> /etc/php5/cgi/php.ini
 print_good "Done."
 
+# Overwrite the lighttpd.conf file with our customized RACHEL version
 echo; print_status "Updating lighttpd.conf to RACHEL version"
 sudo wget https://github.com/rachelproject/rachelplus/raw/master/lighttpd.conf -O /usr/local/etc/lighttpd.conf
 print_good "Done."
 
+# Add setwanip.sh script to run at boot
 echo; print_status "Adding setwanip.sh script to autorun at startup"
 sudo wget https://github.com/rachelproject/rachelplus/raw/master/setwanip-install.sh -O - | bash
 print_good "Done."
 
+# Install MySQL client and server
 echo; print_status "Installing mysql client and server"
 sudo cd /
 sudo chown root:root /tmp
@@ -54,11 +57,15 @@ sudo apt-get remove --purge mysql-server mysql-client mysql-common
 sudo apt-get -y install mysql-server mysql-client libapache2-mod-auth-mysql php5-mysql
 print_good "Done."
 
-echo; print_status "Update mysql by copy & pasting the following commands into the mysql shell:"
+echo; print_status "Update mysql by copy & pasting the following commands into the mysql shell"
+echo; echo "Run the following command to enter a mysql shell...then run the three MySQL commands"
+echo "    mysql -u root -proot"
+echo; echo "MySQL Commands:"
 echo "    CREATE DATABASE sphider_plus;"
 echo "    SHOW DATABASES;"
 echo "    EXIT"
 echo; print_status "If the script does not enter a mysql shell, please type 'mysql -u root -proot' and then enter the commands above."
-echo; print_status "You will also need to reboot once the mysql changes are complete."
+echo; print_status "NOTE:  Please reboot once the mysql changes are complete."
 
-mysql -u root -proot
+# Deleting the install script commands
+rm -f /root/cap-rachel-*
