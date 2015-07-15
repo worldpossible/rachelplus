@@ -17,4 +17,4 @@ wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-ins
 ```
 
 #### Add RACHEL content
-Instructions coming soon...
+The "shell" (mostly CSS, HTML, rsphider, and _h5ai) for RACHEL content is available at https://github.com/rachelproject/contentshell
