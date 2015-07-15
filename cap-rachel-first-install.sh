@@ -16,11 +16,26 @@ if [ "$(id -u)" != "0" ]; then
   exit 1
 fi
 
+# Run the script cap-rachel-first-install.sh to start the setup
+
+# Download additional scripts to /root
+## cap-rachel-first-install-2.sh
+sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-2.sh -O /root/cap-rachel-first-install-2.sh
+## cap-rachel-first-install-3.sh
+sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-3.sh -O /root/cap-rachel-first-install-3.sh
+## cap-rachel-setwanip-install.sh
+sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-setwanip-install.sh -O /root/setwanip-install.sh
+
+# Delete previous setup commands from the /etc/rc.local
+sudo sed -i '/cap-rachel/d' /etc/rc.local
+
+# Update CAP package repositories
 echo; print_status "Updating CAP package repositories"
 apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 16126D3A3E5C1192
 apt-get update
 print_good "Done."
 
+# Repartition external 500GB hard drive into 3 partitions
 echo; print_status "Repartitioning hard drive"
 sgdisk -p /dev/sda
 sgdisk -o /dev/sda
@@ -31,11 +46,15 @@ sgdisk -n 3:122G:-1M -c 3:"RACHEL" -u 3:99999999-9999-9999-9999-999999999999 -t 
 sgdisk -p /dev/sda
 print_good "Done."
 
+# Add the new RACHEL partition /dev/sda3 to mount on boot
 echo; print_status "Adding /dev/sda3 into /etc/fstab"
 echo -e "/dev/sda3\t/media/RACHEL\t\text4\tauto,nobootwait 0\t0" >> /etc/fstab
 print_good "Done."
 
-echo; print_status "[+] I need to reboot; once rebooted, please run the next download/install command."
+# Add lines to /etc/rc.local that will start the next script to run on reboot
+sudo sed -i '$e echo "bash \/root\/cap-rachel-first-install-2.sh&"' /etc/rc.local
+
+echo; print_status "I need to reboot; once rebooted, the next script will run automatically."
 print_status "Rebooting in 10 seconds..." 
 sleep 10
 reboot
