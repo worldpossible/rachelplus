@@ -11,6 +11,12 @@
 # on the eth0 interface. Once run, you must leave the script in the
 # scripts folder located here:  /root/setwanip.sh
 ##############################################################################
+
+# Everything below will go to the file '/var/log/cap-rachel-install.log'
+exec 3>&1 4>&2
+trap 'exec 2>&4 1>&3' 0 1 2 3
+exec 1>>/var/log/cap-rachel-install.log 2>&1
+
 cat > /root/setwanip.sh << 'EOF'
 #!/bin/bash
 newip=$(/sbin/ifconfig |grep -A1 "eth0"| awk '{ if ( $1 == "inet" ) { print $2 }}'|cut -f2 -d":")
