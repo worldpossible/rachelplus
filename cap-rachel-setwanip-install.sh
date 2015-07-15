@@ -30,5 +30,5 @@ else
 fi
 EOF
 chmod +x /root/setwanip.sh
-sudo sed -i '$e echo "# RACHEL - Set file IPs to the current WAN IP"' /etc/rc.local
+sudo sed -i '$e echo "# RACHEL setwanip - Set file IPs to the current WAN IP"' /etc/rc.local
 sudo sed -i '$e echo "bash \/root\/setwanip.sh&"' /etc/rc.local
