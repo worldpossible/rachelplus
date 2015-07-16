@@ -2,10 +2,10 @@
 # FILE: cap-rachel-first-install-2.sh
 # ONELINER Download/Install: wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-2.sh -O - | bash 
 
-# Everything below will go to the file '/var/log/rachel-install.log'
-#exec 3>&1 4>&2
-#trap 'exec 2>&4 1>&3' 0 1 2 3
-RACHELLOG="/var/log/rachel-install.log"
+# Everything below will go to this log directory
+RACHELLOGDIR="var/log/RACHEL"
+RACHELLOGFILE="rachel-install.tmp"
+RACHELLOG="$RACHELLOGDIR/$RACHELLOGFILE"
 
 function print_good () {
     echo -e "\x1B[01;32m[+]\x1B[0m $1"
