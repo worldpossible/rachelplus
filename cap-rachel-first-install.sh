@@ -8,7 +8,7 @@ RACHELLOGDIR="/var/log/RACHEL"
 mkdir -p $RACHELLOGDIR
 RACHELLOGFILE="rachel-install.tmp"
 RACHELLOG="$RACHELLOGDIR/$RACHELLOGFILE"
-exec 1>> $RACHELLOG 2>&1
+exec 1> $RACHELLOG 2>&1
 
 function print_good () {
     echo -e "\x1B[01;32m[+]\x1B[0m $1"
