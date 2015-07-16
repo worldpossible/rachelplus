@@ -35,9 +35,9 @@ sudo sed -i '/cap-rachel/d' /etc/rc.local
 echo; print_status "Printing paritition table:"
 df -h
 echo; print_status "The partition table for /dev/sda should look very similar to the following:"
-echo "     /dev/sda1        20G   44M   19G   1% /media/preloaded"
-echo "     /dev/sda2        99G   60M   94G   1% /media/uploaded"
-echo "     /dev/sda3       339G   67M  321G   1% /media/RACHEL"
+echo "/dev/sda1        20G   44M   19G   1% /media/preloaded"
+echo "/dev/sda2        99G   60M   94G   1% /media/uploaded"
+echo "/dev/sda3       339G   67M  321G   1% /media/RACHEL"
 
 # Install packages
 echo; print_status "Installing PHP"
@@ -49,6 +49,11 @@ print_good "Done."
 # Overwrite the lighttpd.conf file with our customized RACHEL version
 echo; print_status "Updating lighttpd.conf to RACHEL version"
 sudo wget https://github.com/rachelproject/rachelplus/raw/master/lighttpd.conf -O /usr/local/etc/lighttpd.conf
+print_good "Done."
+
+# Delete previous setwanip commands from /etc/rc.local
+echo; print_status "Deleting previous setwanip.sh script from /etc/rc.local"
+sudo sed -i '/setwanip/d' /etc/rc.local
 print_good "Done."
 
 # Add setwanip.sh script to run at boot
@@ -64,7 +69,9 @@ sudo sed -i '$e echo "iptables -t nat -A OUTPUT -d 10.10.10.10 -j DNAT --to-dest
 
 # Install MySQL client and server
 echo; print_status "Installing mysql client and server"
-sudo cd /
+sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password password root'
+sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password root'
+cd /
 sudo chown root:root /tmp
 sudo chmod 1777 /tmp
 sudo apt-get remove --purge mysql-server mysql-client mysql-common
