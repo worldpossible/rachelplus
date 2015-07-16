@@ -1,4 +1,4 @@
-# rachelplus
+# RACHELplus
 RACHEL Configuration on Intel CAP
 
 [Manufacturers Website](http://www.intel.com/content/www/us/en/education/solutions/content-access-point.html)
