@@ -66,10 +66,16 @@ echo; print_status "Adding setwanip.sh script to autorun at startup"
 sudo bash /root/cap-rachel-setwanip-install.sh
 print_good "Done."
 
+# Delete previous iptables commands from /etc/rc.local
+echo; print_status "Deleting previous iptables script from /etc/rc.local"
+sudo sed -i '/iptables/d' /etc/rc.local
+print_good "Done."
+
 # Enable IP forwarding from 10.10.10.10 to 192.168.88.1
 #echo 1 > /proc/sys/net/ipv4/ip_forward #might not need this line
 iptables -t nat -A OUTPUT -d 10.10.10.10 -j DNAT --to-destination 192.168.88.1
 # Add 10.10.10.10 redirect on every reboot
+sudo sed -i '$e echo "# RACHEL iptables - Redirect from 10.10.10.10 to 192.168.88.1"' /etc/rc.local
 sudo sed -i '$e echo "iptables -t nat -A OUTPUT -d 10.10.10.10 -j DNAT --to-destination 192.168.88.1&"' /etc/rc.local
 
 # Install MySQL client and server
