@@ -29,9 +29,8 @@ sudo sed -i '/cap-rachel/d' /etc/rc.local
 # Add header/date/time to install log file
 echo; print_good "RACHEL CAP Install - Started $(date)" | tee $RACHELLOG
 
-echo; print_status "Downloading RACHLEL install scripts for CAP" | tee -a $RACHELLOG
 # Download additional scripts to /root
-echo; print_status "Downloading RACHLEL install scripts for CAP" | tee -a $RACHELLOG
+echo; print_status "Downloading RACHEL install scripts for CAP" | tee -a $RACHELLOG
 ## cap-rachel-first-install-1.sh
 sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-1.sh -O /root/cap-rachel-first-install-1.sh | tee -a $RACHELLOG
 print_good "Done." | tee -a $RACHELLOG
