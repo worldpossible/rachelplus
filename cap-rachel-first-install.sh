@@ -23,14 +23,14 @@ if [ "$(id -u)" != "0" ]; then
   exit 1
 fi
 
-# Fix hostname issue in /etc/hosts
-sed -i 's/ec-server/WRTD-303N-Server/g' /etc/hosts
-
-# Delete previous setup commands from the /etc/rc.local
-sudo sed -i '/cap-rachel/d' /etc/rc.local
-
 # Add header/date/time to install log file
 echo; print_good "RACHEL CAP Install - Started $(date)" | tee $RACHELLOG
+
+# Fix hostname issue in /etc/hosts
+sed -i 's/ec-server/WRTD-303N-Server/g' /etc/hosts | tee -a $RACHELLOG
+
+# Delete previous setup commands from the /etc/rc.local
+sudo sed -i '/cap-rachel/d' /etc/rc.local | tee -a $RACHELLOG
 
 # Download additional scripts to /root
 echo; print_status "Downloading RACHEL install scripts for CAP" | tee -a $RACHELLOG
