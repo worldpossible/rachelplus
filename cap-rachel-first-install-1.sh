@@ -56,6 +56,7 @@ print_good "Done."
 
 # Add the new RACHEL partition /dev/sda3 to mount on boot
 echo; print_status "Adding /dev/sda3 into /etc/fstab"
+sed -i '/\/dev\/sda3/d' /etc/fstab
 echo -e "/dev/sda3\t/media/RACHEL\t\text4\tauto,nobootwait 0\t0" >> /etc/fstab
 print_good "Done."
 
