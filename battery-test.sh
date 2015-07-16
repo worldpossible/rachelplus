@@ -15,9 +15,10 @@
 ##############################################################################
 
 # Change the following, if desired
-VERSION=7 #script version
-LOGFILE="duration-results"  #default log filename
-LOG="$PWD/$LOGFILE" #full path to log file
+VERSION=8 #script version
+RACHELLOGDIR="/var/log/RACHEL"
+LOGFILE="duration-results.log"  #default log filename
+LOG="$RACHELLOGDIR/$LOGFILE" #full path to log file
 
 # Do not change anything below unless you know what you are doing
 
@@ -41,7 +42,7 @@ echo; echo "### Battery Duration Test Script (sam@hfc) - Version $VERSION ###"; 
 # Request if the user wants to set the log file
 echo "[!] Current log file name: $LOG"
 echo; read -p "[?] Do you want to rename your log file? (y/n) " -n 1 -r
-if [[ $REPLY =~ ^[Yy]$ ]]; then
+if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
 	echo; echo "[?] What is the full path to your log file?"
 	read LOG
 	echo "[+] Log file created: $LOG" | tee -a $LOG
@@ -52,10 +53,10 @@ fi
 # Request info to set the current date/time
 echo; echo "[+] Current date/time:  "$(date)
 echo; read -p "[?] Do you want to set the date/time? (y/n) " -n 1 -r
-if [[ $REPLY =~ ^[Yy]$ ]]; then
+if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
 	if [[ -f `which ntpdate` ]]; then
 		echo; echo; read -p "[?] Is this device connected to the internet? (y/n) " -n 1 -r
-		if [[ $REPLY =~ ^[Yy]$ ]]; then
+		if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
 			echo "[+] ntpdate exists, attempting to set date/time automatically."
 			ntpdate time.apple.com
 			echo "[+] Time automatically set to: "$(date)
@@ -77,21 +78,22 @@ echo "[+] Test Started:  $(date -d @$STARTDATE)" >> $LOG
 
 # Create tmp file that will monitor battery in background
 
-sed "s,%LOG%,$LOG,g" >$TMP << 'EOF'
+LOGTEMP=`mktemp`
+sed "s,%LOGTEMP%,$LOGTEMP,g; s,%LOG%,$LOG,g" >$TMP << 'EOF'
 #!/bin/bash
 while :; do
-	sed -i '/Power failure/d' %LOG%
-	sed -i '/Battery lasted/d' %LOG%
-
 	FAILDATE=$(date +"%s")
-	echo "[-] Power failure:  "$(date -d @$FAILDATE) >> %LOG%
+	echo "[-] Power failure:  "$(date -d @$FAILDATE) > %LOGTEMP%
 	DIFF=$(($FAILDATE-$STARTDATE))
 	REST=$(($DIFF%3600))
 	HOURS=$((($DIFF-$REST)/3600))
 	SECONDS=$(($REST%60))
 	MINUTES=$((($REST-$SECONDS)/60))
-	echo "[!] Battery lasted:  $HOURS hours, $MINUTES minutes, $SECONDS seconds" >> %LOG%
+	echo "[!] Battery lasted:  $HOURS hours, $MINUTES minutes, $SECONDS seconds" >> %LOGTEMP%
 	sleep 5
+	sed -i '/Power failure/d' %LOG%
+	sed -i '/Battery lasted/d' %LOG%
+	cat %LOGTEMP% >> %LOG%
 done
 EOF
 
