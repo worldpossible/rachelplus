@@ -6,7 +6,6 @@
 RACHELLOGDIR="/var/log/RACHEL"
 RACHELLOGFILE="rachel-install.tmp"
 RACHELLOG="$RACHELLOGDIR/$RACHELLOGFILE"
-
 exec 1>> $RACHELLOG 2>&1
 
 function print_good () {
@@ -18,7 +17,11 @@ function print_error () {
 }
 
 function print_status () {
-    echo -e "\x1B[01;34m[*]\x1B[0m $1"
+    echo -e "\x1B[01;35m[*]\x1B[0m $1"
+}
+
+function print_question () {
+    echo -e "\x1B[01;33m[?]\x1B[0m $1"
 }
 
 # Check root
@@ -81,7 +84,9 @@ sudo apt-get -y install mysql-server mysql-client libapache2-mod-auth-mysql php5
 print_good "Done."
 
 # Deleting the install script commands
+echo; print_status "Deleting the install scripts."
 rm -f /root/cap-rachel-*
+print_good "Done."
 
 # Add header/date/time to install log file
 TIMESTAMP=$(date +"%b-%d-%Y-%R-%Z")
