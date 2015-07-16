@@ -56,6 +56,12 @@ echo; print_status "Adding setwanip.sh script to autorun at startup"
 sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-setwanip-install.sh -O - | bash
 print_good "Done."
 
+# Enable IP forwarding from 10.10.10.10 to 192.168.88.1
+#echo 1 > /proc/sys/net/ipv4/ip_forward #might not need this line
+iptables -t nat -A OUTPUT -d 10.10.10.10 -j DNAT --to-destination 192.168.88.1
+# Add 10.10.10.10 redirect on every reboot
+sudo sed -i '$e echo "iptables -t nat -A OUTPUT -d 10.10.10.10 -j DNAT --to-destination 192.168.88.1&"' /etc/rc.local
+
 # Install MySQL client and server
 echo; print_status "Installing mysql client and server"
 sudo cd /
@@ -65,15 +71,8 @@ sudo apt-get remove --purge mysql-server mysql-client mysql-common
 sudo apt-get -y install mysql-server mysql-client libapache2-mod-auth-mysql php5-mysql
 print_good "Done."
 
-echo; print_status "Update mysql by copy & pasting the following commands into the mysql shell"
-echo; echo "Run the following command to enter a mysql shell...then run the three MySQL commands"
-echo "    mysql -u root -proot"
-echo; echo "MySQL Commands:"
-echo "    CREATE DATABASE sphider_plus;"
-echo "    SHOW DATABASES;"
-echo "    EXIT"
-echo; print_status "If the script does not enter a mysql shell, please type 'mysql -u root -proot' and then enter the commands above."
-echo; print_status "NOTE:  Please reboot once the mysql changes are complete."
-
 # Deleting the install script commands
 rm -f /root/cap-rachel-*
+
+# Add header/date/time to install log file
+echo; print_good "RACHEL CAP Install - Install completed at $(date)"
