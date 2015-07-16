@@ -3,7 +3,11 @@
 # FILE: cap-rachel-first-install.sh
 # ONELINER Download/Install: sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install.sh -O - | bash 
 
-RACHELLOG="/var/log/rachel-install.log"
+# Everything below will go to this log directory
+RACHELLOGDIR="var/log/RACHEL"
+mkdir -p $RACHELLOGDIR
+RACHELLOGFILE="rachel-install.tmp"
+RACHELLOG="$RACHELLOGDIR/$RACHELLOGFILE"
 
 function print_good () {
     echo -e "\x1B[01;32m[+]\x1B[0m $1"
@@ -34,10 +38,11 @@ else
 fi
 
 # Save backup of previous install log file to $RACHELLOG.bak
-if [[ -f $RACHELLOG ]]; then
-	mv $RACHELLOG $RACHELLOG.bak >> $RACHELLOG 2>&1
-	print_good "Saved backup of previous install log to $RACHELLOG.bak"
-fi
+#PREVRACHELLOG=``
+#if [[ -f $RACHELLOG ]]; then
+#	mv $RACHELLOG $RACHELLOG.bak >> $RACHELLOG 2>&1
+#	echo; print_good "Saved backup of previous install log to $RACHELLOG.bak"
+#fi
 
 # Add header/date/time to install log file
 echo; print_good "RACHEL CAP Install - Started $(date)" | tee $RACHELLOG
@@ -62,17 +67,17 @@ sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-firs
 sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-3.sh -O /root/cap-rachel-first-install-3.sh >> $RACHELLOG 2>&1
 ## cap-rachel-setwanip-install.sh
 sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-setwanip-install.sh -O /root/cap-rachel-setwanip-install.sh >> $RACHELLOG 2>&1
-echo; print_good "Downloading complete." | tee -a $RACHELLOG
+print_good "Done." | tee -a $RACHELLOG
 
 # Show location of the log file
-echo; print_status "Location of RACHEL install log file:" | tee -a $RACHELLOG
-echo "$RACHELLOG" | tee -a $RACHELLOG
+echo; print_status "Location of RACHEL install log files with date/time stamps:" | tee -a $RACHELLOG
+echo "$RACHELLOGDIR" | tee -a $RACHELLOG
 
 # Ask if you are ready to install
 echo; read -p "Are you ready to start the install? " -n 1 -r <&1
 if [[ $REPLY =~ ^[Yy]$ ]]; then
 	echo; echo; print_status "Starting first install script...please wait patiently (about 30 secs) for first reboot." | tee -a $RACHELLOG
-	print_status "The entire script (with reboots) takes 2-5 minutes."
+	print_status "The entire script (with reboots) takes 2-5 minutes." | tee -a $RACHELLOG
 	bash /root/cap-rachel-first-install-1.sh
 else
 	echo; print_error "User requests not to continue...exiting at $(date)" | tee -a $RACHELLOG
