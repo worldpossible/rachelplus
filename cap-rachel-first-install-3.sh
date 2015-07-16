@@ -86,7 +86,5 @@ rm -f /root/cap-rachel-*
 # Add header/date/time to install log file
 TIMESTAMP=$(date +"%b-%d-%Y-%R-%Z")
 sudo mv $RACHELLOG $RACHELLOGDIR/rachel-install-$TIMESTAMP.log
-echo; print_good "RACHEL CAP Install Complete - device is ready for RACHEL content."
 echo; print_good "Log file saved to: /var/log/rachel-install-$TIMESTAMP.log"
-
-
+print_good "RACHEL CAP Install Complete - device is ready for RACHEL content."
