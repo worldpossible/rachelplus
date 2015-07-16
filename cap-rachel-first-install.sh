@@ -29,7 +29,7 @@ fi
 
 # Check internet connecivity
 WGET=`which wget`
-$WGET -q --tries=10 --timeout=5 http://www.google.com -O /tmp/index.google &> /dev/null >> $RACHELLOG 2>&1
+$WGET -N --tries=10 --timeout=5 http://www.google.com -O /tmp/index.google &> /dev/null >> $RACHELLOG 2>&1
 if [ ! -s /tmp/index.google ]; then
 	print_error "No internet connectivity; connect to the internet and try again." | tee $RACHELLOG
 	exit 1
@@ -45,7 +45,8 @@ fi
 #fi
 
 # Add header/date/time to install log file
-echo; print_good "RACHEL CAP Install - Started $(date)" | tee $RACHELLOG
+echo; print_good "RACHEL CAP Install Script - Version 1" | tee $RACHELLOG
+print_good "Install started: $(date)"
 
 # Fix hostname issue in /etc/hosts
 echo; print_status "Fixing hostname in /etc/hosts" | tee -a $RACHELLOG
@@ -60,13 +61,13 @@ print_good "Done." | tee -a $RACHELLOG
 # Download additional scripts to /root
 echo; print_status "Downloading RACHEL install scripts for CAP" | tee -a $RACHELLOG
 ## cap-rachel-first-install-1.sh
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-1.sh -O /root/cap-rachel-first-install-1.sh >> $RACHELLOG 2>&1
+sudo wget -N https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-1.sh -O /root/cap-rachel-first-install-1.sh >> $RACHELLOG 2>&1
 ## cap-rachel-first-install-2.sh
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-2.sh -O /root/cap-rachel-first-install-2.sh >> $RACHELLOG 2>&1
+sudo wget -N https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-2.sh -O /root/cap-rachel-first-install-2.sh >> $RACHELLOG 2>&1
 ## cap-rachel-first-install-3.sh
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-3.sh -O /root/cap-rachel-first-install-3.sh >> $RACHELLOG 2>&1
+sudo wget -N https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-3.sh -O /root/cap-rachel-first-install-3.sh >> $RACHELLOG 2>&1
 ## cap-rachel-setwanip-install.sh
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-setwanip-install.sh -O /root/cap-rachel-setwanip-install.sh >> $RACHELLOG 2>&1
+sudo wget -N https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-setwanip-install.sh -O /root/cap-rachel-setwanip-install.sh >> $RACHELLOG 2>&1
 print_good "Done." | tee -a $RACHELLOG
 
 # Show location of the log file
