@@ -68,6 +68,8 @@ sudo wget -N https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-f
 sudo wget -N https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-3.sh -O /root/cap-rachel-first-install-3.sh >> $RACHELLOG 2>&1
 ## cap-rachel-setwanip-install.sh
 sudo wget -N https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-setwanip-install.sh -O /root/cap-rachel-setwanip-install.sh >> $RACHELLOG 2>&1
+## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies)
+sudo wget -N https://github.com/rachelproject/rachelplus/raw/master/lighttpd.conf -O /root/lighttpd.conf >> $RACHELLOG 2>&1
 print_good "Done." | tee -a $RACHELLOG
 
 # Show location of the log file
