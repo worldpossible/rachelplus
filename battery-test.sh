@@ -14,6 +14,8 @@
 # determine how long the battery lasted.
 ##############################################################################
 
+# ONELINER Download/Install: sudo wget https://github.com/rachelproject/rachelplus/raw/master/battery-test.sh -O /root/battery-test.sh 
+
 # Change the following, if desired
 VERSION=8 #script version
 RACHELLOGDIR="/var/log/RACHEL"
