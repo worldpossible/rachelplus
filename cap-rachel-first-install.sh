@@ -25,8 +25,8 @@ fi
 
 # Check internet connecivity
 WGET=`which wget`
-$WGET -q --tries=10 --timeout=5 http://www.google.com -O /tmp/index.google &> /dev/null | tee $RACHELLOG
-if [ ! -s /tmp/index.google ];then
+$WGET -q --tries=10 --timeout=5 http://www.google.com -O /tmp/index.google &> /dev/null >> $RACHELLOG 2>&1
+if [ ! -s /tmp/index.google ]; then
 	print_error "No internet connectivity; connect to the internet and try again." | tee $RACHELLOG
 	exit 1
 else
@@ -35,7 +35,7 @@ fi
 
 # Save backup of previous install log file to $RACHELLOG.bak
 if [[ -f $RACHELLOG ]]; then
-	mv $RACHELLOG $RACHELLOG.bak
+	mv $RACHELLOG $RACHELLOG.bak >> $RACHELLOG 2>&1
 	print_good "Saved backup of previous install log to $RACHELLOG.bak"
 fi
 
@@ -43,21 +43,25 @@ fi
 echo; print_good "RACHEL CAP Install - Started $(date)" | tee $RACHELLOG
 
 # Fix hostname issue in /etc/hosts
-sed -i 's/ec-server/WRTD-303N-Server/g' /etc/hosts | tee -a $RACHELLOG
+echo; print_status "Fixing hostname in /etc/hosts" | tee -a $RACHELLOG
+sed -i 's/ec-server/WRTD-303N-Server/g' /etc/hosts >> $RACHELLOG 2>&1
+print_good "Done." | tee -a $RACHELLOG
 
 # Delete previous setup commands from the /etc/rc.local
-sudo sed -i '/cap-rachel/d' /etc/rc.local | tee -a $RACHELLOG
+echo; print_status "Delete previous RACHEL setup commands from /etc/rc.local" | tee -a $RACHELLOG
+sudo sed -i '/cap-rachel/d' /etc/rc.local >> $RACHELLOG 2>&1
+print_good "Done." | tee -a $RACHELLOG
 
 # Download additional scripts to /root
 echo; print_status "Downloading RACHEL install scripts for CAP" | tee -a $RACHELLOG
 ## cap-rachel-first-install-1.sh
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-1.sh -O /root/cap-rachel-first-install-1.sh | tee -a $RACHELLOG
+sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-1.sh -O /root/cap-rachel-first-install-1.sh >> $RACHELLOG 2>&1
 ## cap-rachel-first-install-2.sh
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-2.sh -O /root/cap-rachel-first-install-2.sh | tee -a $RACHELLOG
+sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-2.sh -O /root/cap-rachel-first-install-2.sh >> $RACHELLOG 2>&1
 ## cap-rachel-first-install-3.sh
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-3.sh -O /root/cap-rachel-first-install-3.sh | tee -a $RACHELLOG
+sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-3.sh -O /root/cap-rachel-first-install-3.sh >> $RACHELLOG 2>&1
 ## cap-rachel-setwanip-install.sh
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-setwanip-install.sh -O /root/cap-rachel-setwanip-install.sh | tee -a $RACHELLOG
+sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-setwanip-install.sh -O /root/cap-rachel-setwanip-install.sh >> $RACHELLOG 2>&1
 echo; print_good "Downloading complete." | tee -a $RACHELLOG
 
 # Show location of the log file
