@@ -63,7 +63,7 @@ print_good "Done."
 
 # Add setwanip.sh script to run at boot
 echo; print_status "Adding setwanip.sh script to autorun at startup"
-sudo bash cap-rachel-setwanip-install.sh
+sudo bash /root/cap-rachel-setwanip-install.sh
 print_good "Done."
 
 # Enable IP forwarding from 10.10.10.10 to 192.168.88.1
