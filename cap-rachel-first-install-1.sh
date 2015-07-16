@@ -1,9 +1,11 @@
-
 #!/bin/sh
-# FILE: cap-rachel-first-install.sh
-# ONELINER Download/Install: sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install.sh -O - | bash 
+# FILE: cap-rachel-first-install-1.sh
+# ONELINER Download/Install: sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-1.sh -O - | bash 
 
-RACHELLOG="/var/log/rachel-install.log"
+# Everything below will go to the file '/var/log/rachel-install.log'
+exec 3>&1 4>&2
+trap 'exec 2>&4 1>&3' 0 1 2 3
+exec 1>/var/log/rachel-install.log 2>&1
 
 function print_good () {
     echo -e "\x1B[01;32m[+]\x1B[0m $1"
@@ -24,36 +26,38 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 # Add header/date/time to install log file
-echo; print_good "RACHEL CAP Install - Started $(date)" | tee $RACHELLOG
-
-# Fix hostname issue in /etc/hosts
-sed -i 's/ec-server/WRTD-303N-Server/g' /etc/hosts | tee -a $RACHELLOG
+echo; print_good "RACHEL CAP Install - Script 1 started at $(date)"
 
 # Delete previous setup commands from the /etc/rc.local
-sudo sed -i '/cap-rachel/d' /etc/rc.local | tee -a $RACHELLOG
+sudo sed -i '/cap-rachel/d' /etc/rc.local
 
-# Download additional scripts to /root
-echo; print_status "Downloading RACHEL install scripts for CAP" | tee -a $RACHELLOG
-## cap-rachel-first-install-1.sh
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-1.sh -O /root/cap-rachel-first-install-1.sh | tee -a $RACHELLOG
-## cap-rachel-first-install-2.sh
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-2.sh -O /root/cap-rachel-first-install-2.sh | tee -a $RACHELLOG
-## cap-rachel-first-install-3.sh
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-3.sh -O /root/cap-rachel-first-install-3.sh | tee -a $RACHELLOG
-## cap-rachel-setwanip-install.sh
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-setwanip-install.sh -O /root/cap-rachel-setwanip-install.sh | tee -a $RACHELLOG
-echo; print_good "All downloads complete." | tee -a $RACHELLOG
+# Update CAP package repositories
+echo; print_status "Updating CAP package repositories"
+apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 16126D3A3E5C1192
+apt-get update
+print_good "Done."
 
-# Show location of the log file
-echo; print_status "Location of RACHEL install log file:" | tee -a $RACHELLOG
-echo "$RACHELLOG" | tee -a $RACHELLOG
+# Repartition external 500GB hard drive into 3 partitions
+echo; print_status "Repartitioning hard drive"
+sgdisk -p /dev/sda
+sgdisk -o /dev/sda
+parted -s /dev/sda mklabel gpt
+sgdisk -n 1:2048:+20G -c 1:"preloaded" -u 1:77777777-7777-7777-7777-777777777777 -t 1:8300 /dev/sda
+sgdisk -n 2:21G:+100G -c 2:"uploaded" -u 2:88888888-8888-8888-8888-888888888888 -t 2:8300 /dev/sda
+sgdisk -n 3:122G:-1M -c 3:"RACHEL" -u 3:99999999-9999-9999-9999-999999999999 -t 3:8300 /dev/sda
+sgdisk -p /dev/sda
+print_good "Done."
 
-# Ask if you are ready to install
-echo; read -p "Are you ready to start the install? " -n 1 -r <&1
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-	echo; print_status "Starting first install script..." | tee -a $RACHELLOG
-	bash /root/cap-rachel-first-install-1.sh
-else
-	echo; print_error "User requests not to continue...exiting at $(date)" | tee -a $RACHELLOG
-	echo; exit 1
-fi
+# Add the new RACHEL partition /dev/sda3 to mount on boot
+echo; print_status "Adding /dev/sda3 into /etc/fstab"
+echo -e "/dev/sda3\t/media/RACHEL\t\text4\tauto,nobootwait 0\t0" >> /etc/fstab
+print_good "Done."
+
+# Add lines to /etc/rc.local that will start the next script to run on reboot
+sudo sed -i '$e echo "bash \/root\/cap-rachel-first-install-2.sh&"' /etc/rc.local
+
+echo; print_good "RACHEL CAP Install - Script 1 ended at $(date)"
+echo; print_status "I need to reboot; once rebooted, the next script will run automatically."
+print_status "Rebooting in 10 seconds..." 
+sleep 10
+reboot
