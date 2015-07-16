@@ -18,7 +18,11 @@ function print_error () {
 }
 
 function print_status () {
-    echo -e "\x1B[01;34m[*]\x1B[0m $1"
+    echo -e "\x1B[01;35m[*]\x1B[0m $1"
+}
+
+function print_question () {
+    echo -e "\x1B[01;33m[?]\x1B[0m $1"
 }
 
 # Check root
@@ -77,7 +81,7 @@ echo; print_status "Directory of RACHEL install log files with date/time stamps:
 echo "$RACHELLOGDIR" | tee -a $RACHELLOG
 
 # Ask if you are ready to install
-echo; print_error "WARNING: This process will destroy all content on /media/RACHEL"
+echo; print_question "WARNING: This process will destroy all content on /media/RACHEL"
 read -p "Are you ready to start the install? " -n 1 -r <&1
 if [[ $REPLY =~ ^[Yy]$ ]]; then
 	echo; echo; print_status "Starting first install script...please wait patiently (about 30 secs) for first reboot." | tee -a $RACHELLOG
@@ -85,5 +89,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 	bash /root/cap-rachel-first-install-1.sh
 else
 	echo; print_error "User requests not to continue...exiting at $(date)" | tee -a $RACHELLOG
+	# Deleting the install script commands
+	rm -f /root/cap-rachel-* $RACHELLOG
 	echo; exit 1
 fi
