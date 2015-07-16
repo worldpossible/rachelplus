@@ -50,7 +50,7 @@ print_good "Done."
 
 # Overwrite the lighttpd.conf file with our customized RACHEL version
 echo; print_status "Updating lighttpd.conf to RACHEL version"
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/lighttpd.conf -O /usr/local/etc/lighttpd.conf
+sudo mv /root/lighttpd.conf /usr/local/etc/lighttpd.conf
 print_good "Done."
 
 # Delete previous setwanip commands from /etc/rc.local
@@ -60,7 +60,7 @@ print_good "Done."
 
 # Add setwanip.sh script to run at boot
 echo; print_status "Adding setwanip.sh script to autorun at startup"
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-setwanip-install.sh -O - | bash
+sudo bash cap-rachel-setwanip-install.sh
 print_good "Done."
 
 # Enable IP forwarding from 10.10.10.10 to 192.168.88.1
