@@ -25,12 +25,12 @@ fi
 
 # Check internet connecivity
 WGET=`which wget`
-$WGET -q --tries=10 --timeout=5 http://www.google.com -O /tmp/index.google &> /dev/null
+$WGET -q --tries=10 --timeout=5 http://www.google.com -O /tmp/index.google &> /dev/null | tee $RACHELLOG
 if [ ! -s /tmp/index.google ];then
-	print_error "No internet connectivity; connect to the internet and try again."
+	print_error "No internet connectivity; connect to the internet and try again." | tee $RACHELLOG
 	exit 1
 else
-	print_good "Internet connected...continuing install."
+	print_good "Internet connected...continuing install." | tee $RACHELLOG
 fi
 
 # Save backup of previous install log file to $RACHELLOG.bak
