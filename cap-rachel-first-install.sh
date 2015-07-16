@@ -36,16 +36,12 @@ sudo sed -i '/cap-rachel/d' /etc/rc.local | tee -a $RACHELLOG
 echo; print_status "Downloading RACHEL install scripts for CAP" | tee -a $RACHELLOG
 ## cap-rachel-first-install-1.sh
 sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-1.sh -O /root/cap-rachel-first-install-1.sh | tee -a $RACHELLOG
-print_good "Done." | tee -a $RACHELLOG
 ## cap-rachel-first-install-2.sh
 sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-2.sh -O /root/cap-rachel-first-install-2.sh | tee -a $RACHELLOG
-print_good "Done." | tee -a $RACHELLOG
 ## cap-rachel-first-install-3.sh
 sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-3.sh -O /root/cap-rachel-first-install-3.sh | tee -a $RACHELLOG
-print_good "Done." | tee -a $RACHELLOG
 ## cap-rachel-setwanip-install.sh
 sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-setwanip-install.sh -O /root/cap-rachel-setwanip-install.sh | tee -a $RACHELLOG
-print_good "Done." | tee -a $RACHELLOG
 echo; print_good "All downloads complete." | tee -a $RACHELLOG
 
 # Show location of the log file
