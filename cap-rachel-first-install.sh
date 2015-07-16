@@ -23,6 +23,16 @@ if [ "$(id -u)" != "0" ]; then
 	exit 1
 fi
 
+# Check internet connecivity
+WGET=`which wget`
+$WGET -q --tries=10 --timeout=5 http://www.google.com -O /tmp/index.google &> /dev/null
+if [ ! -s /tmp/index.google ];then
+	print_error "No internet connectivity; connect to the internet and try again."
+	exit 1
+else
+	print_good "Internet connected...continuing install."
+fi
+
 # Save backup of previous install log file to $RACHELLOG.bak
 if [[ -f $RACHELLOG ]]; then
 	mv $RACHELLOG $RACHELLOG.bak
@@ -48,7 +58,7 @@ sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-firs
 sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-3.sh -O /root/cap-rachel-first-install-3.sh | tee -a $RACHELLOG
 ## cap-rachel-setwanip-install.sh
 sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-setwanip-install.sh -O /root/cap-rachel-setwanip-install.sh | tee -a $RACHELLOG
-echo; print_good "All downloads complete." | tee -a $RACHELLOG
+echo; print_good "Downloading complete." | tee -a $RACHELLOG
 
 # Show location of the log file
 echo; print_status "Location of RACHEL install log file:" | tee -a $RACHELLOG
