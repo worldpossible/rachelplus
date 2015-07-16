@@ -19,8 +19,14 @@ function print_status () {
 
 # Check root
 if [ "$(id -u)" != "0" ]; then
-  print_error "This step must be run as root; sudo password is 123lkj"
-  exit 1
+	print_error "This step must be run as root; sudo password is 123lkj"
+	exit 1
+fi
+
+# Save backup of previous install log file to $RACHELLOG.bak
+if [[ -f $RACHELLOG ]]; then
+	mv $RACHELLOG $RACHELLOG.bak
+	print_good "Saved backup of previous install log to $RACHELLOG.bak"
 fi
 
 # Add header/date/time to install log file
@@ -52,7 +58,7 @@ echo "$RACHELLOG" | tee -a $RACHELLOG
 echo; read -p "Are you ready to start the install? " -n 1 -r <&1
 if [[ $REPLY =~ ^[Yy]$ ]]; then
 	echo; print_status "Starting first install script...please wait patiently (about 30 secs) for first reboot." | tee -a $RACHELLOG
-	echo; print_status "Each script takes 1-2 minutes with a 30 sec reboot each time."
+	echo; print_status "The entire script (with reboots) takes 2-5 minutes."
 	bash /root/cap-rachel-first-install-1.sh
 else
 	echo; print_error "User requests not to continue...exiting at $(date)" | tee -a $RACHELLOG
