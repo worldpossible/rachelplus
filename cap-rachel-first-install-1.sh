@@ -34,6 +34,7 @@ sudo sed -i '/cap-rachel/d' /etc/rc.local
 # Update CAP package repositories
 echo; print_status "Updating CAP package repositories"
 apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 16126D3A3E5C1192
+apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 40976EAF437D05B5
 apt-get update
 print_good "Done."
 
