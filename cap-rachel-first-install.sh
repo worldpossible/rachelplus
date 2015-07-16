@@ -8,6 +8,12 @@ mkdir -p $RACHELLOGDIR
 RACHELLOGFILE="rachel-install.tmp"
 RACHELLOG="$RACHELLOGDIR/$RACHELLOGFILE"
 
+FILE1="/root/cap-rachel-first-install-1.sh"
+FILE2="/root/cap-rachel-first-install-2.sh"
+FILE3="/root/cap-rachel-first-install-3.sh"
+SETWANIPFILE="/root/cap-rachel-setwanip-install.sh"
+LIGHTTPDFILE="/root/lighttpd.conf"
+
 function print_good () {
     echo -e "\x1B[01;32m[+]\x1B[0m $1"
 }
@@ -57,16 +63,21 @@ print_good "Done." | tee -a $RACHELLOG
 # Download additional scripts to /root
 echo; print_status "Downloading RACHEL install scripts for CAP" | tee -a $RACHELLOG
 ## cap-rachel-first-install-1.sh
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-1.sh -O /root/cap-rachel-first-install-1.sh 1>> $RACHELLOG 2>&1
+sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-1.sh -O $FILE1 1>> $RACHELLOG 2>&1
 ## cap-rachel-first-install-2.sh
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-2.sh -O /root/cap-rachel-first-install-2.sh 1>> $RACHELLOG 2>&1
+sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-2.sh -O $FILE2 1>> $RACHELLOG 2>&1
 ## cap-rachel-first-install-3.sh
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-3.sh -O /root/cap-rachel-first-install-3.sh 1>> $RACHELLOG 2>&1
+sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-3.sh -O $FILE3 1>> $RACHELLOG 2>&1
 ## cap-rachel-setwanip-install.sh
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-setwanip-install.sh -O /root/cap-rachel-setwanip-install.sh 1>> $RACHELLOG 2>&1
+sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-setwanip-install.sh -O $SETWANIPFILE 1>> $RACHELLOG 2>&1
 ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies)
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/lighttpd.conf -O /root/lighttpd.conf 1>> $RACHELLOG 2>&1
-print_good "Done." | tee -a $RACHELLOG
+sudo wget https://github.com/rachelproject/rachelplus/raw/master/lighttpd.conf -O $LIGHTTPDFILE 1>> $RACHELLOG 2>&1
+if [[ -s $FILE1 && -s $FILE2 && -s $FILE3 && -s $SETWANIPFILE && -s $LIGHTTPDFILE ]]  1>> $RACHELLOG 2>&1; then
+	print_good "Done." | tee -a $RACHELLOG
+else
+	print_error "One or more files did not download correctly; check log file (/var/log/rachel-install.tmp) and try again." | tee -a $RACHELLOG
+	exit 1
+fi
 
 # Show location of the log file
 echo; print_status "Directory of RACHEL install log files with date/time stamps:" | tee -a $RACHELLOG
