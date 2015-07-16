@@ -26,7 +26,7 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 # Add header/date/time to install log file
-echo; print_good "RACHEL CAP Install - Started $(date)"
+echo; print_good "RACHEL CAP Install - Script 3 started at $(date)"
 
 # Delete previous setup commands from the /etc/rc.local
 sudo sed -i '/cap-rachel/d' /etc/rc.local
