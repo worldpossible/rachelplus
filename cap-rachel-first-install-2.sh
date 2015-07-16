@@ -26,7 +26,7 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 # Add header/date/time to install log file
-echo; print_good "RACHEL CAP Install - Started $(date)"
+echo; print_good "RACHEL CAP Install - Script 2 started at $(date)"
 
 # Delete previous setup commands from the /etc/rc.local
 sudo sed -i '/cap-rachel/d' /etc/rc.local
@@ -42,6 +42,7 @@ print_good "Done."
 sudo sed -i '$e echo "bash \/root\/cap-rachel-first-install-3.sh&"' /etc/rc.local
 
 # Reboot
+echo; print_good "RACHEL CAP Install - Script 2 ended at $(date)"
 echo; print_status "I need to reboot; once rebooted, please run the next download/install command."
 print_status "Rebooting in 10 seconds..." 
 sleep 10
