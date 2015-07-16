@@ -79,7 +79,7 @@ sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password_again p
 cd /
 sudo chown root:root /tmp
 sudo chmod 1777 /tmp
-sudo apt-get remove --purge mysql-server mysql-client mysql-common
+sudo apt-get -y remove --purge mysql-server mysql-client mysql-common
 sudo apt-get -y install mysql-server mysql-client libapache2-mod-auth-mysql php5-mysql
 print_good "Done."
 
