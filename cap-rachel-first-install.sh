@@ -4,7 +4,7 @@
 # ONELINER Download/Install: sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install.sh -O - | bash 
 
 # Everything below will go to this log directory
-RACHELLOGDIR="var/log/RACHEL"
+RACHELLOGDIR="/var/log/RACHEL"
 mkdir -p $RACHELLOGDIR
 RACHELLOGFILE="rachel-install.tmp"
 RACHELLOG="$RACHELLOGDIR/$RACHELLOGFILE"
@@ -70,7 +70,7 @@ sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-setw
 print_good "Done." | tee -a $RACHELLOG
 
 # Show location of the log file
-echo; print_status "Location of RACHEL install log files with date/time stamps:" | tee -a $RACHELLOG
+echo; print_status "Directory of RACHEL install log files with date/time stamps:" | tee -a $RACHELLOG
 echo "$RACHELLOGDIR" | tee -a $RACHELLOG
 
 # Ask if you are ready to install
