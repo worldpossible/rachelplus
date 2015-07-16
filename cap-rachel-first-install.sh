@@ -67,8 +67,8 @@ echo "$RACHELLOG" | tee -a $RACHELLOG
 # Ask if you are ready to install
 echo; read -p "Are you ready to start the install? " -n 1 -r <&1
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-	echo; print_status "Starting first install script...please wait patiently (about 30 secs) for first reboot." | tee -a $RACHELLOG
-	echo; print_status "The entire script (with reboots) takes 2-5 minutes."
+	echo; echo; print_status "Starting first install script...please wait patiently (about 30 secs) for first reboot." | tee -a $RACHELLOG
+	print_status "The entire script (with reboots) takes 2-5 minutes."
 	bash /root/cap-rachel-first-install-1.sh
 else
 	echo; print_error "User requests not to continue...exiting at $(date)" | tee -a $RACHELLOG
