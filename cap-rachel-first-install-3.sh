@@ -2,10 +2,12 @@
 # FILE: cap-rachel-first-install-3.sh
 # ONELINER Download/Install: sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-3.sh -O - | bash 
 
-# Everything below will go to the file '/var/log/rachel-install.log'
-#exec 3>&1 4>&2
-#trap 'exec 2>&4 1>&3' 0 1 2 3
-exec 1>>/var/log/rachel-install.log 2>&1
+# Everything below will go to this log directory
+RACHELLOGDIR="var/log/RACHEL"
+RACHELLOGFILE="rachel-install.tmp"
+RACHELLOG="$RACHELLOGDIR/$RACHELLOGFILE"
+
+exec 1>> $RACHELLOG 2>&1
 
 function print_good () {
     echo -e "\x1B[01;32m[+]\x1B[0m $1"
@@ -82,4 +84,9 @@ print_good "Done."
 rm -f /root/cap-rachel-*
 
 # Add header/date/time to install log file
-echo; print_good "RACHEL CAP Install - Install completed at $(date)"
+TIMESTAMP=$(date +"%b-%d-%Y-%R-%Z")
+sudo mv $RACHELLOG $RACHELLOGDIR/rachel-install-$TIMESTAMP.log
+echo; print_good "RACHEL CAP Install Complete - device is ready for RACHEL content."
+echo; print_good "Log file saved to: /var/log/rachel-install-$TIMESTAMP.log"
+
+
