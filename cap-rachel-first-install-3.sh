@@ -71,7 +71,7 @@ echo; print_status "Deleting previous iptables script from /etc/rc.local"
 sudo sed -i '/iptables/d' /etc/rc.local
 print_good "Done."
 
-# Enable IP forwarding from 10.10.10.10 to 192.168.88.1
+# Enable IP forwarding from 10.10.10.10 to 192.168.88.1 *NOT WORKING*
 #echo 1 > /proc/sys/net/ipv4/ip_forward #might not need this line
 iptables -t nat -A OUTPUT -d 10.10.10.10 -j DNAT --to-destination 192.168.88.1
 # Add 10.10.10.10 redirect on every reboot
@@ -92,6 +92,11 @@ print_good "Done."
 # Deleting the install script commands
 echo; print_status "Deleting the install scripts."
 rm -f /root/cap-rachel-*
+print_good "Done."
+
+# Add RACHEL home directory
+echo; print_status "Add RACHEL home directory."
+mkdir /media/RACHEL/rachel
 print_good "Done."
 
 # Add header/date/time to install log file
