@@ -23,6 +23,9 @@ if [ "$(id -u)" != "0" ]; then
   exit 1
 fi
 
+# Fix hostname issue in /etc/hosts
+sed -i 's/ec-server/WRTD-303N-Server/g' /etc/hosts
+
 # Delete previous setup commands from the /etc/rc.local
 sudo sed -i '/cap-rachel/d' /etc/rc.local
 
@@ -43,7 +46,7 @@ print_good "Done." | tee -a $RACHELLOG
 ## cap-rachel-setwanip-install.sh
 sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-setwanip-install.sh -O /root/cap-rachel-setwanip-install.sh | tee -a $RACHELLOG
 print_good "Done." | tee -a $RACHELLOG
-echo; print_good "All downloads complete" | tee -a $RACHELLOG
+echo; print_good "All downloads complete." | tee -a $RACHELLOG
 
 # Show location of the log file
 echo; print_status "Location of RACHEL install log file:" | tee -a $RACHELLOG
