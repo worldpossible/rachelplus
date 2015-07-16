@@ -75,11 +75,11 @@ echo "$RACHELLOGDIR" | tee -a $RACHELLOG
 # Ask if you are ready to install
 echo; print_question "WARNING: This process will destroy all content on /media/RACHEL" | tee -a $RACHELLOG
 
-read -p "Are you ready to start the install? " -r
+read -p "Are you ready to start the install? " -r <&1
 if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
 	echo; print_status "Starting first install script...please wait patiently (about 30 secs) for first reboot." | tee -a $RACHELLOG
 	print_status "The entire script (with reboots) takes 2-5 minutes." | tee -a $RACHELLOG
-#	bash /root/cap-rachel-first-install-1.sh
+	bash /root/cap-rachel-first-install-1.sh
 else
 	echo; print_error "User requests not to continue...exiting at $(date)" | tee -a $RACHELLOG
 	# Deleting the install script commands
