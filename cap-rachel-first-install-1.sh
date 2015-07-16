@@ -6,7 +6,6 @@
 RACHELLOGDIR="/var/log/RACHEL"
 RACHELLOGFILE="rachel-install.tmp"
 RACHELLOG="$RACHELLOGDIR/$RACHELLOGFILE"
-
 exec 1>> $RACHELLOG 2>&1
 
 function print_good () {
@@ -18,7 +17,11 @@ function print_error () {
 }
 
 function print_status () {
-    echo -e "\x1B[01;34m[*]\x1B[0m $1"
+    echo -e "\x1B[01;35m[*]\x1B[0m $1"
+}
+
+function print_question () {
+    echo -e "\x1B[01;33m[?]\x1B[0m $1"
 }
 
 # Check root
