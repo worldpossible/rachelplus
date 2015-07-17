@@ -17,7 +17,7 @@
 # ONELINER Download/Install: sudo wget https://github.com/rachelproject/rachelplus/raw/master/battery-test.sh -O /root/battery-test.sh
 
 # Change the following, if desired
-VERSION=2 (July 17, 2015) #script version
+VERSION="3 (July 17, 2015)" #script version
 RACHELLOGDIR="/var/log/RACHEL"
 LOGFILE="battery-test-$(date +"%b-%d-%Y-%R-%Z").log"  #default log filename
 LOG="$RACHELLOGDIR/$LOGFILE" #full path to log file
@@ -35,17 +35,10 @@ function finish {
 	rm -rf "$TMP"
 }
 
-# Save the previous logfile, if found
-if [[ -f $LOG ]]; then
-	mv $LOG $LOG.bak
-	echo; echo "[+] Backup of previously run test saved to $LOG.bak"
-fi
-
 # Identify the script we are running
-echo; echo "### Battery Duration Test Script (sam@hfc) - Version $VERSION ###"; echo
+echo; echo "### Battery Duration Test Script (sam@hfc) - Version $VERSION ###"
 
 # Request if the user wants to set the log file
-echo "[!] Current log file name: $LOG"
 echo; read -p "[?] Do you want to rename your log file? (y/n) " -n 1 -r
 if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
 	echo; echo "[?] What is the full path to your log file?"
