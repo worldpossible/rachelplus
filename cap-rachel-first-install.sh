@@ -13,6 +13,7 @@ FILE2="/root/cap-rachel-first-install-2.sh"
 FILE3="/root/cap-rachel-first-install-3.sh"
 SETWANIPFILE="/root/cap-rachel-setwanip-install.sh"
 LIGHTTPDFILE="/root/lighttpd.conf"
+SOURCESLIST="/root/sources.list"
 
 function print_good () {
     echo -e "\x1B[01;32m[+]\x1B[0m $1"
@@ -72,11 +73,20 @@ sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-firs
 sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-setwanip-install.sh -O $SETWANIPFILE 1>> $RACHELLOG 2>&1
 ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies)
 sudo wget https://github.com/rachelproject/rachelplus/raw/master/lighttpd.conf -O $LIGHTTPDFILE 1>> $RACHELLOG 2>&1
-if [[ -s $FILE1 && -s $FILE2 && -s $FILE3 && -s $SETWANIPFILE && -s $LIGHTTPDFILE ]]  1>> $RACHELLOG 2>&1; then
+## sources-uk.list - replace the package repos for more reliable ones (/etc/apt/sources.list)
+sudo wget https://github.com/rachelproject/rachelplus/raw/master/sources-uk.list -O $SOURCESLIST 1>> $RACHELLOG 2>&1
+if [[ -s $FILE1 && -s $FILE2 && -s $FILE3 && -s $SETWANIPFILE && -s $LIGHTTPDFILE && -s $SOURCESLIST ]]  1>> $RACHELLOG 2>&1; then
 	print_good "Done." | tee -a $RACHELLOG
 else
 	print_error "One or more files did not download correctly; check log file (/var/log/rachel-install.tmp) and try again." | tee -a $RACHELLOG
-	exit 1
+	echo "The following files should have downloaded to /root:" | tee -a $RACHELLOG
+	echo "cap-rachel-first-install-1.sh" | tee -a $RACHELLOG
+	echo "cap-rachel-first-install-2.sh" | tee -a $RACHELLOG
+	echo "cap-rachel-first-install-3.sh" | tee -a $RACHELLOG
+	echo "cap-rachel-setwanip-install.sh" | tee -a $RACHELLOG
+	echo "lighttpd.conf" | tee -a $RACHELLOG
+	echo "sources.list" | tee -a $RACHELLOG
+	echo; exit 1
 fi
 
 # Show location of the log file
