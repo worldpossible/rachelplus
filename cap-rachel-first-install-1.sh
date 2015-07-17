@@ -36,11 +36,17 @@ echo; print_good "RACHEL CAP Install - Script 1 started at $(date)"
 # Delete previous setup commands from the /etc/rc.local
 sudo sed -i '/cap-rachel/d' /etc/rc.local
 
+# Change the source repositories
+echo; print_status "Updating the package repositories list to source from UK"
+mv /etc/apt/sources.list /etc/apt/sources.list.bak
+mv /root/sources.list /etc/apt/sources.list
+print_good "Done."
+
 # Update CAP package repositories
 echo; print_status "Updating CAP package repositories"
 apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 16126D3A3E5C1192
 apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 40976EAF437D05B5
-apt-get update
+apt-get clean; apt-get purge; apt-get update
 print_good "Done."
 
 # Repartition external 500GB hard drive into 3 partitions
