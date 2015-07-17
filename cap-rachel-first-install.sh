@@ -37,7 +37,7 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 # Add header/date/time to install log file
-echo; print_good "RACHEL CAP Install Script - Version 1" | tee $RACHELLOG
+echo; print_good "RACHEL CAP Install Script - Version $(date +%m%d%y%H%M)" | tee $RACHELLOG
 print_good "Install started: $(date)" | tee -a $RACHELLOG
 
 # Check internet connecivity
