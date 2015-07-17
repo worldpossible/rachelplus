@@ -64,13 +64,13 @@ print_good "Done." | tee -a $RACHELLOG
 # Download additional scripts to /root
 echo; print_status "Downloading RACHEL install scripts for CAP" | tee -a $RACHELLOG
 ## cap-rachel-first-install-1.sh
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-1.sh -O $FILE1 1>> $RACHELLOG 2>&1
+sudo wget https://github.com/rachelproject/rachelplus/raw/master/install/cap-rachel-first-install-1.sh -O $FILE1 1>> $RACHELLOG 2>&1
 ## cap-rachel-first-install-2.sh
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-2.sh -O $FILE2 1>> $RACHELLOG 2>&1
+sudo wget https://github.com/rachelproject/rachelplus/raw/master/install/cap-rachel-first-install-2.sh -O $FILE2 1>> $RACHELLOG 2>&1
 ## cap-rachel-first-install-3.sh
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-3.sh -O $FILE3 1>> $RACHELLOG 2>&1
+sudo wget https://github.com/rachelproject/rachelplus/raw/master/install/cap-rachel-first-install-3.sh -O $FILE3 1>> $RACHELLOG 2>&1
 ## cap-rachel-setwanip-install.sh
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-setwanip-install.sh -O $SETWANIPFILE 1>> $RACHELLOG 2>&1
+sudo wget https://github.com/rachelproject/rachelplus/raw/master/install/cap-rachel-setwanip-install.sh -O $SETWANIPFILE 1>> $RACHELLOG 2>&1
 ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies)
 sudo wget https://github.com/rachelproject/rachelplus/raw/master/lighttpd.conf -O $LIGHTTPDFILE 1>> $RACHELLOG 2>&1
 ## sources-uk.list - replace the package repos for more reliable ones (/etc/apt/sources.list)
