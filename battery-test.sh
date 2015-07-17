@@ -43,9 +43,9 @@ echo; read -p "[?] Do you want to rename your log file? (y/n) " -n 1 -r
 if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
 	echo; echo "[?] What is the full path to your log file?"
 	read LOG
-	echo "[+] Log file created: $LOG"
+	echo "[+] Custom log file created: $LOG"
 else
-	echo; echo "[-] Using default log file: $LOG"
+	echo; echo "[-] Using log file: $LOG"
 fi
 
 # Request info to set the current date/time
