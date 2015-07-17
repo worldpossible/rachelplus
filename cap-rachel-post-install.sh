@@ -10,6 +10,7 @@ RACHELLOGDIR="/var/log/RACHEL"
 mkdir -p $RACHELLOGDIR
 RACHELLOGFILE="rachel-install.tmp"
 RACHELLOG="$RACHELLOGDIR/$RACHELLOGFILE"
+RACHELWWW="/media/RACHEL/rachel"
 
 function print_good () {
     echo -e "\x1B[01;32m[+]\x1B[0m $1"
@@ -50,8 +51,14 @@ if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
 	echo; print_status "Fixing index.php." | tee -a $RACHELLOG
 	# Redirect LOCAL CONTENT link to Intel CAP's content manager site on port 8090
 	sed -i 's|<li><a href="local-frameset.html">LOCAL CONTENT</a></li>|<li><a href="./" onclick="javascript:event.target.port=8090" target="_blank">LOCAL CONTENT</a></li>|g' /media/RACHEL/rachel/index.php
-	sed -i 's|<div id="ip">http://<?php echo gethostbyname(gethostname()); ?>/</div>|<div id="ip">http://192.168.88.1</div>|g' /media/RACHEL/rachel/index.php
+	# Display the current IP of the server on the main page
+	sed -i 's|<div id="ip">http://<?php echo gethostbyname(gethostname()); ?>/</div>|<div align="right" id="ip"><b>Server IP</b> </br><? echo $_SERVER["SERVER_ADDR"]; ?></div>|g' /media/RACHEL/rachel/index.php
+	# Download RACHEL Captive Portal redirect page
+	wget https://github.com/rachelproject/rachelplus/raw/master/captiveportal-redirect.php -O $RACHELWWW/captiveportal-redirect.php
+	# Copy over files needed for Captive Portal redirect
+	cp /www/pass_ticket.shtml /www/redirect.shtml $RACHELWWW/.
 else
+	# Exit program
 	echo; print_error "User requests not to continue...exiting at $(date)" | tee -a $RACHELLOG
 	# Deleting the install script commands
 	rm -f /root/cap-rachel-* $RACHELLOG
