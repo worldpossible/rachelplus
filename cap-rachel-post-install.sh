@@ -41,6 +41,22 @@ fi
 echo; print_good "RACHEL CAP Post-Install Script - Version 1" | tee $RACHELLOG
 print_good "Install started: $(date)" | tee -a $RACHELLOG
 
+# Ask if RACHEL is already installed
+echo; print_question "Is the base RACHEL content already located at /media/RACHEL/rachel folder?" | tee -a $RACHELLOG
+read -p "If you answer (n), you will be given an option to provide a path to the content (y/n) " -r <&1
+if [[ $REPLY =~ ^[nN][oO]|[nN]$ ]]; then
+	echo; print_question "The base build of this install is the RACHEL USB 32GB zip file called rachelusb_32EN_X.X.X.zip" | tee -a $RACHELLOG
+	echo "    The X.X.X portion of the file name will vary depending on the RACHEL version. If you have that file at a location" | tee -a $RACHELLOG
+	echo "    that the Intel CAP can reach, answer (y) to enter the path to the file." | tee -a $RACHELLOG
+	echo; read -p "Would you like to provide a path to rsync the files from? (y/n) " -r <&1	
+	if [[ $REPLY =~ ^[nN][oO]|[nN]$ ]]; then
+		echo; print_error "User requests not to continue...exiting at $(date)" | tee -a $RACHELLOG
+		echo; exit 1
+	fi
+	echo "What is the path to the rachelusb_32EN_X.X.X.zip file? " read rachelpath
+
+fi
+
 # Reconfigure RACHEL files
 echo; print_question "Before running this script, you need to have copied the basic RACHEL content to" | tee -a $RACHELLOG
 echo "  /media/RACHEL/rachel on the Intel CAP.  You should see the RACHEL index.php file at /media/RACHEL/rachel/index.php" | tee -a $RACHELLOG
