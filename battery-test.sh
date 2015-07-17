@@ -14,18 +14,21 @@
 # determine how long the battery lasted.
 ##############################################################################
 
-# ONELINER Download/Install: sudo wget https://github.com/rachelproject/rachelplus/raw/master/battery-test.sh -O /root/battery-test.sh 
+# ONELINER Download/Install: sudo wget https://github.com/rachelproject/rachelplus/raw/master/battery-test.sh -O /root/battery-test.sh
 
 # Change the following, if desired
-VERSION=8 #script version
+VERSION=2 (July 17, 2015) #script version
 RACHELLOGDIR="/var/log/RACHEL"
-LOGFILE="duration-results.log"  #default log filename
+LOGFILE="battery-test-$(date +"%b-%d-%Y-%R-%Z").log"  #default log filename
 LOG="$RACHELLOGDIR/$LOGFILE" #full path to log file
 
 # Do not change anything below unless you know what you are doing
 
+# Create tmp file that will monitor battery in background
+#TMP=`mktemp -t battery-test.tmpXXX`
+TMP="/tmp/battery.tmp"
 # Create temp file
-TMP=`mktemp -t battery-test.tmpXXX`
+TMP2="/tmp/battery.tmp2"
 
 # Function that will remove the temp file on start; program continues to run until system shuts down
 function finish {
@@ -74,28 +77,28 @@ else
 fi
 
 # Sends initial test start comments to log file
-echo; echo "[+] Battery Duration Test Script - Version $VERSION" > $LOG
+echo; echo "[+] Battery Duration Test Script - Version $VERSION" > $TMP2
 export STARTDATE=$(date +"%s")
-echo "[+] Test Started:  $(date -d @$STARTDATE)" >> $LOG
+echo "[+] Test Started:  $(date -d @$STARTDATE)" >> $TMP2
+echo "Placeholder" >> $TMP2
+echo "Placeholder" >> $TMP2
 
-# Create tmp file that will monitor battery in background
-
-LOGTEMP=`mktemp`
-sed "s,%LOGTEMP%,$LOGTEMP,g; s,%LOG%,$LOG,g" >$TMP << 'EOF'
+# While loop script that watchs the time and records current diff b/n start and current
+sed "s,%TMP2%,$TMP2,g; s,%LOG%,$LOG,g" >$TMP << 'EOF'
 #!/bin/bash
-while :; do
+TMP=`mktemp`
+for (( ; ; )); do
+	head -n -2 %TMP2% > $TMP; mv $TMP %TMP2%
 	FAILDATE=$(date +"%s")
-	echo "[-] Power failure:  "$(date -d @$FAILDATE) > %LOGTEMP%
+	echo "[-] Power failure:  $(date -d @$FAILDATE)" >> %TMP2%
 	DIFF=$(($FAILDATE-$STARTDATE))
 	REST=$(($DIFF%3600))
 	HOURS=$((($DIFF-$REST)/3600))
 	SECONDS=$(($REST%60))
 	MINUTES=$((($REST-$SECONDS)/60))
-	echo "[!] Battery lasted:  $HOURS hours, $MINUTES minutes, $SECONDS seconds" >> %LOGTEMP%
+	echo "[!] Battery lasted:  $HOURS hours, $MINUTES minutes, $SECONDS seconds" >> %TMP2%
+	cp %TMP2% %LOG%
 	sleep 5
-	sed -i '/Power failure/d' %LOG%
-	sed -i '/Battery lasted/d' %LOG%
-	cat %LOGTEMP% >> %LOG%
 done
 EOF
 
