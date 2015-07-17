@@ -52,7 +52,7 @@ if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
 	# Redirect LOCAL CONTENT link to Intel CAP's content manager site on port 8090
 	sed -i 's|<li><a href="local-frameset.html">LOCAL CONTENT</a></li>|<li><a href="./" onclick="javascript:event.target.port=8090" target="_blank">LOCAL CONTENT</a></li>|g' /media/RACHEL/rachel/index.php
 	# Display the current IP of the server on the main page
-	sed -i 's|<div id="ip">http://<?php echo gethostbyname(gethostname()); ?>/</div>|<div align="right" id="ip"><b>Server IP</b> </br><? echo $_SERVER["SERVER_ADDR"]; ?></div>|g' /media/RACHEL/rachel/index.php
+	sed -i 's|<div id="ip">http://<?php echo gethostbyname(gethostname()); ?>/</div>|<div align="right" id="ip"><b>Server Address</b> </br><? echo $_SERVER["SERVER_ADDR"]; ?></div>|g' /media/RACHEL/rachel/index.php
 	# Download RACHEL Captive Portal redirect page
 	wget https://github.com/rachelproject/rachelplus/raw/master/captiveportal-redirect.php -O $RACHELWWW/captiveportal-redirect.php
 	# Copy over files needed for Captive Portal redirect
