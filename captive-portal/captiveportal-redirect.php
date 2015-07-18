@@ -6,20 +6,47 @@
 <link rel="stylesheet" type="text/css" href="common.css">
 <link rel="stylesheet" type="text/css" href="style.css">
 <!--[if IE]><script type="text/javascript" src="css3-multi-column.min.js"></script><![endif]-->
+
+<style type="text/css">
+#wrap {
+   width:600px;
+   margin:0 auto;
+}
+#center_col {
+    float:center;
+    width:600px;
+}
+#left_col {
+   float:left;
+   width:300px;
+}
+#right_col {
+   float:right;
+   width:300px;
+}
+</style>
+
 </head>
 <body link="#000000" vlink="#000000" alink="#377211">
-<div style='text-align:center'>
-<a href="index.php" target="_blank">
-        <img src="art/rachel_banner.png" />
-</a>
-<p><h2>The World's best educational resources, neatly packaged together for download and distribution in places without internet.</h2></p>
-</br>
-<h3>To access RACHEL content, click the logo above or open your web browser and go to <?php echo $_SERVER["SERVER_ADDR"];?></h3>
-</br><hr></br>
-<b>To create a RACHEL link on your desktop, follow these three simple steps using Firefox, Chrome or Internet Explorer (IE):</b></br>
-1) Resize your Web browser so you can see the browser and your desktop in the same screen.</br>
-2) Left click the icon located to the left side of the address bar. This is where you see the full URL to the website.</br>
-3) Continue to hold down the mouse button and drag the icon to your desktop. This creates the shortcut.
+
+<div id="wrap">
+    <div id="center_col" style='text-align:center'>
+        </br>
+        <a href="http://<? echo $_SERVER["SERVER_ADDR"]; ?>/index.php" target="_blank"><img src="http://<? echo $_SERVER["SERVER_ADDR"]; ?>/art/RACHELbrandLogo-large.png" /></a>
+        </br>
+        <h2>The World's best educational resources,</br>neatly packaged together for download and distribution</br>in places without internet.</h2>
+    </div>
+    <hr>
+    <div id="center_col" style='text-align:center'>
+        <h3>Brought to you by:</h3>
+    </div>
+    <div id="left_col" style='text-align:center'>
+        <a href="http://worldpossible.org" target="_blank"><img src="http://<? echo $_SERVER["SERVER_ADDR"]; ?>/art/WorldPossiblebrandLogo-small.png" /></a>
+    </div>
+    <div id="right_col" style='text-align:center'>
+        <a href="http://hackersforcharity.org" target="_blank"><img src="http://<? echo $_SERVER["SERVER_ADDR"]; ?>/art/HFCbrandLogo-small.jpg" /></a>
+    </div>
 </div>
+
 </body>
 </html>
