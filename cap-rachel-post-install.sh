@@ -1,7 +1,5 @@
 #!/bin/sh
 
-# VERY VERY VERY VERY VERY BETA
-
 # FILE: cap-rachel-post-install.sh
 # ONELINER Download/Install: sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-post-install.sh -O - | bash 
 
@@ -29,9 +27,6 @@ function print_status () {
 function print_question () {
     echo -e "\x1B[01;33m[?]\x1B[0m $1"
 }
-
-print_error "This script is too beta at the moment, exiting."
-exit 1
 
 # Check root
 if [ "$(id -u)" != "0" ]; then
