@@ -62,13 +62,12 @@ echo "    on the Intel CAP.  You should see the RACHEL index.php file at /media/
 echo "    If you are not ready, answer (n), copy over the data and then run this script again." | tee -a $RACHELLOG
 echo; read -p "    Are you ready to update the RACHEL files? " -r <&1
 if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
-	echo; print_status "Fixing index.php." | tee -a $RACHELLOG
-	# Redirect LOCAL CONTENT link to Intel CAP's content manager site on port 8090
-	sed -i 's|<li><a href="local-frameset.html">LOCAL CONTENT</a></li>|<li><a href="./" onclick="javascript:event.target.port=8090" target="_blank">LOCAL CONTENT</a></li>|g' /media/RACHEL/rachel/index.php 1>> $RACHELLOG 2>&1
-	# Display the current IP of the server on the main page
-	sed -i 's|<div id="ip">http://<?php echo gethostbyname(gethostname()); ?>/</div>|<div align="right" id="ip"><b>Server Address</b> </br><? echo $_SERVER["SERVER_ADDR"]; ?></div>|g' /media/RACHEL/rachel/index.php 1>> $RACHELLOG 2>&1
-	# Download RACHEL Captive Portal redirect page
+	# Download latest RACHEL index.php
+	echo; print_status "Update to the latest index.php." | tee -a $RACHELLOG
+	wget https://raw.githubusercontent.com/rachelproject/contentshell/master/index.php -O $RACHELWWW/index.php 1>> $RACHELLOG 2>&1
 	print_good "Done." | tee -a $RACHELLOG
+
+	# Download RACHEL Captive Portal redirect page
 	echo; print_status "Downloading Captive Portal content and moving a copy files." | tee -a $RACHELLOG
 	if [[ ! -f $RACHELWWW/art/captiveportal-redirect.php ]]; then
 		wget https://github.com/rachelproject/rachelplus/raw/master/captive-portal/captiveportal-redirect.php -O $RACHELWWW/art/captiveportal-redirect.php 1>> $RACHELLOG 2>&1
@@ -90,6 +89,7 @@ if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
 	else
 		print_good "$RACHELWWW/art/WorldPossiblebrandLogo-captive.png exists, skipping."
 	fi
+
 	# Copy over files needed for Captive Portal redirect to work (these are the same ones used by the CAP)
 	if [[ ! -f $RACHELWWW/pass_ticket.shtml && ! -f $RACHELWWW/redirect.shtml ]]; then
 		cp /www/pass_ticket.shtml /www/redirect.shtml $RACHELWWW/. 1>> $RACHELLOG 2>&1
