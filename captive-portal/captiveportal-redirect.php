@@ -3,8 +3,6 @@
 <head>
 <title>RACHEL</title>
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
-<link rel="stylesheet" type="text/css" href="common.css">
-<link rel="stylesheet" type="text/css" href="style.css">
 <!--[if IE]><script type="text/javascript" src="css3-multi-column.min.js"></script><![endif]-->
 
 <style type="text/css">
