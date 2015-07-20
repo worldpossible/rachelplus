@@ -74,7 +74,7 @@ sudo wget https://github.com/rachelproject/rachelplus/raw/master/install/cap-rac
 ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies)
 sudo wget https://github.com/rachelproject/rachelplus/raw/master/lighttpd.conf -O $LIGHTTPDFILE 1>> $RACHELLOG 2>&1
 ## sources-uk.list - replace the package repos for more reliable ones (/etc/apt/sources.list)
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/sources/sources-uk.list -O $SOURCESLIST 1>> $RACHELLOG 2>&1
+sudo wget https://github.com/rachelproject/rachelplus/raw/master/sources.list/sources-uk.list -O $SOURCESLIST 1>> $RACHELLOG 2>&1
 if [[ -s $FILE1 && -s $FILE2 && -s $FILE3 && -s $SETWANIPFILE && -s $LIGHTTPDFILE && -s $SOURCESLIST ]]  1>> $RACHELLOG 2>&1; then
 	print_good "Done." | tee -a $RACHELLOG
 else
