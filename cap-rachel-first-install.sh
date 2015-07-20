@@ -3,7 +3,7 @@
 # ONELINER Download/Install: sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install.sh -O - | bash 
 
 # Everything below will go to this log directory
-RACHELLOGDIR="/var/log/RACHEL/"
+RACHELLOGDIR="/var/log/RACHEL"
 mkdir -p $RACHELLOGDIR
 RACHELLOGFILE="rachel-install.tmp"
 RACHELLOG="$RACHELLOGDIR/$RACHELLOGFILE"
@@ -74,11 +74,11 @@ sudo wget https://github.com/rachelproject/rachelplus/raw/master/install/cap-rac
 ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies)
 sudo wget https://github.com/rachelproject/rachelplus/raw/master/lighttpd.conf -O $LIGHTTPDFILE 1>> $RACHELLOG 2>&1
 ## sources-uk.list - replace the package repos for more reliable ones (/etc/apt/sources.list)
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/sources-uk.list -O $SOURCESLIST 1>> $RACHELLOG 2>&1
+sudo wget https://github.com/rachelproject/rachelplus/raw/master/sources/sources-uk.list -O $SOURCESLIST 1>> $RACHELLOG 2>&1
 if [[ -s $FILE1 && -s $FILE2 && -s $FILE3 && -s $SETWANIPFILE && -s $LIGHTTPDFILE && -s $SOURCESLIST ]]  1>> $RACHELLOG 2>&1; then
 	print_good "Done." | tee -a $RACHELLOG
 else
-	print_error "One or more files did not download correctly; check log file (/var/log/rachel-install.tmp) and try again." | tee -a $RACHELLOG
+	print_error "One or more files did not download correctly; check log file (/var/log/RACHEL/rachel-install.tmp) and try again." | tee -a $RACHELLOG
 	echo "The following files should have downloaded to /root:" | tee -a $RACHELLOG
 	echo "cap-rachel-first-install-1.sh" | tee -a $RACHELLOG
 	echo "cap-rachel-first-install-2.sh" | tee -a $RACHELLOG
