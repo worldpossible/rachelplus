@@ -3,7 +3,7 @@
 # ONELINER Download/Install: sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install.sh -O - | bash 
 
 # Everything below will go to this log directory
-RACHELLOGDIR="/var/log/RACHEL"
+RACHELLOGDIR="/var/log/RACHEL/"
 mkdir -p $RACHELLOGDIR
 RACHELLOGFILE="rachel-install.tmp"
 RACHELLOG="$RACHELLOGDIR/$RACHELLOGFILE"
