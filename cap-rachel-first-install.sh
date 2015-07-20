@@ -96,7 +96,7 @@ echo "$RACHELLOGDIR" | tee -a $RACHELLOG
 # Ask if you are ready to install
 echo; print_question "WARNING: This process will destroy all content on /media/RACHEL" | tee -a $RACHELLOG
 
-read -p "Are you ready to start the install? " -r <&1
+read -p "Are you ready to start the install? (y/n)" -r <&1
 if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
 	echo; print_status "Starting first install script...please wait patiently (about 30 secs) for first reboot." | tee -a $RACHELLOG
 	print_status "The entire script (with reboots) takes 2-5 minutes." | tee -a $RACHELLOG
