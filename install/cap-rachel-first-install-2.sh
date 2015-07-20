@@ -1,6 +1,6 @@
 #!/bin/sh
 # FILE: cap-rachel-first-install-2.sh
-# ONELINER Download/Install: wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install-2.sh -O - | bash 
+# ONELINER Download/Install: wget https://github.com/rachelproject/rachelplus/raw/master/install/cap-rachel-first-install-2.sh -O - | bash 
 
 # Everything below will go to this log directory
 RACHELLOGDIR="/var/log/RACHEL"
