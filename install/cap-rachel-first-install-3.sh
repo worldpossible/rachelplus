@@ -94,11 +94,6 @@ echo; print_status "Deleting the install scripts."
 rm -f /root/cap-rachel-*
 print_good "Done."
 
-# Add RACHEL home directory
-echo; print_status "Add RACHEL home directory."
-mkdir /media/RACHEL/rachel
-print_good "Done."
-
 # Add header/date/time to install log file
 TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
 sudo mv $RACHELLOG $RACHELLOGDIR/rachel-install-$TIMESTAMP.log

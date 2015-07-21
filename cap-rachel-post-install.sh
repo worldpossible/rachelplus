@@ -54,7 +54,17 @@ if [[ $REPLY =~ ^[nN][oO]|[nN]$ ]]; then
 	echo "What is the path to the rachelusb_32EN_X.X.X.zip file? " read rachelpath
 
 fi
+
+# Add RACHEL home directory - this is redundant with the next git clone command
+echo; print_status "Add RACHEL home directory."
+mkdir /media/RACHEL/rachel
+print_good "Done."
 COMMENT
+
+# Clone the RACHEL content shell from GitHub
+echo; print_status "Cloning the RACHEL content shell from GitHub." | tee -a $RACHELLOG
+git clone https://github.com/rachelproject/contentshell /media/RACHEL/rachel
+print_good "Done." | tee -a $RACHELLOG
 
 # Reconfigure RACHEL files
 echo; print_question "DOUBLE CHECK - You need to have copied the basic RACHEL content to /media/RACHEL/rachel" | tee -a $RACHELLOG
