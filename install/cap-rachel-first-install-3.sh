@@ -84,13 +84,6 @@ sudo apt-get -y remove --purge mysql-server mysql-client mysql-common
 sudo apt-get -y install mysql-server mysql-client libapache2-mod-auth-mysql php5-mysql
 print_good "Done."
 
-# Deleting the install script commands
-echo; print_status "Deleting the install scripts."
-rm -f /root/cap-rachel-*
-print_good "Done."
+# Start next script
+bash /root/cap-rachel-post-install.sh
 
-# Add header/date/time to install log file
-TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
-sudo mv $RACHELLOG $RACHELLOGDIR/rachel-install-$TIMESTAMP.log
-echo; print_good "Log file saved to: $RACHELLOGDIR/rachel-install-$TIMESTAMP.log"
-print_good "RACHEL CAP Install Complete - device is ready for RACHEL content."

@@ -39,6 +39,9 @@ fi
 echo; print_good "RACHEL CAP Post-Install Script - Version $VERSION" | tee $RACHELLOG
 print_good "Install started: $TIMESTAMP" | tee -a $RACHELLOG
 
+# Delete previous setup commands from the /etc/rc.local
+sudo sed -i '/cap-rachel/d' /etc/rc.local
+
 : <<'COMMENT'
 # Ask if RACHEL is already installed
 echo; print_question "Is the core RACHEL content already located in the /media/RACHEL/rachel folder?" | tee -a $RACHELLOG
@@ -108,10 +111,17 @@ else
 fi
 print_good "Done." | tee -a $RACHELLOG
 
+# Deleting the install script commands
+echo; print_status "Deleting the install scripts."
+rm -f /root/cap-rachel-*
+print_good "Done."
+
 # Add header/date/time to install log file
-sudo mv $RACHELLOG $RACHELLOGDIR/rachel-post-install-$TIMESTAMP.log 1>> $RACHELLOG 2>&1
-echo; print_good "Log file saved to: $RACHELLOGDIR/rachel-post-install-$TIMESTAMP.log" | tee -a $RACHELLOG
-print_good "RACHEL CAP Post-Install Complete." | tee -a $RACHELLOG
+sudo mv $RACHELLOG $RACHELLOGDIR/rachel-install-$TIMESTAMP.log 1>> $RACHELLOG 2>&1
+echo; print_good "Log file saved to: $RACHELLOGDIR/rachel-install-$TIMESTAMP.log" | tee -a $RACHELLOG
+print_good "RACHEL CAP Install Complete." | tee -a $RACHELLOG
+
+# Reboot
 echo; print_status "I need to reboot; once rebooted, your CAP is ready for RACHEL content."
 echo "Download modules from http://dev.worldpossible.org/mods/"
 echo; print_status "Rebooting in 10 seconds..." 
