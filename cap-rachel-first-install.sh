@@ -61,6 +61,49 @@ echo; print_status "Delete previous RACHEL setup commands from /etc/rc.local" | 
 sudo sed -i '/cap-rachel/d' /etc/rc.local 1>> $RACHELLOG 2>&1
 print_good "Done." | tee -a $RACHELLOG
 
+## sources.list - replace the package repos for more reliable ones (/etc/apt/sources.list)
+echo; print_status "Locations for downloading packages:"
+echo "    US) United States"
+echo "    UK) United Kingdom"
+echo "    SG) Singapore"
+echo "    CN) China (CAP Manufacturer's Site)"
+echo; print_question "For the package downloads, select the location nearest you? "
+select class in "US" "UK" "SG" "CN"; do
+        case $class in
+        # US
+        US)
+                echo; print_status "Downloading packages from the United States."
+                sudo wget https://github.com/rachelproject/rachelplus/raw/master/sources.list/sources-us.list -O $SOURCESLIST 1>> $RACHELLOG 2>&1
+                print_good "Done."
+                break
+        ;;
+
+        # UK
+        UK)
+                echo; print_status "Downloading packages from the United Kingdom."
+                sudo wget https://github.com/rachelproject/rachelplus/raw/master/sources.list/sources-uk.list -O $SOURCESLIST 1>> $RACHELLOG 2>&1
+                print_good "Done."
+                break
+        ;;
+
+        # Singapore
+        SG)
+                echo; print_status "Downloading packages from Singapore."
+                sudo wget https://github.com/rachelproject/rachelplus/raw/master/sources.list/sources-sg.list -O $SOURCESLIST 1>> $RACHELLOG 2>&1
+                print_good "Done."
+                break
+        ;;
+
+        # China (Original)
+        CN)
+                echo; print_status "Downloading packages from the China - CAP manufacturer's website."
+                sudo wget https://github.com/rachelproject/rachelplus/raw/master/sources.list/sources-sohu.list -O $SOURCESLIST 1>> $RACHELLOG 2>&1
+                print_good "Done."
+                break
+        ;;
+        esac
+done
+
 # Download additional scripts to /root
 echo; print_status "Downloading RACHEL install scripts for CAP" | tee -a $RACHELLOG
 ## cap-rachel-first-install-1.sh
@@ -73,8 +116,6 @@ sudo wget https://github.com/rachelproject/rachelplus/raw/master/install/cap-rac
 sudo wget https://github.com/rachelproject/rachelplus/raw/master/install/cap-rachel-setwanip-install.sh -O $SETWANIPFILE 1>> $RACHELLOG 2>&1
 ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies)
 sudo wget https://github.com/rachelproject/rachelplus/raw/master/lighttpd.conf -O $LIGHTTPDFILE 1>> $RACHELLOG 2>&1
-## sources-uk.list - replace the package repos for more reliable ones (/etc/apt/sources.list)
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/sources.list/sources-uk.list -O $SOURCESLIST 1>> $RACHELLOG 2>&1
 if [[ -s $FILE1 && -s $FILE2 && -s $FILE3 && -s $SETWANIPFILE && -s $LIGHTTPDFILE && -s $SOURCESLIST ]]  1>> $RACHELLOG 2>&1; then
 	print_good "Done." | tee -a $RACHELLOG
 else
@@ -96,7 +137,7 @@ echo "$RACHELLOGDIR" | tee -a $RACHELLOG
 # Ask if you are ready to install
 echo; print_question "WARNING: This process will destroy all content on /media/RACHEL" | tee -a $RACHELLOG
 
-read -p "Are you ready to start the install? (y/n)" -r <&1
+read -p "Are you ready to start the install? (y/n) " -r <&1
 if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
 	echo; print_status "Starting first install script...please wait patiently (about 30 secs) for first reboot." | tee -a $RACHELLOG
 	print_status "The entire script (with reboots) takes 2-5 minutes." | tee -a $RACHELLOG
