@@ -61,6 +61,7 @@ echo; print_status "Delete previous RACHEL setup commands from /etc/rc.local" | 
 sudo sed -i '/cap-rachel/d' /etc/rc.local 1>> $RACHELLOG 2>&1
 print_good "Done." | tee -a $RACHELLOG
 
+: <<'COMMENT'
 ## sources.list - replace the package repos for more reliable ones (/etc/apt/sources.list)
 echo; print_status "Locations for downloading packages:"
 echo "    US) United States"
@@ -103,6 +104,12 @@ select class in "US" "UK" "SG" "CN"; do <&1
         ;;
         esac
 done
+COMMENT
+
+# For the package downloads, we are setting the default of UK until I can fix the CASE statemetn above
+echo; print_status "Downloading packages from the United Kingdom."
+sudo wget https://github.com/rachelproject/rachelplus/raw/master/sources.list/sources-uk.list -O $SOURCESLIST 1>> $RACHELLOG 2>&1
+print_good "Done."
 
 # Download additional scripts to /root
 echo; print_status "Downloading RACHEL install scripts for CAP" | tee -a $RACHELLOG
