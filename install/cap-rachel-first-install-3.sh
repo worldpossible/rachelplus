@@ -8,6 +8,7 @@ RACHELLOGDIR="/var/log/RACHEL"
 mkdir -p $RACHELLOGDIR
 RACHELLOGFILE="rachel-install.tmp"
 RACHELLOG="$RACHELLOGDIR/$RACHELLOGFILE"
+RACHELWWW="/media/RACHEL/rachel"
 exec 1>> $RACHELLOG 2>&1
 
 function print_good () {
@@ -99,9 +100,9 @@ fi
 
 # Download RACHEL Captive Portal redirect page
 echo; print_status "Downloading Captive Portal content and moving a copy files."
-if [[ ! -f $RACHELWWW/art/captiveportal-redirect.php ]]; then
+if [[ ! -f $RACHELWWW/captiveportal-redirect.php ]]; then
 	wget https://github.com/rachelproject/rachelplus/raw/master/captive-portal/captiveportal-redirect.php -O $RACHELWWW/captiveportal-redirect.php
-	print_good "Downloaded $RACHELWWW/art/captiveportal-redirect.php."
+	print_good "Downloaded $RACHELWWW/captiveportal-redirect.php."
 else
 	print_good "$RACHELWWW/art/captiveportal-redirect.php exists, skipping."
 fi
@@ -113,13 +114,13 @@ else
 fi
 if [[ ! -f $RACHELWWW/art/HFCbrandLogo-captive.jpg ]]; then
 	wget https://github.com/rachelproject/rachelplus/raw/master/captive-portal/HFCbrandLogo-captive.jpg -O $RACHELWWW/art/HFCbrandLogo-captive.jpg
-	print_good "Downloading $RACHELWWW/art/HFCbrandLogo-captive.jpg."
+	print_good "Downloaded $RACHELWWW/art/HFCbrandLogo-captive.jpg."
 else
 	print_good "$RACHELWWW/art/HFCbrandLogo-captive.jpg exists, skipping."
 fi
 if [[ ! -f $RACHELWWW/art/WorldPossiblebrandLogo-captive.png ]]; then
 	wget https://github.com/rachelproject/rachelplus/raw/master/captive-portal/WorldPossiblebrandLogo-captive.png -O $RACHELWWW/art/WorldPossiblebrandLogo-captive.png
-	print_good "Downloading $RACHELWWW/art/WorldPossiblebrandLogo-captive.png."
+	print_good "Downloaded $RACHELWWW/art/WorldPossiblebrandLogo-captive.png."
 else
 	print_good "$RACHELWWW/art/WorldPossiblebrandLogo-captive.png exists, skipping."
 fi
