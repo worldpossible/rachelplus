@@ -61,11 +61,6 @@ echo; print_status "Deleting previous setwanip.sh script from /etc/rc.local"
 sudo sed -i '/setwanip/d' /etc/rc.local
 print_good "Done."
 
-# Add setwanip.sh script to run at boot
-echo; print_status "Adding setwanip.sh script to autorun at startup"
-sudo bash /root/cap-rachel-setwanip-install.sh
-print_good "Done."
-
 # Delete previous iptables commands from /etc/rc.local
 echo; print_status "Deleting previous iptables script from /etc/rc.local"
 sudo sed -i '/iptables/d' /etc/rc.local

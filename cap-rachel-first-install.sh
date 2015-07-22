@@ -112,11 +112,9 @@ sudo wget https://github.com/rachelproject/rachelplus/raw/master/install/cap-rac
 sudo wget https://github.com/rachelproject/rachelplus/raw/master/install/cap-rachel-first-install-2.sh -O $FILE2 1>> $RACHELLOG 2>&1
 ## cap-rachel-first-install-3.sh
 sudo wget https://github.com/rachelproject/rachelplus/raw/master/install/cap-rachel-first-install-3.sh -O $FILE3 1>> $RACHELLOG 2>&1
-## cap-rachel-setwanip-install.sh
-sudo wget https://github.com/rachelproject/rachelplus/raw/master/install/cap-rachel-setwanip-install.sh -O $SETWANIPFILE 1>> $RACHELLOG 2>&1
 ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies)
 sudo wget https://github.com/rachelproject/rachelplus/raw/master/lighttpd.conf -O $LIGHTTPDFILE 1>> $RACHELLOG 2>&1
-if [[ -s $FILE1 && -s $FILE2 && -s $FILE3 && -s $SETWANIPFILE && -s $LIGHTTPDFILE && -s $SOURCESLIST ]]  1>> $RACHELLOG 2>&1; then
+if [[ -s $FILE1 && -s $FILE2 && -s $FILE3 && -s $LIGHTTPDFILE && -s $SOURCESLIST ]]  1>> $RACHELLOG 2>&1; then
 	print_good "Done." | tee -a $RACHELLOG
 else
 	print_error "One or more files did not download correctly; check log file (/var/log/RACHEL/rachel-install.tmp) and try again." | tee -a $RACHELLOG
@@ -124,7 +122,6 @@ else
 	echo "cap-rachel-first-install-1.sh" | tee -a $RACHELLOG
 	echo "cap-rachel-first-install-2.sh" | tee -a $RACHELLOG
 	echo "cap-rachel-first-install-3.sh" | tee -a $RACHELLOG
-	echo "cap-rachel-setwanip-install.sh" | tee -a $RACHELLOG
 	echo "lighttpd.conf" | tee -a $RACHELLOG
 	echo "sources.list" | tee -a $RACHELLOG
 	echo; exit 1

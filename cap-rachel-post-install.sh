@@ -2,10 +2,11 @@
 
 # FILE: cap-rachel-post-install.sh
 # ONELINER Download/Install: sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-post-install.sh -O - | bash 
+# Add header/date/time to install log file
 
 # Everything below will go to this log directory
 VERSION="BETA (July 18, 2015)"
-TIMESTAMP=$(date +"%b-%d-%Y-%R-%Z")
+TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
 RACHELLOGDIR="/var/log/RACHEL"
 mkdir -p $RACHELLOGDIR
 RACHELLOGFILE="rachel-install.tmp"
