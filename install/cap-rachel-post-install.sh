@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # FILE: cap-rachel-post-install.sh
-# ONELINER Download/Install: sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-post-install.sh -O - | bash 
+# ONELINER Download/Install: sudo wget https://github.com/rachelproject/rachelplus/raw/master/install/cap-rachel-post-install.sh -O - | bash 
 # Add header/date/time to install log file
 
 # Everything below will go to this log directory
@@ -62,29 +62,35 @@ mkdir /media/RACHEL/rachel
 print_good "Done."
 COMMENT
 
-# Clone the RACHEL content shell from GitHub
-echo; print_status "Cloning the RACHEL content shell from GitHub." | tee -a $RACHELLOG
-git clone https://github.com/rachelproject/contentshell /media/RACHEL/rachel
-print_good "Done." | tee -a $RACHELLOG
+# Clone or update the RACHEL content shell from GitHub
+if [[ ! -d $RACHELWWW ]]; then
+	echo; print_status "Cloning the RACHEL content shell from GitHub." | tee -a $RACHELLOG
+	git clone https://github.com/rachelproject/contentshell /media/RACHEL/rachel
+	print_good "Done." | tee -a $RACHELLOG
+else
+	echo; print_status "RACHELWWW exists; updated RACHEL content shell from GitHub." | tee -a $RACHELLOG
+	cd $RACHELWWW; git pull
+	print_good "Done." | tee -a $RACHELLOG
+fi
 
 # Download RACHEL Captive Portal redirect page
 echo; print_status "Downloading Captive Portal content and moving a copy files." | tee -a $RACHELLOG
 if [[ ! -f $RACHELWWW/art/captiveportal-redirect.php ]]; then
-	wget https://github.com/rachelproject/rachelplus/raw/master/captive-portal/captiveportal-redirect.php -O $RACHELWWW/art/captiveportal-redirect.php 1>> $RACHELLOG 2>&1
+	wget https://github.com/rachelproject/rachelplus/raw/master/captive-portal/captiveportal-redirect.php -O $RACHELWWW/captiveportal-redirect.php 1>> $RACHELLOG 2>&1
 else
 	print_good "$RACHELWWW/art/captiveportal-redirect.php exists, skipping."
 fi
-if [[ ! -f $RACHELWWW/art/captiveportal-redirect.php ]]; then
+if [[ ! -f $RACHELWWW/art/RACHELbrandLogo-captive.png ]]; then
 	wget https://github.com/rachelproject/rachelplus/raw/master/captive-portal/RACHELbrandLogo-captive.png -O $RACHELWWW/art/RACHELbrandLogo-captive.png 1>> $RACHELLOG 2>&1
 else
 	print_good "$RACHELWWW/art/RACHELbrandLogo-captive.png exists, skipping."
 fi
-if [[ ! -f $RACHELWWW/art/captiveportal-redirect.php ]]; then
+if [[ ! -f $RACHELWWW/art/HFCbrandLogo-captive.jpg ]]; then
 	wget https://github.com/rachelproject/rachelplus/raw/master/captive-portal/HFCbrandLogo-captive.jpg -O $RACHELWWW/art/HFCbrandLogo-captive.jpg 1>> $RACHELLOG 2>&1
 else
 	print_good "$RACHELWWW/art/HFCbrandLogo-captive.jpg exists, skipping."
 fi
-if [[ ! -f $RACHELWWW/art/captiveportal-redirect.php ]]; then
+if [[ ! -f $RACHELWWW/art/WorldPossiblebrandLogo-captive.png ]]; then
 	wget https://github.com/rachelproject/rachelplus/raw/master/captive-portal/WorldPossiblebrandLogo-captive.png -O $RACHELWWW/art/WorldPossiblebrandLogo-captive.png 1>> $RACHELLOG 2>&1
 else
 	print_good "$RACHELWWW/art/WorldPossiblebrandLogo-captive.png exists, skipping."
