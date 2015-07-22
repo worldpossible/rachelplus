@@ -3,10 +3,12 @@
 # ONELINER Download/Install: sudo wget https://github.com/rachelproject/rachelplus/raw/master/install/cap-rachel-first-install-3.sh -O - | bash 
 
 # Everything below will go to this log directory
+TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
 RACHELLOGDIR="/var/log/RACHEL"
+mkdir -p $RACHELLOGDIR
 RACHELLOGFILE="rachel-install.tmp"
 RACHELLOG="$RACHELLOGDIR/$RACHELLOGFILE"
-exec 1>> $RACHELLOG 2>&1
+exec
 
 function print_good () {
     echo -e "\x1B[01;32m[+]\x1B[0m $1"
@@ -84,6 +86,65 @@ sudo apt-get -y remove --purge mysql-server mysql-client mysql-common
 sudo apt-get -y install mysql-server mysql-client libapache2-mod-auth-mysql php5-mysql
 print_good "Done."
 
-# Start next script
-bash /root/cap-rachel-post-install.sh
+# Clone or update the RACHEL content shell from GitHub
+if [[ ! -d $RACHELWWW ]]; then
+	echo; print_status "Cloning the RACHEL content shell from GitHub."
+	git clone https://github.com/rachelproject/contentshell /media/RACHEL/rachel
+	print_good "Done."
+else
+	echo; print_status "RACHELWWW exists; updating RACHEL content shell from GitHub."
+	cd $RACHELWWW; git pull
+	print_good "Done."
+fi
 
+# Download RACHEL Captive Portal redirect page
+echo; print_status "Downloading Captive Portal content and moving a copy files."
+if [[ ! -f $RACHELWWW/art/captiveportal-redirect.php ]]; then
+	wget https://github.com/rachelproject/rachelplus/raw/master/captive-portal/captiveportal-redirect.php -O $RACHELWWW/captiveportal-redirect.php
+	print_good "Downloaded $RACHELWWW/art/captiveportal-redirect.php."
+else
+	print_good "$RACHELWWW/art/captiveportal-redirect.php exists, skipping."
+fi
+if [[ ! -f $RACHELWWW/art/RACHELbrandLogo-captive.png ]]; then
+	wget https://github.com/rachelproject/rachelplus/raw/master/captive-portal/RACHELbrandLogo-captive.png -O $RACHELWWW/art/RACHELbrandLogo-captive.png
+	print_good "Downloaded $RACHELWWW/art/RACHELbrandLogo-captive.png."
+else
+	print_good "$RACHELWWW/art/RACHELbrandLogo-captive.png exists, skipping."
+fi
+if [[ ! -f $RACHELWWW/art/HFCbrandLogo-captive.jpg ]]; then
+	wget https://github.com/rachelproject/rachelplus/raw/master/captive-portal/HFCbrandLogo-captive.jpg -O $RACHELWWW/art/HFCbrandLogo-captive.jpg
+	print_good "Downloading $RACHELWWW/art/HFCbrandLogo-captive.jpg."
+else
+	print_good "$RACHELWWW/art/HFCbrandLogo-captive.jpg exists, skipping."
+fi
+if [[ ! -f $RACHELWWW/art/WorldPossiblebrandLogo-captive.png ]]; then
+	wget https://github.com/rachelproject/rachelplus/raw/master/captive-portal/WorldPossiblebrandLogo-captive.png -O $RACHELWWW/art/WorldPossiblebrandLogo-captive.png
+	print_good "Downloading $RACHELWWW/art/WorldPossiblebrandLogo-captive.png."
+else
+	print_good "$RACHELWWW/art/WorldPossiblebrandLogo-captive.png exists, skipping."
+fi
+
+# Copy over files needed for Captive Portal redirect to work (these are the same ones used by the CAP)
+if [[ ! -f $RACHELWWW/pass_ticket.shtml && ! -f $RACHELWWW/redirect.shtml ]]; then
+	cp /www/pass_ticket.shtml /www/redirect.shtml $RACHELWWW/.
+else
+	print_good "$RACHELWWW/pass_ticket.shtml and $RACHELWWW/redirect.shtml exist, skipping."
+fi
+print_good "Done."
+
+# Deleting the install script commands
+echo; print_status "Deleting the install scripts."
+rm -f /root/cap-rachel-*
+print_good "Done."
+
+# Add header/date/time to install log file
+sudo mv $RACHELLOG $RACHELLOGDIR/rachel-install-$TIMESTAMP.log
+echo; print_good "Log file saved to: $RACHELLOGDIR/rachel-install-$TIMESTAMP.log"
+print_good "RACHEL CAP Install Complete."
+
+# Reboot
+echo; print_status "I need to reboot; once rebooted, your CAP is ready for RACHEL content."
+echo "Download modules from http://dev.worldpossible.org/mods/"
+echo; print_status "Rebooting in 10 seconds..." 
+sleep 10
+reboot
