@@ -68,7 +68,7 @@ echo "    UK) United Kingdom"
 echo "    SG) Singapore"
 echo "    CN) China (CAP Manufacturer's Site)"
 echo; print_question "For the package downloads, select the location nearest you? "
-select class in "US" "UK" "SG" "CN"; do
+select class in "US" "UK" "SG" "CN"; do <&1
         case $class in
         # US
         US)
