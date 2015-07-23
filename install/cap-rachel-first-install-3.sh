@@ -71,10 +71,19 @@ print_good "Done."
 
 # Enable IP forwarding from 10.10.10.10 to 192.168.88.1 *NOT WORKING*
 #echo 1 > /proc/sys/net/ipv4/ip_forward #might not need this line
+	cat > /root/iptables-rachel.sh << 'EOF'
+#!/bin/bash
+# Add the RACHEL iptables rule to redirect 10.10.10.10 to CAP default of 192.168.88.1
+# Added sleep to wait for CAP rcConf and rcConfd to finish initializing
+#
+sleep 60
 iptables -t nat -A OUTPUT -d 10.10.10.10 -j DNAT --to-destination 192.168.88.1
+EOF
+
 # Add 10.10.10.10 redirect on every reboot
 sudo sed -i '$e echo "# RACHEL iptables - Redirect from 10.10.10.10 to 192.168.88.1"' /etc/rc.local
-sudo sed -i '$e echo "iptables -t nat -A OUTPUT -d 10.10.10.10 -j DNAT --to-destination 192.168.88.1&"' /etc/rc.local
+#sudo sed -i '$e echo "iptables -t nat -A OUTPUT -d 10.10.10.10 -j DNAT --to-destination 192.168.88.1&"' /etc/rc.local
+sudo sed -i '$e echo "bash /root/iptables-rachel.sh&"' /etc/rc.local
 
 # Install MySQL client and server
 echo; print_status "Installing mysql client and server"
@@ -90,13 +99,19 @@ print_good "Done."
 # Clone or update the RACHEL content shell from GitHub
 if [[ ! -d $RACHELWWW ]]; then
 	echo; print_status "Cloning the RACHEL content shell from GitHub."
-	git clone https://github.com/rachelproject/contentshell /media/RACHEL/rachel
-	print_good "Done."
+	git clone https://github.com/rachelproject/contentshell /media/RACHEL
 else
-	echo; print_status "RACHELWWW exists; updating RACHEL content shell from GitHub."
-	cd $RACHELWWW; git pull
-	print_good "Done."
+	if [[ ! -f $RACHELWWW/.git ]]; then
+		echo; print_status "RACHELWWW exists but it wasn't installed from git; installing RACHEL content shell from GitHub."
+		git clone https://github.com/rachelproject/contentshell /media/RACHEL/rachel.contentshell
+		cp -rf /media/RACHEL/rachel.contentshell/* /media/RACHEL/rachel
+		rm -rf /media/RACHEL/rachel.contentshell
+	else
+		echo; print_status "RACHELWWW exists; updating RACHEL content shell from GitHub."
+		cd $RACHELWWW; git pull
+	fi
 fi
+print_good "Done."
 
 # Download RACHEL Captive Portal redirect page
 echo; print_status "Downloading Captive Portal content and moving a copy files."
