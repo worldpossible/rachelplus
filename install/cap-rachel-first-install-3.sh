@@ -117,12 +117,9 @@ print_good "Done."
 
 # Download RACHEL Captive Portal redirect page
 echo; print_status "Downloading Captive Portal content and moving a copy files."
-if [[ ! -f $RACHELWWW/captiveportal-redirect.php ]]; then
-	wget https://github.com/rachelproject/rachelplus/raw/master/captive-portal/captiveportal-redirect.php -O $RACHELWWW/captiveportal-redirect.php
-	print_good "Downloaded $RACHELWWW/captiveportal-redirect.php."
-else
-	print_good "$RACHELWWW/art/captiveportal-redirect.php exists, skipping."
-fi
+wget https://github.com/rachelproject/rachelplus/raw/master/captive-portal/captiveportal-redirect.php -O $RACHELWWW/captiveportal-redirect.php
+print_good "Downloaded $RACHELWWW/captiveportal-redirect.php."
+
 if [[ ! -f $RACHELWWW/art/RACHELbrandLogo-captive.png ]]; then
 	wget https://github.com/rachelproject/rachelplus/raw/master/captive-portal/RACHELbrandLogo-captive.png -O $RACHELWWW/art/RACHELbrandLogo-captive.png
 	print_good "Downloaded $RACHELWWW/art/RACHELbrandLogo-captive.png."
