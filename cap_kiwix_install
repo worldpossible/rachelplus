@@ -35,5 +35,5 @@
 
 #download and install english full wikipedia 
 cd /media/RACHEL/kiwix
-sudo wget http://download.kiwix.org/portable/wikipedia_en_all.zip
+sudo wget http://download.kiwix.org/portable/wikipedia/kiwix-0.9+wikipedia_en_all_2015-05.zip
 
