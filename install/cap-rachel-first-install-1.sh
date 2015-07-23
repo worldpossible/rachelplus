@@ -49,28 +49,36 @@ apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 40976EAF437D05B5
 apt-get clean; apt-get purge; apt-get update
 print_good "Done."
 
-# Repartition external 500GB hard drive into 3 partitions
-echo; print_status "Repartitioning hard drive"
-sgdisk -p /dev/sda
-sgdisk -o /dev/sda
-parted -s /dev/sda mklabel gpt
-sgdisk -n 1:2048:+20G -c 1:"preloaded" -u 1:77777777-7777-7777-7777-777777777777 -t 1:8300 /dev/sda
-sgdisk -n 2:21G:+100G -c 2:"uploaded" -u 2:88888888-8888-8888-8888-888888888888 -t 2:8300 /dev/sda
-sgdisk -n 3:122G:-1M -c 3:"RACHEL" -u 3:99999999-9999-9999-9999-999999999999 -t 3:8300 /dev/sda
-sgdisk -p /dev/sda
-print_good "Done."
+# Check if /media/RACHEL/rachel is already mounted
+if grep -qs '/media/RACHEL' /proc/mounts; then
+	echo; print_status "This hard drive is already partitioned for RACHEL, skipping hard drive repartitioning."
+	echo; print_good "RACHEL CAP Install - Script 1 ended at $(date)"
+	echo; print_good "RACHEL CAP Install - Script 2 skipped (hard drive repartitioning) at $(date)"	
+	bash /root/cap-rachel-first-install-3.sh
+else
+	# Repartition external 500GB hard drive into 3 partitions
+	echo; print_status "Repartitioning hard drive"
+	sgdisk -p /dev/sda
+	sgdisk -o /dev/sda
+	parted -s /dev/sda mklabel gpt
+	sgdisk -n 1:2048:+20G -c 1:"preloaded" -u 1:77777777-7777-7777-7777-777777777777 -t 1:8300 /dev/sda
+	sgdisk -n 2:21G:+100G -c 2:"uploaded" -u 2:88888888-8888-8888-8888-888888888888 -t 2:8300 /dev/sda
+	sgdisk -n 3:122G:-1M -c 3:"RACHEL" -u 3:99999999-9999-9999-9999-999999999999 -t 3:8300 /dev/sda
+	sgdisk -p /dev/sda
+	print_good "Done."
 
-# Add the new RACHEL partition /dev/sda3 to mount on boot
-echo; print_status "Adding /dev/sda3 into /etc/fstab"
-sed -i '/\/dev\/sda3/d' /etc/fstab
-echo -e "/dev/sda3\t/media/RACHEL\t\text4\tauto,nobootwait 0\t0" >> /etc/fstab
-print_good "Done."
+	# Add the new RACHEL partition /dev/sda3 to mount on boot
+	echo; print_status "Adding /dev/sda3 into /etc/fstab"
+	sed -i '/\/dev\/sda3/d' /etc/fstab
+	echo -e "/dev/sda3\t/media/RACHEL\t\text4\tauto,nobootwait 0\t0" >> /etc/fstab
+	print_good "Done."
 
-# Add lines to /etc/rc.local that will start the next script to run on reboot
-sudo sed -i '$e echo "bash \/root\/cap-rachel-first-install-2.sh&"' /etc/rc.local
+	# Add lines to /etc/rc.local that will start the next script to run on reboot
+	sudo sed -i '$e echo "bash \/root\/cap-rachel-first-install-2.sh&"' /etc/rc.local
 
-echo; print_good "RACHEL CAP Install - Script 1 ended at $(date)"
-echo; print_status "I need to reboot; once rebooted, the next script will run automatically."
-print_status "Rebooting in 10 seconds..." 
-sleep 10
-reboot
+	echo; print_good "RACHEL CAP Install - Script 1 ended at $(date)"
+	echo; print_status "I need to reboot; once rebooted, the next script will run automatically."
+	print_status "Rebooting in 10 seconds..."
+	sleep 10
+	reboot
+fi
