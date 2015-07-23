@@ -103,9 +103,11 @@ if [[ ! -d $RACHELWWW ]]; then
 else
 	if [[ ! -f $RACHELWWW/.git ]]; then
 		echo; print_status "RACHELWWW exists but it wasn't installed from git; installing RACHEL content shell from GitHub."
+		rm -rf /media/RACHEL/rachel.contentshell # in case of previous failed install
 		git clone https://github.com/rachelproject/contentshell /media/RACHEL/rachel.contentshell
-		cp -rf /media/RACHEL/rachel.contentshell/* /media/RACHEL/rachel
-		rm -rf /media/RACHEL/rachel.contentshell
+		cp -rf /media/RACHEL/rachel.contentshell/* /media/RACHEL/rachel # overwrite current content with contentshell
+		cp -rf /media/RACHEL/rachel.contentshell/.git /media/RACHEL/rachel/ # copy over GitHub files
+		rm -rf /media/RACHEL/rachel.contentshell # remove contentshell temp folder
 	else
 		echo; print_status "RACHELWWW exists; updating RACHEL content shell from GitHub."
 		cd $RACHELWWW; git pull
