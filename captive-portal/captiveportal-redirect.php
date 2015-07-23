@@ -30,6 +30,8 @@
 <div id="wrap">
     <div id="center_col" style='text-align:center'>
 	</br>
+	<h2>Click the RACHEL banner below to begin.</h2>
+	</br>
         <a href="http://<? echo $_SERVER["SERVER_ADDR"]; ?>/index.php" target="_blank"><img src="http://<? echo $_SERVER["SERVER_ADDR"]; ?>/art/RACHELbrandLogo-captive.png" /></a>
 	</br>
 	<h2>The World's best educational resources,</br>neatly packaged together for download and distribution</br>in places without internet.</h2>
