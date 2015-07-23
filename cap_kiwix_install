@@ -35,5 +35,13 @@
 
 #download and install english full wikipedia 
 cd /media/RACHEL/kiwix
-sudo wget http://download.kiwix.org/portable/wikipedia/kiwix-0.9+wikipedia_en_all_2015-05.zip
+wget http://download.kiwix.org/portable/wikipedia/kiwix-0.9+wikipedia_en_all_2015-05.zip
+unzip kiwix-0.9+wikipedia_en_all_2015-05.zip
+#or 
+wget http://download.kiwix.org/portable/wikipedia/kiwix-0.9+wikipedia_en_for-schools_2013-01.zip
+unzip kiwix-0.9+wikipedia_en_for-schools_2013-01.zip
 
+#Remove every directory except 
+rm -rf autorun dvd install kiwix.exe  Kiwix.app kiwix autorun.inf kiwix-linux.tar.bz2  kiwix-0.9-src.tar.xz
+
+# add entry to library.xml
