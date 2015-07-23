@@ -139,9 +139,10 @@ echo; print_status "Directory of RACHEL install log files with date/time stamps:
 echo "$RACHELLOGDIR" | tee -a $RACHELLOG
 
 # Ask if you are ready to install
-echo; print_question "WARNING: This process will destroy all content on /media/RACHEL" | tee -a $RACHELLOG
+echo; print_question "NOTE: If /media/RACHEL/rachel folder exists, it will NOT destroy any content." | tee -a $RACHELLOG
+echo "It will update the contentshell files with the latest ones from GitHub." | tee -a $RACHELLOG
 
-read -p "Are you ready to start the install? (y/n) " -r <&1
+echo; read -p "Are you ready to start the install? (y/n) " -r <&1
 if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
 	echo; print_status "Starting first install script...please wait patiently (about 30 secs) for first reboot." | tee -a $RACHELLOG
 	print_status "The entire script (with reboots) takes 2-5 minutes." | tee -a $RACHELLOG
