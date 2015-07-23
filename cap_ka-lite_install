@@ -1,0 +1,42 @@
+#install ka-lite
+# Bernd 22 July 2016
+
+ # Let's install under /var 
+ cd /var
+  su
+  git clone --recursive https://github.com/learningequality/ka-lite.git
+  cd ka-lite
+  
+  #assuming the assessmentitems.json is on a USB drive called USB
+  cp /media/USB/assessmentitems.json  /var/ka-lite/data/khan
+	
+  ./setup_unix.sh
+  #user: rachel 
+  #password (x2):rachel; name and describe server as desired
+  #no - download exercise pack
+  #no - not already downloaded
+  #no - do not start at boot 
+  
+#configure ka-lite
+  cd /var/ka-lite/kalite
+  nano local_settings.py
+  #this file will be blank - put this in the file and save
+  CONTENT_ROOT = "/media/RACHEL/kacontent/"
+
+
+  mkdir -p /media/RACHEL/kacontent
+  cd /media/RACHEL/kacontent/
+   
+     #assuming the ka-lite_content.zip is on a USB drive called USB
+    unzip  /media/uploaded/data-khan/ka-lite_content.zip
+	cd content
+	mv -- * ..
+	
+	
+	#still need to figure out how to have ka-lite start at boot time, neither sticking it into /etc/rc.local nor adding it to /etc/init.d seems to work
+	/var/ka-lite/bin/kalite start
+	
+	#Login at http://xxx.xxx.xxx.xxx:8008" and register device
+
+	
+  
