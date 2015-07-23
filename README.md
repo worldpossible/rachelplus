@@ -9,9 +9,11 @@ RACHEL Configuration on Intel CAP
 3. MPT upgrade to Firmware 1.2.10_root
 
 ## RACHEL initial setup script for Intel CAP
-Running the following script will configure the Intel CAP hardware up to the point where you can start loading content onto that harddrive (into the folder /media/RACHEL/rachel)
+Running the following script will configure the Intel CAP hardware up to the point where you can start loading content onto that harddrive (into the folder /media/RACHEL/rachel).  
+NOTE:  COPY/PASTE BOTH LINES into your CAP shell/console
 ```bash
-wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install.sh -O - | bash 
+wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install.sh \
+-O /root/cap-rachel-first-install.sh; bash cap-rachel-first-install.sh
 ```
 
 ## Add RACHEL content
