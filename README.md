@@ -12,8 +12,8 @@ RACHEL Configuration on Intel CAP
 Running the following script will configure the Intel CAP hardware up to the point where you can start loading content onto that harddrive (into the folder /media/RACHEL/rachel).  
 NOTE:  COPY/PASTE BOTH LINES into your CAP shell/console
 ```bash
-wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-first-install.sh \
--O /root/cap-rachel-first-install.sh; bash cap-rachel-first-install.sh
+wget https://github.com/rachelproject/rachelplus/raw/master/cap-rachel-configure.sh \
+-O /root/cap-rachel-configure.sh; bash cap-rachel-configure.sh
 ```
 
 ## Add RACHEL content
