@@ -3,7 +3,7 @@
 # Bernd 22 July 2016
 
 # FILE: cap-kalite-install.sh
-# ONELINER Download/Install: sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap_ka-lite_install.sh -O /root/cap_ka-lite_install.sh; bash cap_ka-lite_install.sh
+# ONELINER Download/Install: sudo wget https://github.com/rachelproject/rachelplus/raw/master/cap-ka-lite-install.sh -O /root/cap-ka-lite-install.sh; bash cap_ka-lite_install.sh
 
 # Everything below will go to this log directory
 TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
