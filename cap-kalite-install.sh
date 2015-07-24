@@ -86,8 +86,12 @@ cd /media/RACHEL/kacontent/
 #cd content
 #mv -- * ..
 
+# Delete previous setup commands from the /etc/rc.local
+sudo sed -i '/ka-lite/d' /etc/rc.local
+sudo sed -i '/sleep 20/d' /etc/rc.local
+
 # Start KA Lite at boot time
-sudo sed -i '$e echo "# Start KA Lite at boot time"' /etc/rc.local
+sudo sed -i '$e echo "# Start ka-lite at boot time"' /etc/rc.local
 sudo sed -i '$e echo "sleep 20"' /etc/rc.local
 sudo sed -i '$e echo "/var/ka-lite/bin/kalite start"' /etc/rc.local
 print_good "Done."
