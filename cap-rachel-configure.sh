@@ -68,9 +68,13 @@ fi
 cd $INSTALLTMPDIR
 
 function reboot-CAP () {
-    echo; print_status "I need to reboot; once rebooted, the next script will run automatically." | tee -a $RACHELLOG
+    echo; print_status "I need to reboot; new installs will reboot twice more automatically." | tee -a $RACHELLOG
+    echo; print_status "The file, $RACHELLOG, will be renamed to a dated log file when the script is complete." | tee -a $RACHELLOG
     print_status "Rebooting in 10 seconds..." | tee -a $RACHELLOG
-    sleep 10 1>> $RACHELLOG 2>&1
+    # Progress bar to visualize wait period
+    while true;do echo -n .;sleep 1;done & 
+    sleep 10
+    kill $!; trap 'kill $!' SIGTERM
     reboot 1>> $RACHELLOG 2>&1
 }
 
@@ -91,7 +95,7 @@ function new_install () {
 
     # Delete previous setup commands from the /etc/rc.local
     echo; print_status "Delete previous RACHEL setup commands from /etc/rc.local" | tee -a $RACHELLOG
-    sudo sed -i '/cap-rachel/d' /etc/rc.local 1>> $RACHELLOG 2>&1
+    sed -i '/cap-rachel/d' /etc/rc.local 1>> $RACHELLOG 2>&1
     print_good "Done." | tee -a $RACHELLOG
 
     ## sources.list - replace the package repos for more reliable ones (/etc/apt/sources.list)
@@ -110,25 +114,25 @@ function new_install () {
         # US
         US)
             echo; print_status "Downloading packages from the United States." | tee -a $RACHELLOG
-            sudo wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/sources.list/sources-us.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1
+            wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/sources.list/sources-us.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1
         ;;
 
         # UK
         UK)
             echo; print_status "Downloading packages from the United Kingdom." | tee -a $RACHELLOG
-            sudo wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/sources.list/sources-uk.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1
+            wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/sources.list/sources-uk.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1
         ;;
 
         # Singapore
         SG)
             echo; print_status "Downloading packages from Singapore." | tee -a $RACHELLOG
-            sudo wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/sources.list/sources-sg.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1
+            wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/sources.list/sources-sg.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1
         ;;
 
         # China (Original)
         CN)
             echo; print_status "Downloading packages from the China - CAP manufacturer's website." | tee -a $RACHELLOG
-            sudo wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/sources.list/sources-sohu.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1
+            wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/sources.list/sources-sohu.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1
         ;;
         esac
         print_good "Done." | tee -a $RACHELLOG
@@ -322,12 +326,16 @@ function ka-lite_install () {
 
     # Linux setup of KA Lite
     echo; print_status "Use the following inputs when answering the setup questions:" | tee -a $RACHELLOG
+    echo "For previous installs:"
+    echo "Keep database file - yes (if you want to keep your progress data)"
+    echo "Keep database file - no (if you want to destroy your progress data and start over)"
+    echo; echo "For new/previous installs:"
     echo "User - rachel"  | tee -a $RACHELLOG
     echo "Password (x2) - rachel" | tee -a $RACHELLOG
     echo "Name and describe server as desired" | tee -a $RACHELLOG
-    echo "Download exercise pack? No" | tee -a $RACHELLOG
-    echo "Already downloaded? No" | tee -a $RACHELLOG
-    echo "Start at boot? N" | tee -a $RACHELLOG
+    echo "Download exercise pack? no" | tee -a $RACHELLOG
+    echo "Already downloaded? no" | tee -a $RACHELLOG
+    echo "Start at boot? n" | tee -a $RACHELLOG
     echo
     $KALITEDIR/setup_unix.sh
 
@@ -352,8 +360,8 @@ function ka-lite_install () {
             echo "Copying content from $KALITECONTENT to $KALITEDIR." | tee -a $RACHELLOG
             unzip -c $KALITECONTENT -d /media/RACHEL/ 1>> $RACHELLOG 2>&1
         else
-            echo; print_error "User exited the KA Lite content setup." | tee -a $RACHELLOG
-            print_error "You can download the content folder to $KALITEDIR at a later time." | tee -a $RACHELLOG
+            echo; print_error "You can download the content folder to $KALITEDIR at a later time." | tee -a $RACHELLOG
+            print_error "Not installing the KA Lite content; moving on." | tee -a $RACHELLOG
         fi
     fi
 
