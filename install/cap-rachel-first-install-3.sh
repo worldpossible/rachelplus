@@ -99,17 +99,17 @@ print_good "Done."
 # Clone or update the RACHEL content shell from GitHub
 if [[ ! -d $RACHELWWW ]]; then
 	echo; print_status "Cloning the RACHEL content shell from GitHub."
-	git clone https://github.com/rachelproject/contentshell /media/RACHEL
+	git clone https://github.com/rachelproject/contentshell /media/RACHEL/rachel
 else
 	if [[ ! -d $RACHELWWW/.git ]]; then
-		echo; print_status "RACHELWWW exists but it wasn't installed from git; installing RACHEL content shell from GitHub."
+		echo; print_status "$RACHELWWW exists but it wasn't installed from git; installing RACHEL content shell from GitHub."
 		rm -rf /media/RACHEL/rachel.contentshell # in case of previous failed install
 		git clone https://github.com/rachelproject/contentshell /media/RACHEL/rachel.contentshell
 		cp -rf /media/RACHEL/rachel.contentshell/* /media/RACHEL/rachel # overwrite current content with contentshell
 		cp -rf /media/RACHEL/rachel.contentshell/.git /media/RACHEL/rachel/ # copy over GitHub files
 		rm -rf /media/RACHEL/rachel.contentshell # remove contentshell temp folder
 	else
-		echo; print_status "RACHELWWW exists; updating RACHEL content shell from GitHub."
+		echo; print_status "$RACHELWWW exists; updating RACHEL content shell from GitHub."
 		cd $RACHELWWW; git pull
 	fi
 fi
