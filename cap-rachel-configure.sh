@@ -335,14 +335,14 @@ function ka-lite_install () {
 
     # Linux setup of KA Lite
     echo; print_status "Use the following inputs when answering the setup questions:" | tee -a $RACHELLOG
-    echo; echo "For new installs:"
+    echo; print_question "For new installs:"
     echo "User - rachel"  | tee -a $RACHELLOG
     echo "Password (x2) - rachel" | tee -a $RACHELLOG
     echo "Name and describe server as desired" | tee -a $RACHELLOG
     echo "Download exercise pack? no" | tee -a $RACHELLOG
     echo "Already downloaded? no" | tee -a $RACHELLOG
     echo "Start at boot? n" | tee -a $RACHELLOG
-    echo; echo "For previous installs:"
+    echo; print_question "For previous installs:"
     echo "Keep database file - yes (if you want to keep your progress data)"
     echo "Keep database file - no (if you want to destroy your progress data and start over)"
     echo "Download exercise pack? no" | tee -a $RACHELLOG
@@ -363,6 +363,7 @@ function ka-lite_install () {
     if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
         echo; print_status "Downloading ka-lite_content.zip into /media/RACHEL folder."
         wget -c http://rachelfriends.org/z-holding/ka-lite_content.zip -O /media/RACHEL/ka-lite_content.zip
+        print_status "Unzipping the archive to the correct folder...be patient, this takes awhile."
         unzip -u /media/RACHEL/ka-lite_content.zip -d /media/RACHEL/ 1>> $RACHELLOG 2>&1
         mv /media/RACHEL/content /media/RACHEL/kacontent 1>> $RACHELLOG 2>&1
     else
