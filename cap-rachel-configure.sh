@@ -70,11 +70,20 @@ cd $INSTALLTMPDIR
 function reboot-CAP () {
     echo; print_status "I need to reboot; new installs will reboot twice more automatically." | tee -a $RACHELLOG
     echo; print_status "The file, $RACHELLOG, will be renamed to a dated log file when the script is complete." | tee -a $RACHELLOG
-    print_status "Rebooting in 10 seconds..." | tee -a $RACHELLOG
+    print_status "Rebooting in 10 seconds...Ctrl-C to cancel reboot." | tee -a $RACHELLOG
     # Progress bar to visualize wait period
-    while true;do echo -n .;sleep 1;done & 
+    # trap ctrl-c and call ctrl_c()
+    trap ctrl_c INT
+    function ctrl_c() {
+        kill $!; trap 'kill $1' SIGTERM
+        echo; print_error "Cancelled by user."
+        echo; exit 1
+    }
+    while true; do
+        echo -n .; sleep 1
+    done & 
     sleep 10
-    kill $!; trap 'kill $!' SIGTERM
+    kill $!; trap 'kill $!' SIGTERM   
     reboot 1>> $RACHELLOG 2>&1
 }
 
@@ -326,13 +335,16 @@ function ka-lite_install () {
 
     # Linux setup of KA Lite
     echo; print_status "Use the following inputs when answering the setup questions:" | tee -a $RACHELLOG
-    echo "For previous installs:"
-    echo "Keep database file - yes (if you want to keep your progress data)"
-    echo "Keep database file - no (if you want to destroy your progress data and start over)"
-    echo; echo "For new/previous installs:"
+    echo; echo "For new installs:"
     echo "User - rachel"  | tee -a $RACHELLOG
     echo "Password (x2) - rachel" | tee -a $RACHELLOG
     echo "Name and describe server as desired" | tee -a $RACHELLOG
+    echo "Download exercise pack? no" | tee -a $RACHELLOG
+    echo "Already downloaded? no" | tee -a $RACHELLOG
+    echo "Start at boot? n" | tee -a $RACHELLOG
+    echo; echo "For previous installs:"
+    echo "Keep database file - yes (if you want to keep your progress data)"
+    echo "Keep database file - no (if you want to destroy your progress data and start over)"
     echo "Download exercise pack? no" | tee -a $RACHELLOG
     echo "Already downloaded? no" | tee -a $RACHELLOG
     echo "Start at boot? n" | tee -a $RACHELLOG
