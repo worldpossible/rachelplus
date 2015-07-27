@@ -314,9 +314,9 @@ function repair () {
     echo -e "/dev/sda3\t/media/RACHEL\t\text4\tauto,nobootwait 0\t0" >> /etc/fstab
     print_good "Done." | tee -a $RACHELLOG
 
+    echo; print_good "Log file saved to: $RACHELLOGDIR/rachel-repair-$TIMESTAMP.log" | tee -a $RACHELLOG
+    print_good "RACHEL CAP Repair Complete." | tee -a $RACHELLOG
     sudo mv $RACHELLOG $RACHELLOGDIR/rachel-repair-$TIMESTAMP.log
-    echo; print_good "Log file saved to: $RACHELLOGDIR/rachel-repair-$TIMESTAMP.log"
-    print_good "RACHEL CAP Repair Complete."
     cleanup
     reboot-CAP
 }
@@ -494,7 +494,8 @@ function ka-lite_install () {
     echo "Already downloaded? no" | tee -a $RACHELLOG
     echo "Start at boot? n" | tee -a $RACHELLOG
     echo
-
+    $KALITEDIR/setup_unix.sh
+    
     # Configure ka-lite
     echo; print_status "Configuring KA Lite." | tee -a $RACHELLOG
     sed -i '/CONTENT_ROOT/d' /var/ka-lite/kalite/local_settings.py 1>> $RACHELLOG 2>&1
@@ -537,9 +538,10 @@ function ka-lite_install () {
 
     # Add RACHEL IP
     echo; print_good "Login using wifi at http://192.168.88.1:8008 and register device." | tee -a $RACHELLOG
+    echo "After you register, click the new tab called 'Manage', then 'Videos' and download all the missing videos." | tee -a $RACHELLOG
+    echo; print_good "Log file saved to: $RACHELLOGDIR/rachel-kalite-$TIMESTAMP.log" | tee -a $RACHELLOG
+    print_good "KA Lite Install Complete." | tee -a $RACHELLOG
     mv $RACHELLOG $RACHELLOGDIR/rachel-kalite-$TIMESTAMP.log
-    echo; print_good "Log file saved to: $RACHELLOGDIR/rachel-kalite-$TIMESTAMP.log"
-    print_good "KA Lite Install Complete."
 
     # Reboot CAP
     cleanup
@@ -549,7 +551,7 @@ function ka-lite_install () {
 # Loop function to redisplay menu
 function whattodo {
     echo; echo "[?] What would you like to do next?"
-    echo "1)New Install  2)Repair Install  3)Content Install  4)Install KA Lite  5)Exit"
+    echo "1)New Install  2)Repair CAP  3)Install Content  4)Install KA Lite  5)Exit"
 }
 
 ## MAIN MENU
