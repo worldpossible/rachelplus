@@ -74,9 +74,11 @@ function reboot-CAP () {
     # Progress bar to visualize wait period
     # trap ctrl-c and call ctrl_c()
     trap ctrl_c INT
-    function ctrl_c() {
+    function ctrl_c () {
         kill $!; trap 'kill $1' SIGTERM
         echo; print_error "Cancelled by user."
+        rm $RACHELLOG
+        cleanup
         echo; exit 1
     }
     while true; do
@@ -313,6 +315,90 @@ function repair () {
     reboot-CAP
 }
 
+function content_install () {
+    # Add header/date/time to install log file
+    echo; print_good "RACHEL Content Install Script - Version $(date +%m%d%y%H%M)" | tee -a $RACHELLOG
+    print_good "Install started: $(date)" | tee -a $RACHELLOG   
+    echo; print_error "WARNING:  This will download the core ENGLISH material for RACHEL.  This process may take quite awhile if you do you not have a fast network connection."
+    echo; echo "If you get disconnected, you only have to rerun this install again to continue.  It will not re-download content already on the CAP."
+
+    # Change the source repositories
+    echo; print_question "What language would you like to download content for? " | tee -a $RACHELLOG
+    echo; select class in "English" "Español" "Français" "Português" "Exit"; do
+        case $class in
+        English)
+            # Great Books of the World
+            rsync -avz rsync://dev.worldpossible.org/rachelmods/ebooks-en /media/RACHEL/rachel/modules/
+            # Hesperian Health Guides
+            rsync -avz rsync://dev.worldpossible.org/rachelmods/hesperian_health /media/RACHEL/rachel/modules/ 
+            # UNESCO's IICBA Electronic Library
+            rsync -avz rsync://dev.worldpossible.org/rachelmods/iicba /media/RACHEL/rachel/modules/
+            # Infonet-Biovision
+            rsync -avz rsync://dev.worldpossible.org/rachelmods/infonet /media/RACHEL/rachel/modules/
+            # Khan Academy
+            rsync -av rsync://dev.worldpossible.org/rachelmods/kaos-en /media/RACHEL/rachel/modules/
+            # Khan Academy Health & Medicine
+            rsync -avz rsync://dev.worldpossible.org/rachelmods/khan_health /media/RACHEL/rachel/modules/
+            # Math Expression
+            rsync -avz rsync://dev.worldpossible.org/rachelmods/math_expression /media/RACHEL/rachel/modules/
+            # MedlinePlus Medical Encyclopedia
+            rsync -avz rsync://dev.worldpossible.org/rachelmods/medline_plus /media/RACHEL/rachel/modules/
+            # Music Theory
+            rsync -avz rsync://dev.worldpossible.org/rachelmods/musictheory /media/RACHEL/rachel/modules/
+            # OLPC Educational Packages
+            rsync -avz rsync://dev.worldpossible.org/rachelmods/olpc /media/RACHEL/rachel/modules/
+            # Powertyping
+            rsync -avz rsync://dev.worldpossible.org/rachelmods/powertyping /media/RACHEL/rachel/modules/
+            # Practical Action
+            rsync -avz rsync://dev.worldpossible.org/rachelmods/practical_action /media/RACHEL/rachel/modules/
+            # MIT Scratch
+            rsync -avz rsync://dev.worldpossible.org/rachelmods/scratch /media/RACHEL/rachel/modules/
+            # Understanding Algebra
+            rsync -avz rsync://dev.worldpossible.org/rachelmods/understanding_algebra /media/RACHEL/rachel/modules/
+            # Wikipedia for Schools
+            rsync -avz rsync://dev.worldpossible.org/rachelmods/wikipedia_for_schools /media/RACHEL/rachel/modules/
+            # CK-12 Textbooks
+            rsync -avz rsync://dev.worldpossible.org/rachelmods/ck12 /media/RACHEL/rachel/modules/
+            # Rasp Pi User Guide
+            rsync -avz rsync://dev.worldpossible.org/rachelmods/rpi_guide /media/RACHEL/rachel/modules/
+            # Windows Applications
+            rsync -avz rsync://dev.worldpossible.org/rachelmods/windows_apps /media/RACHEL/rachel/modules/
+            # Medical Information
+            rsync -avz rsync://dev.worldpossible.org/rachelmods/asst_medical /media/RACHEL/rachel/modules/
+        ;;
+        Español)
+            # Grandes Libros del Mundo
+            rsync -avz rsync://dev.worldpossible.org/rachelmods/ebooks-es /media/RACHEL/rachel/modules/
+            # Khan Academy
+            rsync -av rsync://dev.worldpossible.org/rachelmods/kaos-es /media/RACHEL/rachel/modules/
+            # Aplicaciones Didacticas
+            rsync -avz rsync://dev.worldpossible.org/rachelmods/ap_didact /media/RACHEL/rachel/modules/
+            # Currículum Nacional Base Guatemala
+            rsync -avz rsync://dev.worldpossible.org/rachelmods/cnbguatemala /media/RACHEL/rachel/modules/
+        ;;
+        Français)
+            # Khan Academy
+            rsync -av rsync://dev.worldpossible.org/rachelmods/kaos-fr /media/RACHEL/rachel/modules/
+        ;;
+        Português)
+            # Khan Academy
+            rsync -av rsync://dev.worldpossible.org/rachelmods/kaos-pt /media/RACHEL/rachel/modules/
+        ;;
+        Exit)
+            cleanup
+            exit 1
+        ;;
+        esac
+        print_good "Done." | tee -a $RACHELLOG
+        break
+    done
+    cleanup
+    mv $RACHELLOG $RACHELLOGDIR/rachel-kalite-$TIMESTAMP.log
+    echo; print_good "Log file saved to: $RACHELLOGDIR/rachel-content-$TIMESTAMP.log" | tee -a $RACHELLOG
+    print_good "KA Lite Content Install Complete." | tee -a $RACHELLOGecho
+    echo; print_good "Refresh the RACHEL homepage to view your new content."
+}
+
 function ka-lite_install () {
     # Add header/date/time to install log file
     echo; print_good "KA Lite Install Script - Version $(date +%m%d%y%H%M)" | tee -a $RACHELLOG
@@ -405,17 +491,18 @@ function ka-lite_install () {
 # Loop function to redisplay menu
 function whattodo {
     echo; echo "[?] What would you like to do next?"
-    echo "1)New Install  2)Repair Install  3)Install KA Lite  4)Exit"
+    echo "1)New Install  2)Repair Install  3)Content Install  4)Install KA Lite  5)Exit"
 }
 
 ## MAIN MENU
 echo; print_question "What you would like to do:" | tee -a $RACHELLOG
 echo "  - New [Install] RACHEL on a CAP" | tee -a $RACHELLOG
 echo "  - [Repair] an install of a CAP after a firmware upgrade" | tee -a $RACHELLOG
+echo "  - Install/Update RACHEL [Content]" | tee -a $RACHELLOG
 echo "  - Install [KA-Lite]" | tee -a $RACHELLOG
 echo "  - [Exit] the installation script" | tee -a $RACHELLOG
 echo
-select menu in "Install" "Repair" "KA-Lite" "Exit"; do
+select menu in "Install" "Repair" "Content" "KA-Lite" "Exit"; do
         case $menu in
         Install)
         new_install
@@ -424,6 +511,11 @@ select menu in "Install" "Repair" "KA-Lite" "Exit"; do
 
         Repair)
         repair
+        whattodo
+        ;;
+
+        Content)
+        content_install
         whattodo
         ;;
 
