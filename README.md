@@ -9,7 +9,7 @@ RACHEL Configuration on Intel CAP
 3. MPT upgrade to Firmware 1.2.10_root
 
 ## RACHEL initial setup script for Intel CAP
-Running the following script will configure the Intel CAP hardware up to the point where you can start loading content onto that harddrive (into the folder /media/RACHEL/rachel).  
+Running the following script will configure the Intel CAP hardware up to the point where you can start loading content onto that harddrive (into the folder /media/RACHEL/rachel).  At the moment, this script provides the ability to: (1) install RACHEL to a new CAP; (2) repair RACHEL after firmware upgrade; (3) install all available content for a paticular language, and (4) install KA Lite (BETA).
 NOTE:  COPY/PASTE BOTH LINES into your CAP shell/console
 ```bash
 wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/cap-rachel-configure.sh \
@@ -18,3 +18,5 @@ wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/cap-rache
 
 ## Add RACHEL content
 The "shell" (mostly CSS, HTML, rsphider, and _h5ai) for RACHEL content is available at https://github.com/rachelproject/contentshell
+
+Use script (above) option to download all content for a specific language.
