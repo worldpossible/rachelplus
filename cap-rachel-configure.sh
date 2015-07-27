@@ -411,6 +411,22 @@ function content_install () {
             echo; print_status "Syncing 'Medical Information'." | tee -a $RACHELLOG
             rsync -avz rsync://dev.worldpossible.org/rachelmods/asst_medical /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
+            # PhET
+            echo; print_status "Syncing 'PhET'." | tee -a $RACHELLOG
+            rsync -avz rsync://dev.worldpossible.org/rachelmods/PhET /media/RACHEL/rachel/modules/ 
+            print_good "Done." | tee -a $RACHELLOG
+            # TED
+            echo; print_status "Syncing 'TED'." | tee -a $RACHELLOG
+            rsync -avz rsync://dev.worldpossible.org/rachelmods/TED /media/RACHEL/rachel/modules/ 
+            print_good "Done." | tee -a $RACHELLOG
+            # GCF - NOT WORKING AT THE MOMENT
+            #echo; print_status "Syncing 'GCF'." | tee -a $RACHELLOG
+            #sync -avz rsync://dev.worldpossible.org/rachelmods/GCF /media/RACHEL/rachel/modules/ 
+            #print_good "Done." | tee -a $RACHELLOG
+            # radiolab
+            echo; print_status "Syncing 'radiolab'." | tee -a $RACHELLOG
+            rsync -avz rsync://dev.worldpossible.org/rachelmods/radiolab /media/RACHEL/rachel/modules/ 
+            print_good "Done." | tee -a $RACHELLOG
             break
         ;;
         Español)
@@ -495,7 +511,7 @@ function ka-lite_install () {
     echo "Start at boot? n" | tee -a $RACHELLOG
     echo
     $KALITEDIR/setup_unix.sh
-    
+
     # Configure ka-lite
     echo; print_status "Configuring KA Lite." | tee -a $RACHELLOG
     sed -i '/CONTENT_ROOT/d' /var/ka-lite/kalite/local_settings.py 1>> $RACHELLOG 2>&1
