@@ -197,27 +197,6 @@ function new_install () {
         print_good "$RACHELWWW/art/WorldPossiblebrandLogo-captive.png exists, skipping." | tee -a $RACHELLOG
     fi
 
-    # Clone or update the RACHEL content shell from GitHub
-    echo; print_status "Checking for pre-existing RACHEL content." | tee -a $RACHELLOG
-    if [[ ! -d $RACHELWWW ]]; then
-        echo; print_status "RACHEL content does not exist at $RACHELWWW." | tee -a $RACHELLOG
-        echo; print_status "Cloning the RACHEL content shell from GitHub." | tee -a $RACHELLOG
-        git clone https://github.com/rachelproject/contentshell $INSTALLTMPDIR/contentshell 1>> $RACHELLOG 2>&1
-    else
-        if [[ ! -d $RACHELWWW/.git ]]; then
-            echo; print_status "$RACHELWWW exists but it wasn't installed from git; installing RACHEL content shell from GitHub." | tee -a $RACHELLOG
-            rm -rf /media/RACHEL/rachel.contentshell 1>> $RACHELLOG 2>&1 # in case of previous failed install
-            git clone https://github.com/rachelproject/contentshell /media/RACHEL/rachel.contentshell 1>> $RACHELLOG 2>&1
-            cp -rf /media/RACHEL/rachel.contentshell/* /media/RACHEL/rachel 1>> $RACHELLOG 2>&1 # overwrite current content with contentshell
-            cp -rf /media/RACHEL/rachel.contentshell/.git /media/RACHEL/rachel/ 1>> $RACHELLOG 2>&1 # copy over GitHub files
-            rm -rf /media/RACHEL/rachel.contentshell 1>> $RACHELLOG 2>&1 # remove contentshell temp folder
-        else
-            echo; print_status "$RACHELWWW exists; updating RACHEL content shell from GitHub." | tee -a $RACHELLOG
-            cd $RACHELWWW; git pull 1>> $RACHELLOG 2>&1
-        fi
-    fi
-    print_good "Done." | tee -a $RACHELLOG
-
     # Show location of the log file
     echo; print_status "Directory of RACHEL install log files with date/time stamps:" | tee -a $RACHELLOG
     echo "$RACHELLOGDIR" | tee -a $RACHELLOG
@@ -239,10 +218,31 @@ function new_install () {
         print_good "Done."
 
         # Install packages
-        echo; print_status "Installing PHP" | tee -a $RACHELLOG
+        echo; print_status "Installing Git and PHP" | tee -a $RACHELLOG
         apt-get -y install php5-cgi git-core python-m2crypto 1>> $RACHELLOG 2>&1
         # Add the following line at the end of file
         echo "cgi.fix_pathinfo = 1" >> /etc/php5/cgi/php.ini
+        print_good "Done." | tee -a $RACHELLOG
+
+        # Clone or update the RACHEL content shell from GitHub
+        echo; print_status "Checking for pre-existing RACHEL content." | tee -a $RACHELLOG
+        if [[ ! -d $RACHELWWW ]]; then
+            echo; print_status "RACHEL content does not exist at $RACHELWWW." | tee -a $RACHELLOG
+            echo; print_status "Cloning the RACHEL content shell from GitHub." | tee -a $RACHELLOG
+            git clone https://github.com/rachelproject/contentshell $INSTALLTMPDIR/contentshell 1>> $RACHELLOG 2>&1
+        else
+            if [[ ! -d $RACHELWWW/.git ]]; then
+                echo; print_status "$RACHELWWW exists but it wasn't installed from git; installing RACHEL content shell from GitHub." | tee -a $RACHELLOG
+                rm -rf /media/RACHEL/rachel.contentshell 1>> $RACHELLOG 2>&1 # in case of previous failed install
+                git clone https://github.com/rachelproject/contentshell /media/RACHEL/rachel.contentshell 1>> $RACHELLOG 2>&1
+                cp -rf /media/RACHEL/rachel.contentshell/* /media/RACHEL/rachel 1>> $RACHELLOG 2>&1 # overwrite current content with contentshell
+                cp -rf /media/RACHEL/rachel.contentshell/.git /media/RACHEL/rachel/ 1>> $RACHELLOG 2>&1 # copy over GitHub files
+                rm -rf /media/RACHEL/rachel.contentshell 1>> $RACHELLOG 2>&1 # remove contentshell temp folder
+            else
+                echo; print_status "$RACHELWWW exists; updating RACHEL content shell from GitHub." | tee -a $RACHELLOG
+                cd $RACHELWWW; git pull 1>> $RACHELLOG 2>&1
+            fi
+        fi
         print_good "Done." | tee -a $RACHELLOG
 
         # Install MySQL client and server
