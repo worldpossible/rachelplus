@@ -542,6 +542,11 @@ function ka-lite_install () {
         fi
     fi
 
+    # Install module for RACHEL index.php
+    echo; print_status "Syncing 'KA Lite module'." | tee -a $RACHELLOG
+    rsync -av rsync://dev.worldpossible.org/rachelmods/ka-lite /media/RACHEL/rachel/modules/
+    print_good "Done." | tee -a $RACHELLOG
+
     # Delete previous setup commands from the /etc/rc.local
     sudo sed -i '/ka-lite/d' /etc/rc.local 1>> $RACHELLOG 2>&1
     sudo sed -i '/sleep 20/d' /etc/rc.local 1>> $RACHELLOG 2>&1
