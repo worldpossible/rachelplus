@@ -69,21 +69,22 @@ fi
 # Change directory into $INSTALLTMPDIR
 cd $INSTALLTMPDIR
 
+function ctrl_c () {
+    kill $!; trap 'kill $1' SIGTERM
+    echo; print_error "Cancelled by user."
+    rm $RACHELLOG
+    cleanup
+    echo; exit 1
+}
+
 function reboot-CAP () {
+    trap ctrl_c INT
     # No log as it won't clean up the tmp file
     echo; print_status "I need to reboot; new installs will reboot twice more automatically."
     echo; print_status "The file, $RACHELLOG, will be renamed to a dated log file when the script is complete."
     print_status "Rebooting in 10 seconds...Ctrl-C to cancel reboot."
     # Progress bar to visualize wait period
     # trap ctrl-c and call ctrl_c()
-    trap ctrl_c INT
-    function ctrl_c () {
-        kill $!; trap 'kill $1' SIGTERM
-        echo; print_error "Cancelled by user."
-        rm $RACHELLOG
-        cleanup
-        echo; exit 1
-    }
     while true; do
         echo -n .; sleep 1
     done & 
@@ -101,6 +102,7 @@ function cleanup () {
 }
 
 function new_install () {
+    trap ctrl_c INT
     print_header
     echo; print_status "Conducting a new install of RACHEL on a CAP."
 
@@ -322,6 +324,7 @@ function repair () {
 }
 
 function content_install () {
+    trap ctrl_c INT
     print_header
     echo; print_status "Installing RACHEL content." | tee -a $RACHELLOG
     # Add header/date/time to install log file
@@ -566,7 +569,7 @@ function ka-lite_install () {
 
 # Loop function to redisplay menu
 function whattodo {
-    echo; echo "[?] What would you like to do next?"
+    echo; print_question "What would you like to do next?"
     echo "1)New Install  2)Repair CAP  3)Install Content  4)Install KA Lite  5)Exit"
 }
 
