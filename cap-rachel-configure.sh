@@ -3,7 +3,7 @@
 # ONELINER Download/Install: sudo wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/cap-rachel-configure.sh -O /root/cap-rachel-configure.sh; bash cap-rachel-configure.sh
 
 # Everything below will go to this log directory
-VERSION=0724151500 # To get current version - date +%m%d%y%H%M
+VERSION=0728150243 # To get current version - date +%m%d%y%H%M
 TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
 RACHELLOGDIR="/var/log/RACHEL"
 mkdir -p $RACHELLOGDIR
@@ -571,6 +571,9 @@ function whattodo {
 }
 
 ## MAIN MENU
+# Display current script version
+echo; print_good "RACHEL CAP Configuration Script - Version $VERSION"
+
 echo; print_question "What you would like to do:" | tee -a $RACHELLOG
 echo "  - New [Install] RACHEL on a CAP" | tee -a $RACHELLOG
 echo "  - [Repair] an install of a CAP after a firmware upgrade" | tee -a $RACHELLOG
@@ -582,12 +585,10 @@ select menu in "Install" "Repair" "Content" "KA-Lite" "Exit"; do
         case $menu in
         Install)
         new_install
-        whattodo
         ;;
 
         Repair)
         repair
-        whattodo
         ;;
 
         Content)
