@@ -73,7 +73,7 @@
   sudo cp -r /media/CAP/* /media/RACHEL/.
   
 #Import sphider_plus database
-  mysql -u root -proot sphider_plus < /media/RACHEL/sphider_plus.sql
+  mysql -u root -proot sphider_plus < /media/RACHEL/rachel/modules/sphider_plus.sql
   
 #add MySQL password
 #  mysql -u root
