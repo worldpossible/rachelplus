@@ -497,7 +497,7 @@ function ka-lite_install () {
 
     # Download/install assessmentitems.json
     echo; print_status "Downloading latest assessmentitems.json from GitHub." | tee -a $RACHELLOG
-    wget -c $GITHUBPATH/ka-lite/assessmentitems.json -O /var/ka-lite/data/khan/assessmentitems.json 
+    wget -c $GITHUBPATH/assessmentitems.json -O /var/ka-lite/data/khan/assessmentitems.json 
     print_good "Done." | tee -a $RACHELLOG
 
     # Linux setup of KA Lite
