@@ -13,6 +13,9 @@ RACHELWWW="/media/RACHEL/rachel"
 KALITEDIR="/var/ka-lite"
 INSTALLTMPDIR="/root/cap-rachel-install.tmp"
 mkdir -p $INSTALLTMPDIR
+GITHUBPATH="https://raw.githubusercontent.com/rachelproject/rachelplus/master"
+RSYNCONLINE="rsync://dev.worldpossible.org"
+RSYNCOFFLINE=""
 
 FILE2="/root/cap-rachel-first-install-2.sh"
 FILE3="/root/cap-rachel-first-install-3.sh"
@@ -132,25 +135,25 @@ function new_install () {
         # US
         US)
             echo; print_status "Downloading packages from the United States." | tee -a $RACHELLOG
-            wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/sources.list/sources-us.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1
+            wget $GITHUBPATH/sources.list/sources-us.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1
         ;;
 
         # UK
         UK)
             echo; print_status "Downloading packages from the United Kingdom." | tee -a $RACHELLOG
-            wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/sources.list/sources-uk.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1
+            wget $GITHUBPATH/sources.list/sources-uk.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1
         ;;
 
         # Singapore
         SG)
             echo; print_status "Downloading packages from Singapore." | tee -a $RACHELLOG
-            wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/sources.list/sources-sg.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1
+            wget $GITHUBPATH/sources.list/sources-sg.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1
         ;;
 
         # China (Original)
         CN)
             echo; print_status "Downloading packages from the China - CAP manufacturer's website." | tee -a $RACHELLOG
-            wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/sources.list/sources-sohu.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1
+            wget $GITHUBPATH/sources.list/sources-sohu.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1
         ;;
         esac
         print_good "Done." | tee -a $RACHELLOG
@@ -160,11 +163,11 @@ function new_install () {
     # Download/stage GitHub files to $INSTALLTMPDIR
     echo; print_status "Downloading RACHEL install scripts for CAP to the temp folder $INSTALLTMPDIR." | tee -a $RACHELLOG
     ## cap-rachel-first-install-2.sh
-    wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/install/cap-rachel-first-install-2.sh -O /root/cap-rachel-first-install-2.sh 1>> $RACHELLOG 2>&1
+    wget $GITHUBPATH/install/cap-rachel-first-install-2.sh -O /root/cap-rachel-first-install-2.sh 1>> $RACHELLOG 2>&1
     ## cap-rachel-first-install-3.sh
-    wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/install/cap-rachel-first-install-3.sh -O /root/cap-rachel-first-install-3.sh 1>> $RACHELLOG 2>&1
+    wget $GITHUBPATH/install/cap-rachel-first-install-3.sh -O /root/cap-rachel-first-install-3.sh 1>> $RACHELLOG 2>&1
     ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies)
-    wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/lighttpd.conf -O /root/lighttpd.conf 1>> $RACHELLOG 2>&1
+    wget $GITHUBPATH/lighttpd.conf -O /root/lighttpd.conf 1>> $RACHELLOG 2>&1
     if [[ -s $FILE2 && -s $FILE3 && -s $LIGHTTPDFILE ]]  1>> $RACHELLOG 2>&1; then
         print_good "Done." | tee -a $RACHELLOG
     else
@@ -178,22 +181,22 @@ function new_install () {
 
     # RACHEL Captive Portal file download
     echo; print_status "Downloading Captive Portal content and moving a copy files." | tee -a $RACHELLOG
-    wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/captive-portal/captiveportal-redirect.php 1>> $RACHELLOG 2>&1
+    wget $GITHUBPATH/captive-portal/captiveportal-redirect.php 1>> $RACHELLOG 2>&1
     print_good "Downloaded captiveportal-redirect.php." | tee -a $RACHELLOG
     if [[ ! -f $RACHELWWW/art/RACHELbrandLogo-captive.png ]]; then
-        wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/captive-portal/RACHELbrandLogo-captive.png 1>> $RACHELLOG 2>&1
+        wget $GITHUBPATH/captive-portal/RACHELbrandLogo-captive.png 1>> $RACHELLOG 2>&1
         print_good "Downloaded RACHELbrandLogo-captive.png." | tee -a $RACHELLOG
     else
         print_good "$RACHELWWW/art/RACHELbrandLogo-captive.png exists, skipping." | tee -a $RACHELLOG
     fi
     if [[ ! -f $RACHELWWW/art/HFCbrandLogo-captive.jpg ]]; then
-        wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/captive-portal/HFCbrandLogo-captive.jpg 1>> $RACHELLOG 2>&1
+        wget $GITHUBPATH/captive-portal/HFCbrandLogo-captive.jpg 1>> $RACHELLOG 2>&1
         print_good "Downloaded HFCbrandLogo-captive.jpg." | tee -a $RACHELLOG
     else
         print_good "$RACHELWWW/art/HFCbrandLogo-captive.jpg exists, skipping." | tee -a $RACHELLOG
     fi
     if [[ ! -f $RACHELWWW/art/WorldPossiblebrandLogo-captive.png ]]; then
-        wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/captive-portal/WorldPossiblebrandLogo-captive.png 1>> $RACHELLOG 2>&1
+        wget $GITHUBPATH/captive-portal/WorldPossiblebrandLogo-captive.png 1>> $RACHELLOG 2>&1
         print_good "Downloaded WorldPossiblebrandLogo-captive.png." | tee -a $RACHELLOG
     else
         print_good "$RACHELWWW/art/WorldPossiblebrandLogo-captive.png exists, skipping." | tee -a $RACHELLOG
@@ -307,7 +310,7 @@ function repair () {
     # Download/update to latest RACHEL lighttpd.conf
     echo; print_status "Downloading latest lighttpd.conf" | tee -a $RACHELLOG
     ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies)
-    sudo wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/lighttpd.conf -O /usr/local/etc/lighttpd.conf 1>> $RACHELLOG 2>&1
+    sudo wget $GITHUBPATH/lighttpd.conf -O /usr/local/etc/lighttpd.conf 1>> $RACHELLOG 2>&1
     print_good "Done." | tee -a $RACHELLOG
 
     # Reapply /etc/fstab entry for /media/RACHEL
@@ -340,128 +343,128 @@ function content_install () {
         English)
             # Great Books of the World
             echo; print_status "Syncing 'Great Books of the World'." | tee -a $RACHELLOG
-            rsync -avz rsync://dev.worldpossible.org/rachelmods/ebooks-en /media/RACHEL/rachel/modules/
+            rsync -avz $RSYNCONLINE/rachelmods/ebooks-en /media/RACHEL/rachel/modules/
             print_good "Done." | tee -a $RACHELLOG
             # Hesperian Health Guides
             echo; print_status "Syncing 'Hesperian Health Guides'." | tee -a $RACHELLOG
-            rsync -avz rsync://dev.worldpossible.org/rachelmods/hesperian_health /media/RACHEL/rachel/modules/ 
+            rsync -avz $RSYNCONLINE/rachelmods/hesperian_health /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # UNESCO's IICBA Electronic Library
             echo; print_status "Syncing 'UNESCO's IICBA Electronic Library'." | tee -a $RACHELLOG
-            rsync -avz rsync://dev.worldpossible.org/rachelmods/iicba /media/RACHEL/rachel/modules/ 
+            rsync -avz $RSYNCONLINE/rachelmods/iicba /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Infonet-Biovision
             echo; print_status "Syncing 'Infonet-Biovision'." | tee -a $RACHELLOG
-            rsync -avz rsync://dev.worldpossible.org/rachelmods/infonet /media/RACHEL/rachel/modules/ 
+            rsync -avz $RSYNCONLINE/rachelmods/infonet /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Khan Academy
             echo; print_status "Syncing 'Khan Academy'." | tee -a $RACHELLOG
-            rsync -av rsync://dev.worldpossible.org/rachelmods/kaos-en /media/RACHEL/rachel/modules/ 
+            rsync -av $RSYNCONLINE/rachelmods/kaos-en /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Khan Academy Health & Medicine
             echo; print_status "Syncing 'Khan Academy Health & Medicine'." | tee -a $RACHELLOG
-            rsync -avz rsync://dev.worldpossible.org/rachelmods/khan_health /media/RACHEL/rachel/modules/ 
+            rsync -avz $RSYNCONLINE/rachelmods/khan_health /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Math Expression
             echo; print_status "Syncing 'Math Expression'." | tee -a $RACHELLOG
-            rsync -avz rsync://dev.worldpossible.org/rachelmods/math_expression /media/RACHEL/rachel/modules/ 
+            rsync -avz $RSYNCONLINE/rachelmods/math_expression /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # MedlinePlus Medical Encyclopedia
             echo; print_status "Syncing 'MedlinePlus Medical Encyclopedia'." | tee -a $RACHELLOG
-            rsync -avz rsync://dev.worldpossible.org/rachelmods/medline_plus /media/RACHEL/rachel/modules/ 
+            rsync -avz $RSYNCONLINE/rachelmods/medline_plus /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Music Theory
             echo; print_status "Syncing 'Music Theory'." | tee -a $RACHELLOG
-            rsync -avz rsync://dev.worldpossible.org/rachelmods/musictheory /media/RACHEL/rachel/modules/ 
+            rsync -avz $RSYNCONLINE/rachelmods/musictheory /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # OLPC Educational Packages
             echo; print_status "Syncing 'OLPC Educational Packagess'." | tee -a $RACHELLOG
-            rsync -avz rsync://dev.worldpossible.org/rachelmods/olpc /media/RACHEL/rachel/modules/ 
+            rsync -avz $RSYNCONLINE/rachelmods/olpc /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Powertyping
             echo; print_status "Syncing 'Powertyping'." | tee -a $RACHELLOG
-            rsync -avz rsync://dev.worldpossible.org/rachelmods/powertyping /media/RACHEL/rachel/modules/ 
+            rsync -avz $RSYNCONLINE/rachelmods/powertyping /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Practical Action
             echo; print_status "Syncing 'Practical Action'." | tee -a $RACHELLOG
-            rsync -avz rsync://dev.worldpossible.org/rachelmods/practical_action /media/RACHEL/rachel/modules/ 
+            rsync -avz $RSYNCONLINE/rachelmods/practical_action /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # MIT Scratch
             echo; print_status "Syncing 'MIT Scratch'." | tee -a $RACHELLOG
-            rsync -avz rsync://dev.worldpossible.org/rachelmods/scratch /media/RACHEL/rachel/modules/ 
+            rsync -avz $RSYNCONLINE/rachelmods/scratch /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Understanding Algebra
             echo; print_status "Syncing 'Understanding Algebra'." | tee -a $RACHELLOG
-            rsync -avz rsync://dev.worldpossible.org/rachelmods/understanding_algebra /media/RACHEL/rachel/modules/ 
+            rsync -avz $RSYNCONLINE/rachelmods/understanding_algebra /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Wikipedia for Schools
             echo; print_status "Syncing 'Wikipedia for Schools'." | tee -a $RACHELLOG
-            rsync -avz rsync://dev.worldpossible.org/rachelmods/wikipedia_for_schools /media/RACHEL/rachel/modules/ 
+            rsync -avz $RSYNCONLINE/rachelmods/wikipedia_for_schools /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # CK-12 Textbooks
             echo; print_status "Syncing 'CK-12 Textbooks'." | tee -a $RACHELLOG
-            rsync -avz rsync://dev.worldpossible.org/rachelmods/ck12 /media/RACHEL/rachel/modules/ 
+            rsync -avz $RSYNCONLINE/rachelmods/ck12 /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Rasp Pi User Guide
             echo; print_status "Syncing 'Rasp Pi User Guide'." | tee -a $RACHELLOG
-            rsync -avz rsync://dev.worldpossible.org/rachelmods/rpi_guide /media/RACHEL/rachel/modules/ 
+            rsync -avz $RSYNCONLINE/rachelmods/rpi_guide /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Windows Applications
             echo; print_status "Syncing 'Windows Applications'." | tee -a $RACHELLOG
-            rsync -avz rsync://dev.worldpossible.org/rachelmods/windows_apps /media/RACHEL/rachel/modules/ 
+            rsync -avz $RSYNCONLINE/rachelmods/windows_apps /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Medical Information
             echo; print_status "Syncing 'Medical Information'." | tee -a $RACHELLOG
-            rsync -avz rsync://dev.worldpossible.org/rachelmods/asst_medical /media/RACHEL/rachel/modules/ 
+            rsync -avz $RSYNCONLINE/rachelmods/asst_medical /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # PhET
             echo; print_status "Syncing 'PhET'." | tee -a $RACHELLOG
-            rsync -avz rsync://dev.worldpossible.org/rachelmods/PhET /media/RACHEL/rachel/modules/ 
+            rsync -avz $RSYNCONLINE/rachelmods/PhET /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # TED
             echo; print_status "Syncing 'TED'." | tee -a $RACHELLOG
-            rsync -avz rsync://dev.worldpossible.org/rachelmods/TED /media/RACHEL/rachel/modules/ 
+            rsync -avz $RSYNCONLINE/rachelmods/TED /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # GCF - NOT WORKING AT THE MOMENT
             #echo; print_status "Syncing 'GCF'." | tee -a $RACHELLOG
-            #sync -avz rsync://dev.worldpossible.org/rachelmods/GCF /media/RACHEL/rachel/modules/ 
+            #sync -avz $RSYNCONLINE/rachelmods/GCF /media/RACHEL/rachel/modules/ 
             #print_good "Done." | tee -a $RACHELLOG
             # radiolab
             echo; print_status "Syncing 'radiolab'." | tee -a $RACHELLOG
-            rsync -avz rsync://dev.worldpossible.org/rachelmods/radiolab /media/RACHEL/rachel/modules/ 
+            rsync -avz $RSYNCONLINE/rachelmods/radiolab /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             break
         ;;
         Español)
             # Grandes Libros del Mundo
             echo; print_status "Syncing 'Grandes Libros del Mundo'." | tee -a $RACHELLOG
-            rsync -avz rsync://dev.worldpossible.org/rachelmods/ebooks-es /media/RACHEL/rachel/modules/ 
+            rsync -avz $RSYNCONLINE/rachelmods/ebooks-es /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Khan Academy
             echo; print_status "Syncing 'Khan Academy'." | tee -a $RACHELLOG
-            rsync -av rsync://dev.worldpossible.org/rachelmods/kaos-es /media/RACHEL/rachel/modules/ 
+            rsync -av $RSYNCONLINE/rachelmods/kaos-es /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Aplicaciones Didacticas
             echo; print_status "Syncing 'Aplicaciones Didacticas'." | tee -a $RACHELLOG
-            rsync -avz rsync://dev.worldpossible.org/rachelmods/ap_didact /media/RACHEL/rachel/modules/ 
+            rsync -avz $RSYNCONLINE/rachelmods/ap_didact /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Currículum Nacional Base Guatemala
             echo; print_status "Syncing 'Currículum Nacional Base Guatemala'." | tee -a $RACHELLOG
-            rsync -avz rsync://dev.worldpossible.org/rachelmods/cnbguatemala /media/RACHEL/rachel/modules/ 
+            rsync -avz $RSYNCONLINE/rachelmods/cnbguatemala /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             break
         ;;
         Français)
             # Khan Academy
             echo; print_status "Syncing 'Khan Academy'." | tee -a $RACHELLOG
-            rsync -av rsync://dev.worldpossible.org/rachelmods/kaos-fr /media/RACHEL/rachel/modules/ 
+            rsync -av $RSYNCONLINE/rachelmods/kaos-fr /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             break
         ;;
         Português)
             # Khan Academy
             echo; print_status "Syncing 'Khan Academy'." | tee -a $RACHELLOG
-            rsync -av rsync://dev.worldpossible.org/rachelmods/kaos-pt /media/RACHEL/rachel/modules/ 
+            rsync -av $RSYNCONLINE/rachelmods/kaos-pt /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             break
         ;;
@@ -494,7 +497,7 @@ function ka-lite_install () {
 
     # Download/install assessmentitems.json
     echo; print_status "Downloading latest assessmentitems.json from GitHub." | tee -a $RACHELLOG
-    wget -c https://raw.githubusercontent.com/rachelproject/rachelplus/master/ka-lite/assessmentitems.json -O /var/ka-lite/data/khan/assessmentitems.json 
+    wget -c $GITHUBPATH/ka-lite/assessmentitems.json -O /var/ka-lite/data/khan/assessmentitems.json 
     print_good "Done." | tee -a $RACHELLOG
 
     # Linux setup of KA Lite
@@ -544,10 +547,11 @@ function ka-lite_install () {
 
     # Install module for RACHEL index.php
     echo; print_status "Syncing 'KA Lite module'." | tee -a $RACHELLOG
-    rsync -av rsync://dev.worldpossible.org/rachelmods/ka-lite /media/RACHEL/rachel/modules/
+    rsync -av $RSYNCONLINE/rachelmods/ka-lite /media/RACHEL/rachel/modules/
     print_good "Done." | tee -a $RACHELLOG
 
     # Delete previous setup commands from the /etc/rc.local
+    echo; print_status "Setting up KA Lite to start at boot..." | tee -a $RACHELLOG
     sudo sed -i '/ka-lite/d' /etc/rc.local 1>> $RACHELLOG 2>&1
     sudo sed -i '/sleep 20/d' /etc/rc.local 1>> $RACHELLOG 2>&1
 
@@ -558,7 +562,9 @@ function ka-lite_install () {
     print_good "Done." | tee -a $RACHELLOG
 
     # Starting KA Lite
+    echo; print_status "Starting KA Lite..." | tee -a $RACHELLOG
     /var/ka-lite/bin/kalite start 1>> $RACHELLOG 2>&1
+    print_good "Done." | tee -a $RACHELLOG
 
     # Add RACHEL IP
     echo; print_good "Login using wifi at http://192.168.88.1:8008 and register device." | tee -a $RACHELLOG
