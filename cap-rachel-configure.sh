@@ -2,7 +2,11 @@
 # FILE: cap-rachel-configure.sh
 # ONELINER Download/Install: sudo wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/cap-rachel-configure.sh -O /root/cap-rachel-configure.sh; bash cap-rachel-configure.sh
 
-# Everything below will go to this log directory
+# COMMON VARIABLES - Change as needed
+LOCAL=""
+WGETOFFLINE=""
+
+# CORE VARIABLES - Change if you know what you are doing
 VERSION=0728150243 # To get current version - date +%m%d%y%H%M
 TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
 RACHELLOGDIR="/var/log/RACHEL"
@@ -15,8 +19,6 @@ INSTALLTMPDIR="/root/cap-rachel-install.tmp"
 mkdir -p $INSTALLTMPDIR
 GITHUBPATH="https://raw.githubusercontent.com/rachelproject/rachelplus/master"
 RSYNCONLINE="rsync://dev.worldpossible.org"
-RSYNCOFFLINE=""
-
 FILE2="/root/cap-rachel-first-install-2.sh"
 FILE3="/root/cap-rachel-first-install-3.sh"
 LIGHTTPDFILE="/root/lighttpd.conf"
@@ -537,8 +539,9 @@ function ka-lite_install () {
         echo; read -p "Do you have the ka-lite_content.zip file already downloaded? (y/n) " -r <&1
         if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
             echo; echo "[?] What is the full path of the ka-lite_content.zip file (eg /media/RACHEL/ka-lite_content.zip)? "; read KALITECONTENT
-            echo "Copying content from $KALITECONTENT to $KALITEDIR." | tee -a $RACHELLOG
+            echo "Unpacking content from $KALITECONTENT and moving to '/media/RACHEL/kacontent'." | tee -a $RACHELLOG
             unzip -c $KALITECONTENT -d /media/RACHEL/ 1>> $RACHELLOG 2>&1
+            mv /media/RACHEL/content /media/RACHEL/kacontent 1>> $RACHELLOG 2>&1
         else
             echo; print_error "You can download the content folder to $KALITEDIR at a later time." | tee -a $RACHELLOG
             print_error "Not installing the KA Lite content; moving on." | tee -a $RACHELLOG
