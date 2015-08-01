@@ -533,15 +533,15 @@ function ka-lite_install () {
         echo; print_status "Downloading ka-lite_content.zip into /media/RACHEL folder."
         wget -c http://rachelfriends.org/z-holding/ka-lite_content.zip -O /media/RACHEL/ka-lite_content.zip 
         print_status "Unzipping the archive to the correct folder...be patient, this takes awhile."
-        unzip -u /media/RACHEL/ka-lite_content.zip -d /media/RACHEL/ 1>> $RACHELLOG 2>&1
-        mv /media/RACHEL/content /media/RACHEL/kacontent 1>> $RACHELLOG 2>&1
+        unzip -u /media/RACHEL/ka-lite_content.zip -d /media/RACHEL/
+        mv /media/RACHEL/content /media/RACHEL/kacontent
     else
         echo; read -p "Do you have the ka-lite_content.zip file already downloaded? (y/n) " -r <&1
         if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
             echo; echo "[?] What is the full path of the ka-lite_content.zip file (eg /media/RACHEL/ka-lite_content.zip)? "; read KALITECONTENT
             echo "Unpacking content from $KALITECONTENT and moving to '/media/RACHEL/kacontent'." | tee -a $RACHELLOG
-            unzip -c $KALITECONTENT -d /media/RACHEL/ 1>> $RACHELLOG 2>&1
-            mv /media/RACHEL/content /media/RACHEL/kacontent 1>> $RACHELLOG 2>&1
+            unzip -c $KALITECONTENT -d /media/RACHEL/
+            mv /media/RACHEL/content /media/RACHEL/kacontent
         else
             echo; print_error "You can download the content folder to $KALITEDIR at a later time." | tee -a $RACHELLOG
             print_error "Not installing the KA Lite content; moving on." | tee -a $RACHELLOG
