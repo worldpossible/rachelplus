@@ -427,10 +427,10 @@ function content_install () {
             echo; print_status "Syncing 'TED'." | tee -a $RACHELLOG
             rsync -avz $RSYNCONLINE/rachelmods/TED /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
-            # GCF - NOT WORKING AT THE MOMENT
-            #echo; print_status "Syncing 'GCF'." | tee -a $RACHELLOG
-            #sync -avz $RSYNCONLINE/rachelmods/GCF /media/RACHEL/rachel/modules/ 
-            #print_good "Done." | tee -a $RACHELLOG
+            # GCF
+            echo; print_status "Syncing 'GCF'." | tee -a $RACHELLOG
+            rsync -avz $RSYNCONLINE/rachelmods/GCF /media/RACHEL/rachel/modules/ 
+            print_good "Done." | tee -a $RACHELLOG
             # radiolab
             echo; print_status "Syncing 'radiolab'." | tee -a $RACHELLOG
             rsync -avz $RSYNCONLINE/rachelmods/radiolab /media/RACHEL/rachel/modules/ 
