@@ -59,28 +59,26 @@ function print_header () {
     print_good "Script started: $(date)" | tee -a $RACHELLOG
 }
 
+function check_internet () {
 # Check internet connecivity
 WGET=`which wget`
 $WGET -q --tries=10 --timeout=5 --spider http://google.com 1>> $RACHELLOG 2>&1
 if [[ $? -eq 0 ]]; then
     echo; print_good "Internet connected...continuing install." | tee -a $RACHELLOG
 else
-    echo; print_error "No internet connectivity; waiting 30 seconds and then I will try again." | tee -a $RACHELLOG
+    echo; print_error "No internet connectivity; waiting 15 seconds and then I will try again." | tee -a $RACHELLOG
     # Progress bar to visualize wait period
     while true;do echo -n .;sleep 1;done & 
-    sleep 30
+    sleep 15
     kill $!; trap 'kill $!' SIGTERM
     $WGET -q --tries=10 --timeout=5 --spider http://google.com
     if [[ $? -eq 0 ]]; then
         echo; print_good "Internet connected...continuing install." | tee -a $RACHELLOG
     else
-        echo; print_error "No internet connectivity; connect to the internet and try again." | tee -a $RACHELLOG
-        exit 1
+        echo; print_error "No internet connectivity; if you want to download content, connect to the internet and try again." | tee -a $RACHELLOG
     fi
 fi
-
-# Change directory into $INSTALLTMPDIR
-cd $INSTALLTMPDIR
+}
 
 function ctrl_c () {
     kill $!; trap 'kill $1' SIGTERM
@@ -116,9 +114,27 @@ function cleanup () {
 
 function sanitize () {
     # Remove history, clean logs
-    echo "" > /root/.bash_history
+    echo; print_status "Sanitizing log files."
     rm -f /var/log/rachel-install* /var/log/RACHEL/*
-
+    rm -f /root/.ssh/known_hosts
+    rm -f /media/RACHEL/ka-lite_content.zip
+    rm -f /recovery/2015*
+    echo "" > /root/.bash_history
+    # Stop script from defaulting the SSID
+    sed -i 's/redis-cli del WlanSsidT0_ssid/#redis-cli del WlanSsidT0_ssid/g' /root/generate_recovery.sh
+    # KA Lite
+    echo; print_status "Stopping KA Lite."
+    /var/ka-lite/bin/kalite stop
+    # Delete the Device ID and crypto keys from the database (without affecting the admin user you have already set up)
+    echo; print_status "Delete KA Lite Device ID and clearing crypto keys from the database"
+    /var/ka-lite/bin/kalite manage runcode "from django.conf import settings; settings.DEBUG_ALLOW_DELETIONS = True; from securesync.models import Device; Device.objects.all().delete(); from fle_utils.config.models import Settings; Settings.objects.all().delete()"
+    echo; print_question "Do you want to run the /root/generate_recovery.sh script?"
+    read -p "    Select 'n' to exit. (y/n) " -r <&1
+    if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
+        cleanup
+        /root/generate_recovery.sh
+    fi
+    echo; print_good "Done."
 }
 
 function new_install () {
@@ -336,9 +352,22 @@ function repair () {
     echo -e "/dev/sda3\t/media/RACHEL\t\text4\tauto,nobootwait 0\t0" >> /etc/fstab
     print_good "Done." | tee -a $RACHELLOG
 
-    echo; print_good "Log file saved to: $RACHELLOGDIR/rachel-repair-$TIMESTAMP.log" | tee -a $RACHELLOG
-    print_good "RACHEL CAP Repair Complete." | tee -a $RACHELLOG
+    # Fixing /etc/rc.local to start KA Lite on boot
+    echo; print_status "Fixing /etc/rc.local" | tee -a $RACHELLOG
+    # Delete previous setup commands from the /etc/rc.local
+    echo; print_status "Setting up KA Lite to start at boot..." | tee -a $RACHELLOG
+    sudo sed -i '/ka-lite/d' /etc/rc.local 1>> $RACHELLOG 2>&1
+    sudo sed -i '/sleep 20/d' /etc/rc.local 1>> $RACHELLOG 2>&1
+
+    # Start KA Lite at boot time
+    sudo sed -i '$e echo "# Start ka-lite at boot time"' /etc/rc.local 1>> $RACHELLOG 2>&1
+    sudo sed -i '$e echo "sleep 20"' /etc/rc.local 1>> $RACHELLOG 2>&1
+    sudo sed -i '$e echo "/var/ka-lite/bin/kalite start"' /etc/rc.local 1>> $RACHELLOG 2>&1
+    print_good "Done." | tee -a $RACHELLOG
+
+    echo; print_good "RACHEL CAP Repair Complete." | tee -a $RACHELLOG
     sudo mv $RACHELLOG $RACHELLOGDIR/rachel-repair-$TIMESTAMP.log
+    echo; print_good "Log file saved to: $RACHELLOGDIR/rachel-repair-$TIMESTAMP.log" | tee -a $RACHELLOG
     cleanup
     reboot-CAP
 }
@@ -642,21 +671,28 @@ function ka-lite_install () {
 # Loop function to redisplay mhf
 function whattodo {
     echo; print_question "What would you like to do next?"
-    echo "1)New Install  2)Repair CAP  3)Install Content  4)Install KA Lite  5)Exit"
+    echo "1)New Install  2)Repair CAP  3)Install Content  4)Install KA Lite  5)Sanitize  6)Exit"
 }
 
 ## MAIN MENU
 # Display current script version
 echo; print_good "RACHEL CAP Configuration Script - Version $VERSION"
 
+# Check for internet connectivity
+check_internet
+
+# Change directory into $INSTALLTMPDIR
+cd $INSTALLTMPDIR
+
 echo; print_question "What you would like to do:" | tee -a $RACHELLOG
 echo "  - New [Install] RACHEL on a CAP" | tee -a $RACHELLOG
 echo "  - [Repair] an install of a CAP after a firmware upgrade" | tee -a $RACHELLOG
 echo "  - Install/Update RACHEL [Content]" | tee -a $RACHELLOG
 echo "  - Install [KA-Lite]" | tee -a $RACHELLOG
+echo "  - [Sanitize] CAP for imaging" | tee -a $RACHELLOG
 echo "  - [Exit] the installation script" | tee -a $RACHELLOG
 echo
-select menu in "Install" "Repair" "Content" "KA-Lite" "Exit"; do
+select menu in "Install" "Repair" "Content" "KA-Lite"  "Sanitize"  "Exit"; do
         case $menu in
         Install)
         new_install
@@ -673,6 +709,11 @@ select menu in "Install" "Repair" "Content" "KA-Lite" "Exit"; do
 
         KA-Lite)
         ka-lite_install
+        whattodo
+        ;;
+
+        Sanitize)
+        sanitize
         whattodo
         ;;
 

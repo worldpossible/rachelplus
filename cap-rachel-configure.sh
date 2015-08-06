@@ -535,6 +535,7 @@ function ka-lite_install () {
         print_status "Unzipping the archive to the correct folder...be patient, this takes awhile."
         unzip -u /media/RACHEL/ka-lite_content.zip -d /media/RACHEL/
         mv /media/RACHEL/content /media/RACHEL/kacontent
+        rm ka-lite_content.zip
     else
         echo; read -p "Do you have the ka-lite_content.zip file already downloaded? (y/n) " -r <&1
         if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
