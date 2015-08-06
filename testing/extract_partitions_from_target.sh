@@ -76,5 +76,8 @@ extract_partition / rootfs.tar.xz --exclude=boot
 echo "Abstract RACHEL partition"
 extract_partition /media/RACHEL/rachel rachel.tar.xz
 
-echo "Successfully abstracted partition images to $partition_dir"
+# abstract kacontent partition
+echo "Abstract kacontent partition"
+extract_partition /media/RACHEL/kacontent kacontent.tar.xz
 
+echo "Successfully abstracted partition images to $partition_dir"

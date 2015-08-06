@@ -7,7 +7,7 @@ LOCAL=""
 WGETOFFLINE=""
 
 # CORE VARIABLES - Change if you know what you are doing
-VERSION=0728150243 # To get current version - date +%m%d%y%H%M
+VERSION=0806150411 # To get current version - date +%m%d%y%H%M
 TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
 RACHELLOGDIR="/var/log/RACHEL"
 mkdir -p $RACHELLOGDIR

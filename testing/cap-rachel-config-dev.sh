@@ -15,7 +15,7 @@ KALITERSYNCSRCIP="" # Enter a local repository of video content for KA Lite
 KALITERSYNCSRCPATH="/media/RACHEL/kacontent"
 
 # CORE VARIABLES - Change if you know what you are doing
-VERSION=0728150243 # To get current version - date +%m%d%y%H%M
+VERSION=0806150411 # To get current version - date +%m%d%y%H%M
 TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
 RACHELLOGDIR="/var/log/RACHEL"
 mkdir -p $RACHELLOGDIR
@@ -115,10 +115,10 @@ function cleanup () {
 function sanitize () {
     # Remove history, clean logs
     echo; print_status "Sanitizing log files."
-    rm -f /var/log/rachel-install* /var/log/RACHEL/*
+    rm -rf /var/log/rachel-install* /var/log/RACHEL/*
     rm -f /root/.ssh/known_hosts
     rm -f /media/RACHEL/ka-lite_content.zip
-    rm -f /recovery/2015*
+    rm -rf /recovery/2015*
     echo "" > /root/.bash_history
     # Stop script from defaulting the SSID
     sed -i 's/redis-cli del WlanSsidT0_ssid/#redis-cli del WlanSsidT0_ssid/g' /root/generate_recovery.sh
