@@ -72,12 +72,12 @@ extract_partition /boot boot.tar.xz
 echo "Abstract Linux rootfs partition"
 extract_partition / rootfs.tar.xz --exclude=boot
 
-# abstract RACHEL partition
-echo "Abstract RACHEL partition"
-extract_partition /media/RACHEL/rachel rachel.tar.xz
+# abstract RACHEL partition - too big; takes too long
+#echo "Abstract RACHEL partition"
+#extract_partition /media/RACHEL/rachel rachel.tar.xz
 
-# abstract kacontent partition
-echo "Abstract kacontent partition"
-extract_partition /media/RACHEL/kacontent kacontent.tar.xz
+# abstract kacontent partition - too big; takes too long
+#echo "Abstract kacontent partition"
+#extract_partition /media/RACHEL/kacontent kacontent.tar.xz
 
 echo "Successfully abstracted partition images to $partition_dir"

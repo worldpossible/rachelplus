@@ -321,6 +321,46 @@ function repair () {
     echo -e "/dev/sda3\t/media/RACHEL\t\text4\tauto,nobootwait 0\t0" >> /etc/fstab
     print_good "Done." | tee -a $RACHELLOG
 
+    # Fixing /etc/rc.local to start KA Lite on boot
+    echo; print_status "Fixing /etc/rc.local" | tee -a $RACHELLOG
+    # Delete previous setup commands from the /etc/rc.local
+    echo; print_status "Setting up KA Lite to start at boot..." | tee -a $RACHELLOG
+    sudo sed -i '/ka-lite/d' /etc/rc.local 1>> $RACHELLOG 2>&1
+    sudo sed -i '/sleep 20/d' /etc/rc.local 1>> $RACHELLOG 2>&1
+
+    # Start KA Lite at boot time
+    sudo sed -i '$e echo "# Start ka-lite at boot time"' /etc/rc.local 1>> $RACHELLOG 2>&1
+    sudo sed -i '$e echo "sleep 20"' /etc/rc.local 1>> $RACHELLOG 2>&1
+    sudo sed -i '$e echo "/var/ka-lite/bin/kalite start"' /etc/rc.local 1>> $RACHELLOG 2>&1
+    print_good "Done." | tee -a $RACHELLOG
+
+    # Delete previous setwanip commands from /etc/rc.local
+    echo; print_status "Deleting previous setwanip.sh script from /etc/rc.local" | tee -a $RACHELLOG
+    sudo sed -i '/setwanip/d' /etc/rc.local
+    rm -f /root/setwanip.sh
+    print_good "Done." | tee -a $RACHELLOG
+
+    # Delete previous iptables commands from /etc/rc.local
+    echo; print_status "Deleting previous iptables script from /etc/rc.local" | tee -a $RACHELLOG
+    sudo sed -i '/iptables/d' /etc/rc.local
+    print_good "Done." | tee -a $RACHELLOG
+
+    # Enable IP forwarding from 10.10.10.10 to 192.168.88.1 (only from wifi)
+    #echo 1 > /proc/sys/net/ipv4/ip_forward #line not needed as option already set
+    cat > /root/iptables-rachel.sh << 'EOF'
+#!/bin/bash
+# Add the RACHEL iptables rule to redirect 10.10.10.10 to CAP default of 192.168.88.1
+# Added sleep to wait for CAP rcConf and rcConfd to finish initializing
+#
+sleep 60
+iptables -t nat -A PREROUTING -p tcp -d 10.10.10.10 -j DNAT --to-destination 192.168.88.1
+EOF
+
+    # Add 10.10.10.10 redirect on every reboot
+    sudo sed -i '$e echo "# RACHEL iptables - Redirect from 10.10.10.10 to 192.168.88.1"' /etc/rc.local
+    #sudo sed -i '$e echo "iptables -t nat -A OUTPUT -d 10.10.10.10 -j DNAT --to-destination 192.168.88.1&"' /etc/rc.local
+    sudo sed -i '$e echo "bash /root/iptables-rachel.sh&"' /etc/rc.local
+
     echo; print_good "Log file saved to: $RACHELLOGDIR/rachel-repair-$TIMESTAMP.log" | tee -a $RACHELLOG
     print_good "RACHEL CAP Repair Complete." | tee -a $RACHELLOG
     sudo mv $RACHELLOG $RACHELLOGDIR/rachel-repair-$TIMESTAMP.log

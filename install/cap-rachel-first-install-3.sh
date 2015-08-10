@@ -65,7 +65,7 @@ print_good "Done."
 
 # Enable IP forwarding from 10.10.10.10 to 192.168.88.1 (only from wifi)
 #echo 1 > /proc/sys/net/ipv4/ip_forward #line not needed as option already set
-	cat > /root/iptables-rachel.sh << 'EOF'
+cat > /root/iptables-rachel.sh << 'EOF'
 #!/bin/bash
 # Add the RACHEL iptables rule to redirect 10.10.10.10 to CAP default of 192.168.88.1
 # Added sleep to wait for CAP rcConf and rcConfd to finish initializing
