@@ -210,6 +210,7 @@ function sphider_plus.sql () {
     else
         echo; print_status "File saved at /media/RACHEL/z-SQLdatabase/sphider_plus.sql"
         echo; print_good "Done." | tee -a $RACHELLOG
+    fi
 }
 
 function new_install () {
@@ -827,7 +828,8 @@ select menu in "Install" "Content" "KA-Lite"  "Utilities"  "Exit"; do
         echo "  - [Repair] an install of a CAP after a firmware upgrade" | tee -a $RACHELLOG
         echo "  - [Sanitize] CAP for imaging" | tee -a $RACHELLOG
         echo "  - [Symlink] all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent" | tee -a $RACHELLOG
-        echo "  - Install [Kiwix]" | tee -a $RACHELLOG
+        echo "  - [Install-Kiwix]" | tee -a $RACHELLOG
+        echo "  - [Install-Sphider]" | tee -a $RACHELLOG
         echo "  - Return to [Main Menu]" | tee -a $RACHELLOG
         echo
         select util in "Repair" "Sanitize" "Symlink" "Install-Kiwix" "Install-Sphider" "Main-Menu"; do
