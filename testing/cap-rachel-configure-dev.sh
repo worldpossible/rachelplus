@@ -2,21 +2,23 @@
 # FILE: cap-rachel-configure.sh
 # ONELINER Download/Install: sudo wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/cap-rachel-configure.sh -O /root/cap-rachel-configure.sh; bash cap-rachel-configure.sh
 
-# For local build, you will need:
-# 1. Clone of rachelplus repo
-# 2. 
+# For local build, you will need to run the following commands:
+# git clone https://github.com/rachelproject/rachelplus <offline-folder>/rachelplus
+# git clone https://github.com/rachelproject/contentshell <offline-folder>/rachel.contentshell
 
 # COMMON VARIABLES - Change as needed
+VERSION=0806150411 # To get current version - date +%m%d%y%H%M
 INTERNET="1" # Enter 0 (Offline), 1 (Online), or leave blank and script will check connectivity
-LOCAL=""
+DIRCONTENTOFFLINE="" # Enter location of downloaded content for offline install
+RSYNCOFFLINE=""
 WGETOFFLINE=""
+KALITEOFFLINE=""
 KALITEDEFAULT="" # Enter 1 (Download), 2 (Unzip), 3 (RSync) or leave empty for interactive prompts
 KALITERSYNCSRCUSER="root"
 KALITERSYNCSRCIP="" # Enter a local repository of video content for KA Lite
 KALITERSYNCSRCPATH="/media/RACHEL/kacontent"
 
-# CORE VARIABLES - Change if you know what you are doing
-VERSION=0806150411 # To get current version - date +%m%d%y%H%M
+# CORE RACHEL VARIABLES - Change if you know what you are doing
 TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
 RACHELLOGDIR="/var/log/RACHEL"
 mkdir -p $RACHELLOGDIR
@@ -26,35 +28,11 @@ RACHELWWW="/media/RACHEL/rachel"
 KALITEDIR="/var/ka-lite"
 INSTALLTMPDIR="/root/cap-rachel-install.tmp"
 mkdir -p $INSTALLTMPDIR
-GITHUBPATH="https://raw.githubusercontent.com/rachelproject/rachelplus/master"
+GITHUBONLINE="https://raw.githubusercontent.com/rachelproject/rachelplus/master"
 RSYNCONLINE="rsync://dev.worldpossible.org"
-FILE2="/root/cap-rachel-first-install-2.sh"
-FILE3="/root/cap-rachel-first-install-3.sh"
+NEWINSTALLFILE2="/root/cap-rachel-first-install-2.sh"
+NEWINSTALLFILE3="/root/cap-rachel-first-install-3.sh"
 LIGHTTPDCONF="/root/lighttpd.conf"
-
-if [[ $INTERNET == "1" ]]; then
-    GITHUBSRC=""
-    RYSNCSRC=""
-    SOURCEUS="wget $GITHUBPATH/sources.list/sources-us.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1"
-    SOURCEUK="wget $GITHUBPATH/sources.list/sources-uk.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1"
-    SOURCESG="wget $GITHUBPATH/sources.list/sources-sg.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1"
-    SOURCECN="wget $GITHUBPATH/sources.list/sources-sohu.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1"
-    CAPRACHELFIRSTINSTALL2="wget $GITHUBPATH/install/cap-rachel-first-install-2.sh -O /root/cap-rachel-first-install-2.sh 1>> $RACHELLOG 2>&1"
-    CAPRACHELFIRSTINSTALL3="wget $GITHUBPATH/install/cap-rachel-first-install-3.sh -O /root/cap-rachel-first-install-3.sh 1>> $RACHELLOG 2>&1"
-    LIGHTTPDFILE="wget $GITHUBPATH/lighttpd.conf -O /root/lighttpd.conf 1>> $RACHELLOG 2>&1"
-    CAPTIVEPORTAL-REDIRECT="wget $GITHUBPATH/captive-portal/captiveportal-redirect.php 1>> $RACHELLOG 2>&1"
-    RACHELBRANDLOGO-CAPTIVE="wget $GITHUBPATH/captive-portal/RACHELbrandLogo-captive.png 1>> $RACHELLOG 2>&1"
-    HFCBRANDLOGO-CAPTIVE="wget $GITHUBPATH/captive-portal/HFCbrandLogo-captive.jpg 1>> $RACHELLOG 2>&1"
-    WORLDPOSSIBLEBRANDLOGO-CAPTIVE="wget $GITHUBPATH/captive-portal/WorldPossiblebrandLogo-captive.png 1>> $RACHELLOG 2>&1"
-    GITCLONE-RACHELCONTENTSHELL="git clone https://github.com/rachelproject/contentshell /media/RACHEL/rachel.contentshell 1>> $RACHELLOG 2>&1"
-else
-    SOURCEUS=""
-    SOURCEUK=""
-    SOURCESG=""
-    SOURCECN=""
-    CAPRACHELFIRSTINSTALL2=""
-    CAPRACHELFIRSTINSTALL3=""
-fi
 
 function print_good () {
     echo -e "\x1B[01;32m[+]\x1B[0m $1"
@@ -77,6 +55,22 @@ if [ "$(id -u)" != "0" ]; then
     print_error "This step must be run as root; sudo password is 123lkj"
     exit 1
 fi
+
+function testing-script () {
+    echo; print_status "Downloading known good file."
+    wget $GITHUBONLINE/testing/cap-rachel-configure-dev.sh -O $INSTALLTMPDIR/cap-rachel-configure-dev.sh
+    command_status
+    print_status "Variable DOWNLOADERROR=$DOWNLOADERROR"
+    print_good "Done."
+
+    echo; print_status "Downloading file that does not exist."
+    wget $GITHUBONLINE/testing/cap-rachel-idontexist.sh -O $INSTALLTMPDIR/cap-rachel-idontexist.sh
+    command_status
+    print_status "Variable DOWNLOADERROR=$DOWNLOADERROR"
+    print_good "Done."
+
+    break
+}
 
 function print_header () {
     # Add header/date/time to install log file
@@ -116,6 +110,35 @@ function check_internet () {
     fi
 }
 
+if [[ $INTERNET == "1" ]]; then
+    DOWNLOADERROR="0"
+    SOURCEUS="wget -r $GITHUBONLINE/sources.list/sources-us.list -O /etc/apt/sources.list"
+    SOURCEUK="wget -r $GITHUBONLINE/sources.list/sources-uk.list -O /etc/apt/sources.list"
+    SOURCESG="wget -r $GITHUBONLINE/sources.list/sources-sg.list -O /etc/apt/sources.list"
+    SOURCECN="wget -r $GITHUBONLINE/sources.list/sources-sohu.list -O /etc/apt/sources.list" 
+    CAPRACHELFIRSTINSTALL2="wget -r $GITHUBONLINE/install/cap-rachel-first-install-2.sh"
+    CAPRACHELFIRSTINSTALL3="wget -r $GITHUBONLINE/install/cap-rachel-first-install-3.sh"
+    LIGHTTPDFILE="wget -r $GITHUBONLINE/lighttpd.conf"
+    CAPTIVEPORTALREDIRECT="wget -r $GITHUBONLINE/captive-portal/captiveportal-redirect.php"
+    RACHELBRANDLOGOCAPTIVE="wget -r $GITHUBONLINE/captive-portal/RACHELbrandLogo-captive.png"
+    HFCBRANDLOGOCAPTIVE="wget -r $GITHUBONLINE/captive-portal/HFCbrandLogo-captive.jpg"
+    WORLDPOSSIBLEBRANDLOGOCAPTIVE="wget -r $GITHUBONLINE/captive-portal/WorldPossiblebrandLogo-captive.png"
+    GITCLONERACHELCONTENTSHELL="git clone https://github.com/rachelproject/contentshell /media/RACHEL/rachel.contentshell"
+else
+    SOURCEUS="cp $DIRCONTENTOFFLINE/rachelplus/sources.list/sources-us.list /etc/apt/sources.list"
+    SOURCEUK="cp $DIRCONTENTOFFLINE/rachelplus/sources.list/sources-uk.list /etc/apt/sources.list"
+    SOURCESG="cp $DIRCONTENTOFFLINE/rachelplus/sources.list/sources-sg.list /etc/apt/sources.list"
+    SOURCECN="cp $DIRCONTENTOFFLINE/rachelplus/sources.list/sources-cn.list /etc/apt/sources.list"
+    CAPRACHELFIRSTINSTALL2="cp $DIRCONTENTOFFLINE/rachelplus/sources.list/cap-rachel-first-install-2.sh ."
+    CAPRACHELFIRSTINSTALL3="cp $DIRCONTENTOFFLINE/rachelplus/sources.list/cap-rachel-first-install-3.sh ."
+    LIGHTTPDFILE="cp $DIRCONTENTOFFLINE/rachelplus/sources.list/lighttpd.conf ."
+    CAPTIVEPORTALREDIRECT="cp $DIRCONTENTOFFLINE/rachelplus/captive-portal/captiveportal-redirect.php ."
+    RACHELBRANDLOGOCAPTIVE="cp $DIRCONTENTOFFLINE/rachelplus/captive-portal/RACHELbrandLogo-captive.png ."
+    HFCBRANDLOGOCAPTIVE="cp $DIRCONTENTOFFLINE/rachelplus/captive-portal/HFCbrandLogo-captive.jpg ."
+    WORLDPOSSIBLEBRANDLOGOCAPTIVE="cp $DIRCONTENTOFFLINE/rachelplus/captive-portal/WorldPossiblebrandLogo-captive.png ."
+    GITCLONERACHELCONTENTSHELL="cp -r $DIRCONTENTOFFLINE/rachel.contentshell /media/RACHEL/rachel.contentshell"
+fi
+
 function ctrl_c () {
     kill $!; trap 'kill $1' SIGTERM
     echo; print_error "Cancelled by user."
@@ -123,6 +146,16 @@ function ctrl_c () {
 #    rm $RACHELLOG
 #    cleanup
 #    echo; exit 1
+}
+
+function command_status () {
+    export EXITCODE="$?"
+    if [[ $EXITCODE != 0 ]]; then
+        print_error "Command failed.  Exit code: $EXITCODE" | tee -a $RACHELLOG
+        export DOWNLOADERROR="1"
+    else
+        print_good "Command successful." | tee -a $RACHELLOG
+    fi
 }
 
 function reboot-CAP () {
@@ -266,6 +299,8 @@ function new_install () {
     print_header
     echo; print_status "Conducting a new install of RACHEL on a CAP."
 
+    cd $INSTALLTMPDIR
+
     # Fix hostname issue in /etc/hosts
     echo; print_status "Fixing hostname in /etc/hosts" | tee -a $RACHELLOG
     sed -i 's/ec-server/WRTD-303N-Server/g' /etc/hosts 1>> $RACHELLOG 2>&1
@@ -287,30 +322,38 @@ function new_install () {
     echo "    SG) Singapore" | tee -a $RACHELLOG
     echo "    CN) China (CAP Manufacturer's Site)" | tee -a $RACHELLOG
     echo; print_question "For the package downloads, select the location nearest you? " | tee -a $RACHELLOG
-    select class in "US" "UK" "SG" "CN"; do
-        case $class in
+    select CLASS in "US" "UK" "SG" "CN"; do
+        case $CLASS in
         # US
         US)
             echo; print_status "Downloading packages from the United States." | tee -a $RACHELLOG
-            $SOURCEUS
+            $SOURCEUS 1>> $RACHELLOG 2>&1
+            command_status
+            break
         ;;
 
         # UK
         UK)
             echo; print_status "Downloading packages from the United Kingdom." | tee -a $RACHELLOG
-            $SOURCEUK
+            $SOURCEUK 1>> $RACHELLOG 2>&1
+            command_status
+            break
         ;;
 
         # Singapore
         SG)
             echo; print_status "Downloading packages from Singapore." | tee -a $RACHELLOG
-            $SOURCESG
+            $SOURCESG 1>> $RACHELLOG 2>&1
+            command_status
+            break
         ;;
 
         # China (Original)
         CN)
             echo; print_status "Downloading packages from the China - CAP manufacturer's website." | tee -a $RACHELLOG
-            $SOURCECN
+            $SOURCECN 1>> $RACHELLOG 2>&1
+            command_status
+            break
         ;;
         esac
         print_good "Done." | tee -a $RACHELLOG
@@ -320,43 +363,53 @@ function new_install () {
     # Download/stage GitHub files to $INSTALLTMPDIR
     echo; print_status "Downloading RACHEL install scripts for CAP to the temp folder $INSTALLTMPDIR." | tee -a $RACHELLOG
     ## cap-rachel-first-install-2.sh
-    $CAPRACHELFIRSTINSTALL2
+    echo; print_status "Downloading cap-rachel-first-install-2.sh" | tee -a $RACHELLOG
+    $CAPRACHELFIRSTINSTALL2 1>> $RACHELLOG 2>&1
+    command_status
     ## cap-rachel-first-install-3.sh
-    $CAPRACHELFIRSTINSTALL3
+    echo; print_status "Downloading cap-rachel-first-install-3.sh" | tee -a $RACHELLOG
+    $CAPRACHELFIRSTINSTALL3 1>> $RACHELLOG 2>&1
+    command_status
     ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies)
-    $LIGHTTPDFILE
-    if [[ -s $FILE2 && -s $FILE3 && -s $LIGHTTPDCONF ]]  1>> $RACHELLOG 2>&1; then
-        print_good "Done." | tee -a $RACHELLOG
-    else
-        print_error "One or more files did not download correctly; check log file (/var/log/RACHEL/rachel-install.tmp) and try again." | tee -a $RACHELLOG
-        echo "The following files should have downloaded to the /root folder:" | tee -a $RACHELLOG
-        echo "cap-rachel-first-install-2.sh" | tee -a $RACHELLOG
-        echo "cap-rachel-first-install-3.sh" | tee -a $RACHELLOG
-        echo "lighttpd.conf" | tee -a $RACHELLOG
-        echo; exit 1
-    fi
+    echo; print_status "Downloading lighttpd.conf" | tee -a $RACHELLOG
+    $LIGHTTPDFILE 1>> $RACHELLOG 2>&1
+    command_status
 
     # RACHEL Captive Portal file download
+    cd $RACHELWWW
     echo; print_status "Downloading Captive Portal content and moving a copy files." | tee -a $RACHELLOG
-    $CAPTIVEPORTAL-REDIRECT
+    $CAPTIVEPORTALREDIRECT 1>> $RACHELLOG 2>&1
+    command_status
     print_good "Downloaded captiveportal-redirect.php." | tee -a $RACHELLOG
     if [[ ! -f $RACHELWWW/art/RACHELbrandLogo-captive.png ]]; then
-        $RACHELBRANDLOGO-CAPTIVE
-        print_good "Downloaded RACHELbrandLogo-captive.png." | tee -a $RACHELLOG
+        $RACHELBRANDLOGOCAPTIVE 1>> $RACHELLOG 2>&1
+        command_status
+        echo; print_good "Downloaded RACHELbrandLogo-captive.png." | tee -a $RACHELLOG
     else
-        print_good "$RACHELWWW/art/RACHELbrandLogo-captive.png exists, skipping." | tee -a $RACHELLOG
+        echo; print_good "$RACHELWWW/art/RACHELbrandLogo-captive.png exists, skipping." | tee -a $RACHELLOG
     fi
     if [[ ! -f $RACHELWWW/art/HFCbrandLogo-captive.jpg ]]; then
-        $HFCBRANDLOGO-CAPTIVE
-        print_good "Downloaded HFCbrandLogo-captive.jpg." | tee -a $RACHELLOG
+        $HFCBRANDLOGOCAPTIVE 1>> $RACHELLOG 2>&1
+        command_status
+        echo; print_good "Downloaded HFCbrandLogo-captive.jpg." | tee -a $RACHELLOG
     else
-        print_good "$RACHELWWW/art/HFCbrandLogo-captive.jpg exists, skipping." | tee -a $RACHELLOG
+        echo; print_good "$RACHELWWW/art/HFCbrandLogo-captive.jpg exists, skipping." | tee -a $RACHELLOG
     fi
     if [[ ! -f $RACHELWWW/art/WorldPossiblebrandLogo-captive.png ]]; then
-        $WORLDPOSSIBLEBRANDLOGO-CAPTIVE
-        print_good "Downloaded WorldPossiblebrandLogo-captive.png." | tee -a $RACHELLOG
+        $WORLDPOSSIBLEBRANDLOGOCAPTIVE 1>> $RACHELLOG 2>&1
+        command_status
+        echo; print_good "Downloaded WorldPossiblebrandLogo-captive.png." | tee -a $RACHELLOG
     else
-        print_good "$RACHELWWW/art/WorldPossiblebrandLogo-captive.png exists, skipping." | tee -a $RACHELLOG
+        echo; print_good "$RACHELWWW/art/WorldPossiblebrandLogo-captive.png exists, skipping." | tee -a $RACHELLOG
+    fi
+
+    # Check if files downloaded correctly
+    if [[ $DOWNLOADERROR == 0 ]]; then
+        echo; print_good "Done." | tee -a $RACHELLOG
+    else
+        echo; print_error "One or more files did not download correctly; check log file (/var/log/RACHEL/rachel-install.tmp) and try again." | tee -a $RACHELLOG
+        cleanup
+        echo; exit 1
     fi
 
     # Show location of the log file
@@ -391,13 +444,13 @@ function new_install () {
         if [[ ! -d $RACHELWWW ]]; then
             echo; print_status "RACHEL content shell does not exist at $RACHELWWW." | tee -a $RACHELLOG
             echo; print_status "Cloning the RACHEL content shell from GitHub." | tee -a $RACHELLOG
-            $GITCLONE-RACHELCONTENTSHELL
+            $GITCLONERACHELCONTENTSHELL
             mv $RACHELWWW.contentshell $RACHELWWW
         else
             if [[ ! -d $RACHELWWW/.git ]]; then
                 echo; print_status "$RACHELWWW exists but it wasn't installed from git; installing RACHEL content shell from GitHub." | tee -a $RACHELLOG
                 rm -rf $RACHELWWW.contentshell 1>> $RACHELLOG 2>&1 # in case of previous failed install
-                $GITCLONE-RACHELCONTENTSHELL
+                $GITCLONERACHELCONTENTSHELL
                 cp -rf $RACHELWWW.contentshell/* $RACHELWWW 1>> $RACHELLOG 2>&1 # overwrite current content with contentshell
                 cp -rf $RACHELWWW.contentshell/.git $RACHELWWW 1>> $RACHELLOG 2>&1 # copy over GitHub files
                 rm -rf $RACHELWWW.contentshell 1>> $RACHELLOG 2>&1 # remove contentshell temp folder
@@ -421,7 +474,7 @@ function new_install () {
 
         # Overwrite the lighttpd.conf file with our customized RACHEL version
         echo; print_status "Updating lighttpd.conf to RACHEL version" | tee -a $RACHELLOG
-        mv /root/lighttpd.conf /usr/local/etc/lighttpd.conf 1>> $RACHELLOG 2>&1
+        mv $INSTALLTMPDIR/lighttpd.conf /usr/local/etc/lighttpd.conf 1>> $RACHELLOG 2>&1
         print_good "Done." | tee -a $RACHELLOG
         
         # Check if /media/RACHEL/rachel is already mounted
@@ -449,7 +502,7 @@ function new_install () {
             print_good "Done." | tee -a $RACHELLOG
 
             # Add lines to /etc/rc.local that will start the next script to run on reboot
-            sudo sed -i '$e echo "bash \/root\/cap-rachel-first-install-2.sh&"' /etc/rc.local 1>> $RACHELLOG 2>&1
+            sudo sed -i '$e echo "bash '$INSTALLTMPDIR'\/cap-rachel-first-install-2.sh&"' /etc/rc.local 1>> $RACHELLOG 2>&1
 
             echo; print_good "RACHEL CAP Install - Script ended at $(date)" | tee -a $RACHELLOG
             reboot-CAP
@@ -457,7 +510,7 @@ function new_install () {
     else
         echo; print_error "User requests not to continue...exiting at $(date)" | tee -a $RACHELLOG
         # Deleting the install script commands
-        rm -f /root/cap-rachel-* $RACHELLOG 1>> $RACHELLOG 2>&1
+        cleanup
         echo; exit 1
     fi
 }
@@ -467,16 +520,13 @@ function repair () {
     echo; print_status "Repairing your CAP after a firmware upgrade."
     # Download/update to latest RACHEL lighttpd.conf
     echo; print_status "Downloading latest lighttpd.conf" | tee -a $RACHELLOG
-    ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies)
-    $LIGHTTPDFILE
-    if [[ -s $LIGHTTPDCONF ]]  1>> $RACHELLOG 2>&1; then
-        print_good "Done." | tee -a $RACHELLOG
-    else
-        print_error "One or more files did not download correctly; check log file (/var/log/RACHEL/rachel-install.tmp) and try again." | tee -a $RACHELLOG
-        echo "The lighttpd.conf file should have downloaded to the /root folder." | tee -a $RACHELLOG
+    ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies and ensuring the file downloads correctly)
+    $LIGHTTPDFILE 1>> $RACHELLOG 2>&1
+    command_status
+    if [[ $DOWNLOADERROR == 1 ]]; then
+        print_error "The lighttpd.conf file did not download correctly; check log file (/var/log/RACHEL/rachel-install.tmp) and try again." | tee -a $RACHELLOG
         echo; break
     fi
-
     print_good "Done." | tee -a $RACHELLOG
 
     # Reapply /etc/fstab entry for /media/RACHEL
@@ -706,7 +756,7 @@ function ka-lite_install () {
 
     # Download/install assessmentitems.json
     echo; print_status "Downloading latest assessmentitems.json from GitHub." | tee -a $RACHELLOG
-    wget -c $GITHUBPATH/assessmentitems.json -O /var/ka-lite/data/khan/assessmentitems.json 
+    wget -c $GITHUBONLINE/assessmentitems.json -O /var/ka-lite/data/khan/assessmentitems.json 
     print_good "Done." | tee -a $RACHELLOG
 
     # Linux setup of KA Lite
@@ -861,6 +911,9 @@ echo "  - Other [Utilities]" | tee -a $RACHELLOG
 echo "    - Repair an install of a CAP after a firmware upgrade" | tee -a $RACHELLOG
 echo "    - Sanitize CAP for imaging" | tee -a $RACHELLOG
 echo "    - Symlink all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent" | tee -a $RACHELLOG
+echo "    - Install Kiwix" | tee -a $RACHELLOG
+echo "    - Install Sphider" | tee -a $RACHELLOG
+echo "    - Test script" | tee -a $RACHELLOG
 echo "  - [Exit] the installation script" | tee -a $RACHELLOG
 echo
 select menu in "Install" "Content" "KA-Lite"  "Utilities"  "Exit"; do
@@ -886,9 +939,10 @@ select menu in "Install" "Content" "KA-Lite"  "Utilities"  "Exit"; do
         echo "  - [Symlink] all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent" | tee -a $RACHELLOG
         echo "  - [Install-Kiwix]" | tee -a $RACHELLOG
         echo "  - [Install-Sphider]" | tee -a $RACHELLOG
+        echo "  - [Test] script" | tee -a $RACHELLOG
         echo "  - Return to [Main Menu]" | tee -a $RACHELLOG
         echo
-        select util in "Repair" "Sanitize" "Symlink" "Install-Kiwix" "Install-Sphider" "Main-Menu"; do
+        select util in "Repair" "Sanitize" "Symlink" "Install-Kiwix" "Install-Sphider" "Test" "Main-Menu"; do
             case $util in
                 Repair)
                 repair
@@ -912,6 +966,11 @@ select menu in "Install" "Content" "KA-Lite"  "Utilities"  "Exit"; do
 
                 Install-Sphider)
                 sphider_plus.sql
+                break
+                ;;
+
+                Test)
+                testing-script
                 break
                 ;;
 
