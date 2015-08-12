@@ -7,6 +7,7 @@
 # 2. 
 
 # COMMON VARIABLES - Change as needed
+INTERNET="1" # Enter 0 (Offline), 1 (Online), or leave blank and script will check connectivity
 LOCAL=""
 WGETOFFLINE=""
 KALITEDEFAULT="" # Enter 1 (Download), 2 (Unzip), 3 (RSync) or leave empty for interactive prompts
@@ -29,7 +30,31 @@ GITHUBPATH="https://raw.githubusercontent.com/rachelproject/rachelplus/master"
 RSYNCONLINE="rsync://dev.worldpossible.org"
 FILE2="/root/cap-rachel-first-install-2.sh"
 FILE3="/root/cap-rachel-first-install-3.sh"
-LIGHTTPDFILE="/root/lighttpd.conf"
+LIGHTTPDCONF="/root/lighttpd.conf"
+
+if [[ $INTERNET == "1" ]]; then
+    GITHUBSRC=""
+    RYSNCSRC=""
+    SOURCEUS="wget $GITHUBPATH/sources.list/sources-us.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1"
+    SOURCEUK="wget $GITHUBPATH/sources.list/sources-uk.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1"
+    SOURCESG="wget $GITHUBPATH/sources.list/sources-sg.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1"
+    SOURCECN="wget $GITHUBPATH/sources.list/sources-sohu.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1"
+    CAPRACHELFIRSTINSTALL2="wget $GITHUBPATH/install/cap-rachel-first-install-2.sh -O /root/cap-rachel-first-install-2.sh 1>> $RACHELLOG 2>&1"
+    CAPRACHELFIRSTINSTALL3="wget $GITHUBPATH/install/cap-rachel-first-install-3.sh -O /root/cap-rachel-first-install-3.sh 1>> $RACHELLOG 2>&1"
+    LIGHTTPDFILE="wget $GITHUBPATH/lighttpd.conf -O /root/lighttpd.conf 1>> $RACHELLOG 2>&1"
+    CAPTIVEPORTAL-REDIRECT="wget $GITHUBPATH/captive-portal/captiveportal-redirect.php 1>> $RACHELLOG 2>&1"
+    RACHELBRANDLOGO-CAPTIVE="wget $GITHUBPATH/captive-portal/RACHELbrandLogo-captive.png 1>> $RACHELLOG 2>&1"
+    HFCBRANDLOGO-CAPTIVE="wget $GITHUBPATH/captive-portal/HFCbrandLogo-captive.jpg 1>> $RACHELLOG 2>&1"
+    WORLDPOSSIBLEBRANDLOGO-CAPTIVE="wget $GITHUBPATH/captive-portal/WorldPossiblebrandLogo-captive.png 1>> $RACHELLOG 2>&1"
+    GITCLONE-RACHELCONTENTSHELL="git clone https://github.com/rachelproject/contentshell /media/RACHEL/rachel.contentshell 1>> $RACHELLOG 2>&1"
+else
+    SOURCEUS=""
+    SOURCEUK=""
+    SOURCESG=""
+    SOURCECN=""
+    CAPRACHELFIRSTINSTALL2=""
+    CAPRACHELFIRSTINSTALL3=""
+fi
 
 function print_good () {
     echo -e "\x1B[01;32m[+]\x1B[0m $1"
@@ -60,32 +85,44 @@ function print_header () {
 }
 
 function check_internet () {
-# Check internet connecivity
-WGET=`which wget`
-$WGET -q --tries=10 --timeout=5 --spider http://google.com 1>> $RACHELLOG 2>&1
-if [[ $? -eq 0 ]]; then
-    echo; print_good "Internet connected...continuing install." | tee -a $RACHELLOG
-else
-    echo; print_error "No internet connectivity; waiting 15 seconds and then I will try again." | tee -a $RACHELLOG
-    # Progress bar to visualize wait period
-    while true;do echo -n .;sleep 1;done & 
-    sleep 15
-    kill $!; trap 'kill $!' SIGTERM
-    $WGET -q --tries=10 --timeout=5 --spider http://google.com
-    if [[ $? -eq 0 ]]; then
-        echo; print_good "Internet connected...continuing install." | tee -a $RACHELLOG
+    trap ctrl_c INT
+    if [[ $INTERNET == "1" || -z $INTERNET ]]; then
+        # Check internet connecivity
+        WGET=`which wget`
+        $WGET -q --tries=10 --timeout=5 --spider http://google.com 1>> $RACHELLOG 2>&1
+        if [[ $? -eq 0 ]]; then
+            echo; print_good "Internet connected...continuing install." | tee -a $RACHELLOG
+            INTERNET=1
+        else
+            echo; print_error "No internet connectivity; waiting 10 seconds and then I will try again." | tee -a $RACHELLOG
+            # Progress bar to visualize wait period
+            while true;do echo -n .;sleep 1;done & 
+            sleep 10
+            kill $!; trap 'kill $!' SIGTERM
+            $WGET -q --tries=10 --timeout=5 --spider http://google.com
+            if [[ $? -eq 0 ]]; then
+                echo; print_good "Internet connected...continuing install." | tee -a $RACHELLOG
+                INTERNET=1
+            else
+                echo; print_error "No internet connectivity; entering 'Offline' mode." | tee -a $RACHELLOG
+                INTERNET=0
+            fi
+        fi
+    elif [[ $INTERNET = "0" ]]; then
+        echo; print_good "Script set for 'Offline' mode; continuing." | tee -a $RACHELLOG
     else
-        echo; print_error "No internet connectivity; if you want to download content, connect to the internet and try again." | tee -a $RACHELLOG
+        echo; print_error "Script variable for 'INTERNET' not set correctly; check script and try again." | tee -a $RACHELLOG
+        exit 1
     fi
-fi
 }
 
 function ctrl_c () {
     kill $!; trap 'kill $1' SIGTERM
     echo; print_error "Cancelled by user."
-    rm $RACHELLOG
-    cleanup
-    echo; exit 1
+#    whattodo
+#    rm $RACHELLOG
+#    cleanup
+#    echo; exit 1
 }
 
 function reboot-CAP () {
@@ -188,28 +225,39 @@ EOF
 }
 
 function kiwix () {
-    echo; print_status "Setting up kiwix." | tee -a $RACHELLOG
-    cd /var
-    wget http://rachelfriends.org/z-holding/kiwix-0.9-linux-i686.tar.bz2
-    tar xjvf /var/kiwix-0.9-linux-i686.tar.bz2
-    # Add lines to /etc/rc.local that will start kiwix on boot
-    sed -i '$e echo "bash \/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' /etc/rc.local 1>> $RACHELLOG 2>&1
-    print_good "Done." | tee -a $RACHELLOG
+    if [[ $INTERNET == "1" ]]; then
+        echo; print_status "Setting up kiwix." | tee -a $RACHELLOG
+        cd /var
+        wget http://rachelfriends.org/z-holding/kiwix-0.9-linux-i686.tar.bz2
+        tar xjvf /var/kiwix-0.9-linux-i686.tar.bz2
+        # Remove old kiwix boot lines from /etc/rc.local
+        sed -i '/kiwix/d' /etc/rc.local 1>> $RACHELLOG 2>&1
+        # Add lines to /etc/rc.local that will start kiwix on boot
+        sed -i '$e echo "\# Start kiwix on boot"' /etc/rc.local 1>> $RACHELLOG 2>&1
+        sed -i '$e echo "bash \/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' /etc/rc.local 1>> $RACHELLOG 2>&1
+        print_good "Done." | tee -a $RACHELLOG
+    else
+        print_error "No internet connectivity; try again when connected."
+    fi
 }
 
 function sphider_plus.sql () {
-    echo; print_status "Installing sphider_plus.sql" | tee -a $RACHELLOG
-    cd /media/RACHEL
-    wget http://rachelfriends.org/z-SQLdatabase/sphider_plus.sql
-    mysql -u root -proot sphider_plus < sphider_plus.sql
-    echo; print_status "The sphider_plus.sql file was downloaded to /media/RACHEL/z-SQLdatabase/sphider_plus.sql"
-    echo; read -p "Check for errors...if no errors, enter 'y' to delete the source file; otherwise enter 'n' to troubleshoot and keep the downloaded file. Delete? (y/n) " -r <&1
-    if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
-        rm /media/RACHEL/sphider_plus.sql
-        echo; print_good "Done." | tee -a $RACHELLOG
+    if [[ $INTERNET == "1" ]]; then
+        echo; print_status "Installing sphider_plus.sql" | tee -a $RACHELLOG
+        cd /media/RACHEL
+        wget http://rachelfriends.org/z-SQLdatabase/sphider_plus.sql
+        mysql -u root -proot sphider_plus < sphider_plus.sql
+        echo; print_status "The sphider_plus.sql file was downloaded to /media/RACHEL/z-SQLdatabase/sphider_plus.sql"
+        echo; read -p "Check for errors...if no errors, enter 'y' to delete the source file; otherwise enter 'n' to troubleshoot and keep the downloaded file. Delete? (y/n) " -r <&1
+        if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
+            rm /media/RACHEL/sphider_plus.sql
+            echo; print_good "Done." | tee -a $RACHELLOG
+        else
+            echo; print_status "File saved at /media/RACHEL/z-SQLdatabase/sphider_plus.sql"
+            echo; print_good "Done." | tee -a $RACHELLOG
+        fi
     else
-        echo; print_status "File saved at /media/RACHEL/z-SQLdatabase/sphider_plus.sql"
-        echo; print_good "Done." | tee -a $RACHELLOG
+        print_error "No internet connectivity; try again when connected."
     fi
 }
 
@@ -244,25 +292,25 @@ function new_install () {
         # US
         US)
             echo; print_status "Downloading packages from the United States." | tee -a $RACHELLOG
-            wget $GITHUBPATH/sources.list/sources-us.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1
+            $SOURCEUS
         ;;
 
         # UK
         UK)
             echo; print_status "Downloading packages from the United Kingdom." | tee -a $RACHELLOG
-            wget $GITHUBPATH/sources.list/sources-uk.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1
+            $SOURCEUK
         ;;
 
         # Singapore
         SG)
             echo; print_status "Downloading packages from Singapore." | tee -a $RACHELLOG
-            wget $GITHUBPATH/sources.list/sources-sg.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1
+            $SOURCESG
         ;;
 
         # China (Original)
         CN)
             echo; print_status "Downloading packages from the China - CAP manufacturer's website." | tee -a $RACHELLOG
-            wget $GITHUBPATH/sources.list/sources-sohu.list -O /etc/apt/sources.list 1>> $RACHELLOG 2>&1
+            $SOURCECN
         ;;
         esac
         print_good "Done." | tee -a $RACHELLOG
@@ -272,12 +320,12 @@ function new_install () {
     # Download/stage GitHub files to $INSTALLTMPDIR
     echo; print_status "Downloading RACHEL install scripts for CAP to the temp folder $INSTALLTMPDIR." | tee -a $RACHELLOG
     ## cap-rachel-first-install-2.sh
-    wget $GITHUBPATH/install/cap-rachel-first-install-2.sh -O /root/cap-rachel-first-install-2.sh 1>> $RACHELLOG 2>&1
+    $CAPRACHELFIRSTINSTALL2
     ## cap-rachel-first-install-3.sh
-    wget $GITHUBPATH/install/cap-rachel-first-install-3.sh -O /root/cap-rachel-first-install-3.sh 1>> $RACHELLOG 2>&1
+    $CAPRACHELFIRSTINSTALL3
     ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies)
-    wget $GITHUBPATH/lighttpd.conf -O /root/lighttpd.conf 1>> $RACHELLOG 2>&1
-    if [[ -s $FILE2 && -s $FILE3 && -s $LIGHTTPDFILE ]]  1>> $RACHELLOG 2>&1; then
+    $LIGHTTPDFILE
+    if [[ -s $FILE2 && -s $FILE3 && -s $LIGHTTPDCONF ]]  1>> $RACHELLOG 2>&1; then
         print_good "Done." | tee -a $RACHELLOG
     else
         print_error "One or more files did not download correctly; check log file (/var/log/RACHEL/rachel-install.tmp) and try again." | tee -a $RACHELLOG
@@ -290,22 +338,22 @@ function new_install () {
 
     # RACHEL Captive Portal file download
     echo; print_status "Downloading Captive Portal content and moving a copy files." | tee -a $RACHELLOG
-    wget $GITHUBPATH/captive-portal/captiveportal-redirect.php 1>> $RACHELLOG 2>&1
+    $CAPTIVEPORTAL-REDIRECT
     print_good "Downloaded captiveportal-redirect.php." | tee -a $RACHELLOG
     if [[ ! -f $RACHELWWW/art/RACHELbrandLogo-captive.png ]]; then
-        wget $GITHUBPATH/captive-portal/RACHELbrandLogo-captive.png 1>> $RACHELLOG 2>&1
+        $RACHELBRANDLOGO-CAPTIVE
         print_good "Downloaded RACHELbrandLogo-captive.png." | tee -a $RACHELLOG
     else
         print_good "$RACHELWWW/art/RACHELbrandLogo-captive.png exists, skipping." | tee -a $RACHELLOG
     fi
     if [[ ! -f $RACHELWWW/art/HFCbrandLogo-captive.jpg ]]; then
-        wget $GITHUBPATH/captive-portal/HFCbrandLogo-captive.jpg 1>> $RACHELLOG 2>&1
+        $HFCBRANDLOGO-CAPTIVE
         print_good "Downloaded HFCbrandLogo-captive.jpg." | tee -a $RACHELLOG
     else
         print_good "$RACHELWWW/art/HFCbrandLogo-captive.jpg exists, skipping." | tee -a $RACHELLOG
     fi
     if [[ ! -f $RACHELWWW/art/WorldPossiblebrandLogo-captive.png ]]; then
-        wget $GITHUBPATH/captive-portal/WorldPossiblebrandLogo-captive.png 1>> $RACHELLOG 2>&1
+        $WORLDPOSSIBLEBRANDLOGO-CAPTIVE
         print_good "Downloaded WorldPossiblebrandLogo-captive.png." | tee -a $RACHELLOG
     else
         print_good "$RACHELWWW/art/WorldPossiblebrandLogo-captive.png exists, skipping." | tee -a $RACHELLOG
@@ -339,19 +387,20 @@ function new_install () {
         print_good "Done." | tee -a $RACHELLOG
 
         # Clone or update the RACHEL content shell from GitHub
-        echo; print_status "Checking for pre-existing RACHEL content." | tee -a $RACHELLOG
+        echo; print_status "Checking for pre-existing RACHEL content shell." | tee -a $RACHELLOG
         if [[ ! -d $RACHELWWW ]]; then
-            echo; print_status "RACHEL content does not exist at $RACHELWWW." | tee -a $RACHELLOG
+            echo; print_status "RACHEL content shell does not exist at $RACHELWWW." | tee -a $RACHELLOG
             echo; print_status "Cloning the RACHEL content shell from GitHub." | tee -a $RACHELLOG
-            git clone https://github.com/rachelproject/contentshell $INSTALLTMPDIR/contentshell 1>> $RACHELLOG 2>&1
+            $GITCLONE-RACHELCONTENTSHELL
+            mv $RACHELWWW.contentshell $RACHELWWW
         else
             if [[ ! -d $RACHELWWW/.git ]]; then
                 echo; print_status "$RACHELWWW exists but it wasn't installed from git; installing RACHEL content shell from GitHub." | tee -a $RACHELLOG
-                rm -rf /media/RACHEL/rachel.contentshell 1>> $RACHELLOG 2>&1 # in case of previous failed install
-                git clone https://github.com/rachelproject/contentshell /media/RACHEL/rachel.contentshell 1>> $RACHELLOG 2>&1
-                cp -rf /media/RACHEL/rachel.contentshell/* /media/RACHEL/rachel 1>> $RACHELLOG 2>&1 # overwrite current content with contentshell
-                cp -rf /media/RACHEL/rachel.contentshell/.git /media/RACHEL/rachel/ 1>> $RACHELLOG 2>&1 # copy over GitHub files
-                rm -rf /media/RACHEL/rachel.contentshell 1>> $RACHELLOG 2>&1 # remove contentshell temp folder
+                rm -rf $RACHELWWW.contentshell 1>> $RACHELLOG 2>&1 # in case of previous failed install
+                $GITCLONE-RACHELCONTENTSHELL
+                cp -rf $RACHELWWW.contentshell/* $RACHELWWW 1>> $RACHELLOG 2>&1 # overwrite current content with contentshell
+                cp -rf $RACHELWWW.contentshell/.git $RACHELWWW 1>> $RACHELLOG 2>&1 # copy over GitHub files
+                rm -rf $RACHELWWW.contentshell 1>> $RACHELLOG 2>&1 # remove contentshell temp folder
             else
                 echo; print_status "$RACHELWWW exists; updating RACHEL content shell from GitHub." | tee -a $RACHELLOG
                 cd $RACHELWWW; git pull 1>> $RACHELLOG 2>&1
@@ -419,7 +468,15 @@ function repair () {
     # Download/update to latest RACHEL lighttpd.conf
     echo; print_status "Downloading latest lighttpd.conf" | tee -a $RACHELLOG
     ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies)
-    sudo wget $GITHUBPATH/lighttpd.conf -O /usr/local/etc/lighttpd.conf 1>> $RACHELLOG 2>&1
+    $LIGHTTPDFILE
+    if [[ -s $LIGHTTPDCONF ]]  1>> $RACHELLOG 2>&1; then
+        print_good "Done." | tee -a $RACHELLOG
+    else
+        print_error "One or more files did not download correctly; check log file (/var/log/RACHEL/rachel-install.tmp) and try again." | tee -a $RACHELLOG
+        echo "The lighttpd.conf file should have downloaded to the /root folder." | tee -a $RACHELLOG
+        echo; break
+    fi
+
     print_good "Done." | tee -a $RACHELLOG
 
     # Reapply /etc/fstab entry for /media/RACHEL
@@ -432,28 +489,27 @@ function repair () {
     echo; print_status "Fixing /etc/rc.local" | tee -a $RACHELLOG
     # Delete previous setup commands from the /etc/rc.local
     echo; print_status "Setting up KA Lite to start at boot..." | tee -a $RACHELLOG
-    sudo sed -i '/ka-lite/d' /etc/rc.local 1>> $RACHELLOG 2>&1
-    sudo sed -i '/sleep 20/d' /etc/rc.local 1>> $RACHELLOG 2>&1
+    sed -i '/ka-lite/d' /etc/rc.local 1>> $RACHELLOG 2>&1
+    sed -i '/sleep 20/d' /etc/rc.local 1>> $RACHELLOG 2>&1
 
     # Start KA Lite at boot time
-    sudo sed -i '$e echo "# Start ka-lite at boot time"' /etc/rc.local 1>> $RACHELLOG 2>&1
-    sudo sed -i '$e echo "sleep 20"' /etc/rc.local 1>> $RACHELLOG 2>&1
-    sudo sed -i '$e echo "/var/ka-lite/bin/kalite start"' /etc/rc.local 1>> $RACHELLOG 2>&1
+    sed -i '$e echo "# Start ka-lite at boot time"' /etc/rc.local 1>> $RACHELLOG 2>&1
+    sed -i '$e echo "sleep 20"' /etc/rc.local 1>> $RACHELLOG 2>&1
+    sed -i '$e echo "/var/ka-lite/bin/kalite start"' /etc/rc.local 1>> $RACHELLOG 2>&1
     print_good "Done." | tee -a $RACHELLOG
 
     # Delete previous setwanip commands from /etc/rc.local
     echo; print_status "Deleting previous setwanip.sh script from /etc/rc.local" | tee -a $RACHELLOG
-    sudo sed -i '/setwanip/d' /etc/rc.local
+    sed -i '/setwanip/d' /etc/rc.local
     rm -f /root/setwanip.sh
     print_good "Done." | tee -a $RACHELLOG
 
     # Delete previous iptables commands from /etc/rc.local
     echo; print_status "Deleting previous iptables script from /etc/rc.local" | tee -a $RACHELLOG
-    sudo sed -i '/iptables/d' /etc/rc.local
+    sed -i '/iptables/d' /etc/rc.local
     print_good "Done." | tee -a $RACHELLOG
 
-    # Enable IP forwarding from 10.10.10.10 to 192.168.88.1 (only from wifi)
-    #echo 1 > /proc/sys/net/ipv4/ip_forward #line not needed as option already set
+    # Fix the iptables-rachel.sh script
     cat > /root/iptables-rachel.sh << 'EOF'
 #!/bin/bash
 # Add the RACHEL iptables rule to redirect 10.10.10.10 to CAP default of 192.168.88.1
