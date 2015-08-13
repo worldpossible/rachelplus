@@ -1,0 +1,7 @@
+zip -r9 ka-lite_content.zip content # max compression, recursive zip file creation
+
+find $DIRCONTENTOFFLINE/. -type f -exec sha1sum {} >> SHA1SUMS \; # to calculate the SHA1 of each file
+
+find . -type d -exec chmod 0755 {} \;
+find . -type f -exec chmod 0644 {} \;
+find . -type d -user harry -exec chown daisy {} \;
