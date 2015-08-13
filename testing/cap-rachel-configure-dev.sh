@@ -2,21 +2,20 @@
 # FILE: cap-rachel-configure.sh
 # ONELINER Download/Install: sudo wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/cap-rachel-configure.sh -O /root/cap-rachel-configure.sh; bash cap-rachel-configure.sh
 
-# For local build, you will need to run the following commands:
-# git clone https://github.com/rachelproject/rachelplus <offline-folder>/rachelplus
-# git clone https://github.com/rachelproject/contentshell <offline-folder>/rachel.contentshell
+# For offline build, you will need to run the following script to download content to your computer/drive.  This script is also available when you run this script under the Utilities menu, then select Download-Offline-Content:
+# #!/bin/bash
+# DIRCONTENTOFFLINE="/root/rachel-install-files"
+# git clone https://github.com/rachelproject/rachelplus $DIRCONTENTOFFLINE/rachelplus
+# git clone https://github.com/rachelproject/contentshell $DIRCONTENTOFFLINE/rachel.contentshell
+# rsync -avz --ignore-existing $RSYNCONLINE/rachelmods $DIRCONTENTOFFLINE/
+# git clone --recursive https://github.com/learningequality/ka-lite.git $DIRCONTENTOFFLINE/ka-lite
+# wget -c http://rachelfriends.org/z-holding/ka-lite_content.zip -O $DIRCONTENTOFFLINE/ka-lite_content.zip
+# Finally, change the variable DIRCONTENTOFFLINE to your "offline folder" location
 
 # COMMON VARIABLES - Change as needed
-VERSION=0806150411 # To get current version - date +%m%d%y%H%M
+VERSION=0812151942 # To get current version - date +%m%d%y%H%M
 INTERNET="1" # Enter 0 (Offline), 1 (Online), or leave blank and script will check connectivity
-DIRCONTENTOFFLINE="" # Enter location of downloaded content for offline install
-RSYNCOFFLINE=""
-WGETOFFLINE=""
-KALITEOFFLINE=""
-KALITEDEFAULT="" # Enter 1 (Download), 2 (Unzip), 3 (RSync) or leave empty for interactive prompts
-KALITERSYNCSRCUSER="root"
-KALITERSYNCSRCIP="" # Enter a local repository of video content for KA Lite
-KALITERSYNCSRCPATH="/media/RACHEL/kacontent"
+DIRCONTENTOFFLINE="/media/RACHEL-Content" # Enter directory of downloaded RACHEL content for offline install
 
 # CORE RACHEL VARIABLES - Change if you know what you are doing
 TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
@@ -27,12 +26,15 @@ RACHELLOG="$RACHELLOGDIR/$RACHELLOGFILE"
 RACHELWWW="/media/RACHEL/rachel"
 KALITEDIR="/var/ka-lite"
 INSTALLTMPDIR="/root/cap-rachel-install.tmp"
+RACHELPARTITION="/media/RACHEL"
 mkdir -p $INSTALLTMPDIR
-GITHUBONLINE="https://raw.githubusercontent.com/rachelproject/rachelplus/master"
 RSYNCONLINE="rsync://dev.worldpossible.org"
-NEWINSTALLFILE2="/root/cap-rachel-first-install-2.sh"
-NEWINSTALLFILE3="/root/cap-rachel-first-install-3.sh"
-LIGHTTPDCONF="/root/lighttpd.conf"
+GITRACHELPLUS="https://raw.githubusercontent.com/rachelproject/rachelplus/master"
+GITCONTENTSHELL="https://raw.githubusercontent.com/rachelproject/contentshell/master"
+NEWINSTALLFILE2="$INSTALLTMPDIR/cap-rachel-first-install-2.sh"
+NEWINSTALLFILE3="$INSTALLTMPDIR/cap-rachel-first-install-3.sh"
+LIGHTTPDCONF="$INSTALLTMPDIR/lighttpd.conf"
+KALITERCONTENTDIR="/media/RACHEL/kacontent"
 
 function print_good () {
     echo -e "\x1B[01;32m[+]\x1B[0m $1"
@@ -57,19 +59,68 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 function testing-script () {
-    echo; print_status "Downloading known good file."
-    wget $GITHUBONLINE/testing/cap-rachel-configure-dev.sh -O $INSTALLTMPDIR/cap-rachel-configure-dev.sh
-    command_status
-    print_status "Variable DOWNLOADERROR=$DOWNLOADERROR"
-    print_good "Done."
+    set -x
+    echo $INSTALLTMPDIR
+    cd $INSTALLTMPDIR
+   # Download/stage GitHub files to $INSTALLTMPDIR
+    echo; print_status "Downloading RACHEL install scripts for CAP to the temp folder $INSTALLTMPDIR." | tee -a $RACHELLOG
+    ## cap-rachel-first-install-2.sh
+    echo; print_status "Downloading cap-rachel-first-install-2.sh" | tee -a $RACHELLOG
+    $CAPRACHELFIRSTINSTALL2 1>> $RACHELLOG 2>&1
+    wget_status
+    ## cap-rachel-first-install-3.sh
+    echo; print_status "Downloading cap-rachel-first-install-3.sh" | tee -a $RACHELLOG
+    $CAPRACHELFIRSTINSTALL3 1>> $RACHELLOG 2>&1
+    wget_status
+    ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies)
+    echo; print_status "Downloading lighttpd.conf" | tee -a $RACHELLOG
+    $LIGHTTPDFILE 1>> $RACHELLOG 2>&1
+    wget_status
 
-    echo; print_status "Downloading file that does not exist."
-    wget $GITHUBONLINE/testing/cap-rachel-idontexist.sh -O $INSTALLTMPDIR/cap-rachel-idontexist.sh
-    command_status
-    print_status "Variable DOWNLOADERROR=$DOWNLOADERROR"
-    print_good "Done."
+    # RACHEL Captive Portal file download
+    cd $RACHELWWW
+    echo; print_status "Downloading Captive Portal content and moving a copy files." | tee -a $RACHELLOG
+    $CAPTIVEPORTALREDIRECT 1>> $RACHELLOG 2>&1
+    wget_status
+    print_good "Downloaded captiveportal-redirect.php." | tee -a $RACHELLOG
+    if [[ ! -f $RACHELWWW/art/RACHELbrandLogo-captive.png ]]; then
+        $RACHELBRANDLOGOCAPTIVE 1>> $RACHELLOG 2>&1
+        wget_status
+        echo; print_good "Downloaded RACHELbrandLogo-captive.png." | tee -a $RACHELLOG
+    else
+        echo; print_good "$RACHELWWW/art/RACHELbrandLogo-captive.png exists, skipping." | tee -a $RACHELLOG
+    fi
+    if [[ ! -f $RACHELWWW/art/HFCbrandLogo-captive.jpg ]]; then
+        $HFCBRANDLOGOCAPTIVE 1>> $RACHELLOG 2>&1
+        wget_status
+        echo; print_good "Downloaded HFCbrandLogo-captive.jpg." | tee -a $RACHELLOG
+    else
+        echo; print_good "$RACHELWWW/art/HFCbrandLogo-captive.jpg exists, skipping." | tee -a $RACHELLOG
+    fi
+    if [[ ! -f $RACHELWWW/art/WorldPossiblebrandLogo-captive.png ]]; then
+        $WORLDPOSSIBLEBRANDLOGOCAPTIVE 1>> $RACHELLOG 2>&1
+        wget_status
+        echo; print_good "Downloaded WorldPossiblebrandLogo-captive.png." | tee -a $RACHELLOG
+    else
+        echo; print_good "$RACHELWWW/art/WorldPossiblebrandLogo-captive.png exists, skipping." | tee -a $RACHELLOG
+    fi
 
-    break
+    # Check if files downloaded correctly
+    if [[ $DOWNLOADERROR == 0 ]]; then
+        echo; print_good "Done." | tee -a $RACHELLOG
+    else
+        echo; print_error "One or more files did not download correctly; check log file (/var/log/RACHEL/rachel-install.tmp) and try again." | tee -a $RACHELLOG
+        cleanup
+        echo; exit 1
+    fi
+    # Check if /media/RACHEL/rachel is already mounted
+    if grep -qs '/media/RACHEL' /proc/mounts; then
+        echo; print_status "This hard drive is already partitioned for RACHEL, skipping hard drive repartitioning." | tee -a $RACHELLOG
+        echo; print_good "RACHEL CAP Install - Script ended at $(date)" | tee -a $RACHELLOG
+        echo; print_good "RACHEL CAP Install - Script 2 skipped (hard drive repartitioning) at $(date)" | tee -a $RACHELLOG
+        bash $INSTALLTMPDIR/cap-rachel-first-install-3.sh
+    fi
+    exit 1
 }
 
 function print_header () {
@@ -112,18 +163,25 @@ function check_internet () {
 
 if [[ $INTERNET == "1" ]]; then
     DOWNLOADERROR="0"
-    SOURCEUS="wget -r $GITHUBONLINE/sources.list/sources-us.list -O /etc/apt/sources.list"
-    SOURCEUK="wget -r $GITHUBONLINE/sources.list/sources-uk.list -O /etc/apt/sources.list"
-    SOURCESG="wget -r $GITHUBONLINE/sources.list/sources-sg.list -O /etc/apt/sources.list"
-    SOURCECN="wget -r $GITHUBONLINE/sources.list/sources-sohu.list -O /etc/apt/sources.list" 
-    CAPRACHELFIRSTINSTALL2="wget -r $GITHUBONLINE/install/cap-rachel-first-install-2.sh"
-    CAPRACHELFIRSTINSTALL3="wget -r $GITHUBONLINE/install/cap-rachel-first-install-3.sh"
-    LIGHTTPDFILE="wget -r $GITHUBONLINE/lighttpd.conf"
-    CAPTIVEPORTALREDIRECT="wget -r $GITHUBONLINE/captive-portal/captiveportal-redirect.php"
-    RACHELBRANDLOGOCAPTIVE="wget -r $GITHUBONLINE/captive-portal/RACHELbrandLogo-captive.png"
-    HFCBRANDLOGOCAPTIVE="wget -r $GITHUBONLINE/captive-portal/HFCbrandLogo-captive.jpg"
-    WORLDPOSSIBLEBRANDLOGOCAPTIVE="wget -r $GITHUBONLINE/captive-portal/WorldPossiblebrandLogo-captive.png"
+    SOURCEUS="wget -r $GITRACHELPLUS/sources.list/sources-us.list -O /etc/apt/sources.list"
+    SOURCEUK="wget -r $GITRACHELPLUS/sources.list/sources-uk.list -O /etc/apt/sources.list"
+    SOURCESG="wget -r $GITRACHELPLUS/sources.list/sources-sg.list -O /etc/apt/sources.list"
+    SOURCECN="wget -r $GITRACHELPLUS/sources.list/sources-sohu.list -O /etc/apt/sources.list" 
+    CAPRACHELFIRSTINSTALL2="wget -r $GITRACHELPLUS/install/cap-rachel-first-install-2.sh -O cap-rachel-first-install-2.sh"
+    CAPRACHELFIRSTINSTALL3="wget -r $GITRACHELPLUS/install/cap-rachel-first-install-3.sh -O cap-rachel-first-install-3.sh"
+    LIGHTTPDFILE="wget -r $GITRACHELPLUS/lighttpd.conf -O lighttpd.conf"
+    CAPTIVEPORTALREDIRECT="wget -r $GITRACHELPLUS/captive-portal/captiveportal-redirect.php -O captiveportal-redirect.php"
+    RACHELBRANDLOGOCAPTIVE="wget -r $GITRACHELPLUS/captive-portal/RACHELbrandLogo-captive.png -O art/RACHELbrandLogo-captive.png"
+    HFCBRANDLOGOCAPTIVE="wget -r $GITRACHELPLUS/captive-portal/HFCbrandLogo-captive.jpg -O art/HFCbrandLogo-captive.jpg"
+    WORLDPOSSIBLEBRANDLOGOCAPTIVE="wget -r $GITRACHELPLUS/captive-portal/WorldPossiblebrandLogo-captive.png -O art/WorldPossiblebrandLogo-captive.png"
     GITCLONERACHELCONTENTSHELL="git clone https://github.com/rachelproject/contentshell /media/RACHEL/rachel.contentshell"
+    RSYNCDIR="$RSYNCONLINE"
+    ASSESSMENTITEMSJSON="wget -c $GITRACHELPLUS/assessmentitems.json -O /var/ka-lite/data/khan/assessmentitems.json"
+    KALITEINSTALL="git clone --recursive https://github.com/learningequality/ka-lite.git /var/ka-lite"
+    KALITEUPDATE="git pull"
+    KALITECONTENTINSTALL="wget -c http://rachelfriends.org/z-holding/ka-lite_content.zip -O $RACHELPARTITION/ka-lite_content.zip"
+    KIWIXINSTALL="wget -c http://rachelfriends.org/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $RACHELPARTITION/kiwix-0.9-linux-i686.tar.bz2 && cd $RACHELPARTITION"
+    SPHIDERPLUSSQLINSTALL="wget -c http://rachelfriends.org/z-SQLdatabase/sphider_plus.sql -O $RACHELPARTITION/sphider_plus.sql && cd $RACHELPARTITION"
 else
     SOURCEUS="cp $DIRCONTENTOFFLINE/rachelplus/sources.list/sources-us.list /etc/apt/sources.list"
     SOURCEUK="cp $DIRCONTENTOFFLINE/rachelplus/sources.list/sources-uk.list /etc/apt/sources.list"
@@ -137,6 +195,13 @@ else
     HFCBRANDLOGOCAPTIVE="cp $DIRCONTENTOFFLINE/rachelplus/captive-portal/HFCbrandLogo-captive.jpg ."
     WORLDPOSSIBLEBRANDLOGOCAPTIVE="cp $DIRCONTENTOFFLINE/rachelplus/captive-portal/WorldPossiblebrandLogo-captive.png ."
     GITCLONERACHELCONTENTSHELL="cp -r $DIRCONTENTOFFLINE/rachel.contentshell /media/RACHEL/rachel.contentshell"
+    RSYNCDIR="$DIRCONTENTOFFLINE"
+    ASSESSMENTITEMSJSON="cp -r $DIRCONTENTOFFLINE/rachelplus/assessmentitems.json /var/ka-lite/data/khan/assessmentitems.json"
+    KALITEINSTALL="cp -r $DIRCONTENTOFFLINE/ka-lite /var/"
+    KALITEUPDATE="cp -r $DIRCONTENTOFFLINE/ka-lite /var/"
+    KALITECONTENTINSTALL="cp -r $DIRCONTENTOFFLINE/ka-lite_content.zip /media/RACHEL/"
+    KIWIXINSTALL="cd $DIRCONTENTOFFLINE"
+    SPHIDERPLUSSQLINSTALL="cd $DIRCONTENTOFFLINE"
 fi
 
 function ctrl_c () {
@@ -148,7 +213,7 @@ function ctrl_c () {
 #    echo; exit 1
 }
 
-function command_status () {
+function wget_status () {
     export EXITCODE="$?"
     if [[ $EXITCODE != 0 ]]; then
         print_error "Command failed.  Exit code: $EXITCODE" | tee -a $RACHELLOG
@@ -156,6 +221,12 @@ function command_status () {
     else
         print_good "Command successful." | tee -a $RACHELLOG
     fi
+}
+
+function check_sha1 () {
+    CALCULATEDHASH=$(openssl sha1 $1)
+    KNOWNHASH=$(cat $INSTALLTMPDIR/rachelplus/hashes.txt | grep $1 | cut -f1 -d" ")
+    if [ "SHA1(${1})= $2" = "${CALCULATEDHASH}" ]; then print_good "Good hash!" && export GOODHASH=1; else print_error "Bad hash!"  && export GOODHASH=0; fi
 }
 
 function reboot-CAP () {
@@ -210,7 +281,7 @@ function sanitize () {
 function symlink () {
     trap ctrl_c INT
     print_header
-    echo; print_status "Symlinking all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent"
+    echo; print_status "Symlinking all .mp4 videos in the module kaos-en to $KALITERCONTENTDIR"
 
     # Write python file for creating symlinks
     cat > /tmp/symlink.py << 'EOF'
@@ -258,40 +329,44 @@ EOF
 }
 
 function kiwix () {
-    if [[ $INTERNET == "1" ]]; then
-        echo; print_status "Setting up kiwix." | tee -a $RACHELLOG
-        cd /var
-        wget http://rachelfriends.org/z-holding/kiwix-0.9-linux-i686.tar.bz2
-        tar xjvf /var/kiwix-0.9-linux-i686.tar.bz2
-        # Remove old kiwix boot lines from /etc/rc.local
-        sed -i '/kiwix/d' /etc/rc.local 1>> $RACHELLOG 2>&1
-        # Add lines to /etc/rc.local that will start kiwix on boot
-        sed -i '$e echo "\# Start kiwix on boot"' /etc/rc.local 1>> $RACHELLOG 2>&1
-        sed -i '$e echo "bash \/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' /etc/rc.local 1>> $RACHELLOG 2>&1
-        print_good "Done." | tee -a $RACHELLOG
-    else
-        print_error "No internet connectivity; try again when connected."
-    fi
+    echo; print_status "Setting up kiwix." | tee -a $RACHELLOG
+    $KIWIXINSTALL
+    tar -C /var/ -xjvf kiwix-0.9-linux-i686.tar.bz2
+    # Remove old kiwix boot lines from /etc/rc.local
+    sed -i '/kiwix/d' /etc/rc.local 1>> $RACHELLOG 2>&1
+    # Add lines to /etc/rc.local that will start kiwix on boot
+    sed -i '$e echo "\# Start kiwix on boot"' /etc/rc.local 1>> $RACHELLOG 2>&1
+    sed -i '$e echo "bash \/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' /etc/rc.local 1>> $RACHELLOG 2>&1
+    print_good "Done." | tee -a $RACHELLOG
 }
 
 function sphider_plus.sql () {
-    if [[ $INTERNET == "1" ]]; then
-        echo; print_status "Installing sphider_plus.sql" | tee -a $RACHELLOG
-        cd /media/RACHEL
-        wget http://rachelfriends.org/z-SQLdatabase/sphider_plus.sql
-        mysql -u root -proot sphider_plus < sphider_plus.sql
-        echo; print_status "The sphider_plus.sql file was downloaded to /media/RACHEL/z-SQLdatabase/sphider_plus.sql"
-        echo; read -p "Check for errors...if no errors, enter 'y' to delete the source file; otherwise enter 'n' to troubleshoot and keep the downloaded file. Delete? (y/n) " -r <&1
-        if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
-            rm /media/RACHEL/sphider_plus.sql
-            echo; print_good "Done." | tee -a $RACHELLOG
-        else
-            echo; print_status "File saved at /media/RACHEL/z-SQLdatabase/sphider_plus.sql"
-            echo; print_good "Done." | tee -a $RACHELLOG
-        fi
+    echo; print_status "Installing sphider_plus.sql" | tee -a $RACHELLOG
+    $SPHIDERPLUSSQLINSTALL
+    mysql -u root -proot sphider_plus < sphider_plus.sql
+    echo; read -p "Check for errors...if no errors, enter 'y' to delete the source file; otherwise enter 'n' to troubleshoot and keep the downloaded file. Delete? (y/n) " -r <&1
+    if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
+        rm $RACHELPARTITION/sphider_plus.sql
+        echo; print_good "Done." | tee -a $RACHELLOG
     else
-        print_error "No internet connectivity; try again when connected."
+        echo; print_status "Not deleting file.  The 'sphider_plus.sql' file is located in this directory:  $(pwd)"
+        echo; print_good "Done." | tee -a $RACHELLOG
     fi
+}
+
+function download_offline_content () {
+    echo; git clone https://github.com/rachelproject/rachelplus $DIRCONTENTOFFLINE/rachelplus
+    echo; git clone https://github.com/rachelproject/contentshell $DIRCONTENTOFFLINE/rachel.contentshell
+    echo; git clone https://github.com/learningequality/ka-lite $DIRCONTENTOFFLINE/ka-lite
+    echo; wget -c $GITRACHELPLUS/assessmentitems.json -O $DIRCONTENTOFFLINE/assessmentitems.json
+    wget_status
+    echo; wget -c http://rachelfriends.org/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $DIRCONTENTOFFLINE/kiwix-0.9-linux-i686.tar.bz2
+    wget_status
+    #echo; wget -c http://rachelfriends.org/z-SQLdatabase/sphider_plus.sql -O $DIRCONTENTOFFLINE/sphider_plus.sql
+    wget_status
+    #echo; wget -c http://rachelfriends.org/z-holding/ka-lite_content.zip -O $DIRCONTENTOFFLINE/ka-lite_content.zip
+    wget_status
+    #echo; rsync -avz --ignore-existing $RSYNCONLINE/rachelmods $DIRCONTENTOFFLINE/
 }
 
 function new_install () {
@@ -328,7 +403,7 @@ function new_install () {
         US)
             echo; print_status "Downloading packages from the United States." | tee -a $RACHELLOG
             $SOURCEUS 1>> $RACHELLOG 2>&1
-            command_status
+            wget_status
             break
         ;;
 
@@ -336,7 +411,7 @@ function new_install () {
         UK)
             echo; print_status "Downloading packages from the United Kingdom." | tee -a $RACHELLOG
             $SOURCEUK 1>> $RACHELLOG 2>&1
-            command_status
+            wget_status
             break
         ;;
 
@@ -344,7 +419,7 @@ function new_install () {
         SG)
             echo; print_status "Downloading packages from Singapore." | tee -a $RACHELLOG
             $SOURCESG 1>> $RACHELLOG 2>&1
-            command_status
+            wget_status
             break
         ;;
 
@@ -352,7 +427,7 @@ function new_install () {
         CN)
             echo; print_status "Downloading packages from the China - CAP manufacturer's website." | tee -a $RACHELLOG
             $SOURCECN 1>> $RACHELLOG 2>&1
-            command_status
+            wget_status
             break
         ;;
         esac
@@ -365,39 +440,39 @@ function new_install () {
     ## cap-rachel-first-install-2.sh
     echo; print_status "Downloading cap-rachel-first-install-2.sh" | tee -a $RACHELLOG
     $CAPRACHELFIRSTINSTALL2 1>> $RACHELLOG 2>&1
-    command_status
+    wget_status
     ## cap-rachel-first-install-3.sh
     echo; print_status "Downloading cap-rachel-first-install-3.sh" | tee -a $RACHELLOG
     $CAPRACHELFIRSTINSTALL3 1>> $RACHELLOG 2>&1
-    command_status
+    wget_status
     ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies)
     echo; print_status "Downloading lighttpd.conf" | tee -a $RACHELLOG
     $LIGHTTPDFILE 1>> $RACHELLOG 2>&1
-    command_status
+    wget_status
 
     # RACHEL Captive Portal file download
     cd $RACHELWWW
     echo; print_status "Downloading Captive Portal content and moving a copy files." | tee -a $RACHELLOG
     $CAPTIVEPORTALREDIRECT 1>> $RACHELLOG 2>&1
-    command_status
+    wget_status
     print_good "Downloaded captiveportal-redirect.php." | tee -a $RACHELLOG
     if [[ ! -f $RACHELWWW/art/RACHELbrandLogo-captive.png ]]; then
         $RACHELBRANDLOGOCAPTIVE 1>> $RACHELLOG 2>&1
-        command_status
+        wget_status
         echo; print_good "Downloaded RACHELbrandLogo-captive.png." | tee -a $RACHELLOG
     else
         echo; print_good "$RACHELWWW/art/RACHELbrandLogo-captive.png exists, skipping." | tee -a $RACHELLOG
     fi
     if [[ ! -f $RACHELWWW/art/HFCbrandLogo-captive.jpg ]]; then
         $HFCBRANDLOGOCAPTIVE 1>> $RACHELLOG 2>&1
-        command_status
+        wget_status
         echo; print_good "Downloaded HFCbrandLogo-captive.jpg." | tee -a $RACHELLOG
     else
         echo; print_good "$RACHELWWW/art/HFCbrandLogo-captive.jpg exists, skipping." | tee -a $RACHELLOG
     fi
     if [[ ! -f $RACHELWWW/art/WorldPossiblebrandLogo-captive.png ]]; then
         $WORLDPOSSIBLEBRANDLOGOCAPTIVE 1>> $RACHELLOG 2>&1
-        command_status
+        wget_status
         echo; print_good "Downloaded WorldPossiblebrandLogo-captive.png." | tee -a $RACHELLOG
     else
         echo; print_good "$RACHELWWW/art/WorldPossiblebrandLogo-captive.png exists, skipping." | tee -a $RACHELLOG
@@ -482,7 +557,7 @@ function new_install () {
             echo; print_status "This hard drive is already partitioned for RACHEL, skipping hard drive repartitioning." | tee -a $RACHELLOG
             echo; print_good "RACHEL CAP Install - Script ended at $(date)" | tee -a $RACHELLOG
             echo; print_good "RACHEL CAP Install - Script 2 skipped (hard drive repartitioning) at $(date)" | tee -a $RACHELLOG
-            bash /root/cap-rachel-first-install-3.sh
+            bash $INSTALLTMPDIR/cap-rachel-first-install-3.sh
         else
             # Repartition external 500GB hard drive into 3 partitions
             echo; print_status "Repartitioning hard drive" | tee -a $RACHELLOG
@@ -522,7 +597,7 @@ function repair () {
     echo; print_status "Downloading latest lighttpd.conf" | tee -a $RACHELLOG
     ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies and ensuring the file downloads correctly)
     $LIGHTTPDFILE 1>> $RACHELLOG 2>&1
-    command_status
+    wget_status
     if [[ $DOWNLOADERROR == 1 ]]; then
         print_error "The lighttpd.conf file did not download correctly; check log file (/var/log/RACHEL/rachel-install.tmp) and try again." | tee -a $RACHELLOG
         echo; break
@@ -598,128 +673,128 @@ function content_install () {
         English)
             # Great Books of the World
             echo; print_status "Syncing 'Great Books of the World'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/ebooks-en /media/RACHEL/rachel/modules/
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/ebooks-en /media/RACHEL/rachel/modules/
             print_good "Done." | tee -a $RACHELLOG
             # Hesperian Health Guides
             echo; print_status "Syncing 'Hesperian Health Guides'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/hesperian_health /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/hesperian_health /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # UNESCO's IICBA Electronic Library
             echo; print_status "Syncing 'UNESCO's IICBA Electronic Library'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/iicba /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/iicba /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Infonet-Biovision
             echo; print_status "Syncing 'Infonet-Biovision'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/infonet /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/infonet /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Khan Academy
             echo; print_status "Syncing 'Khan Academy'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/kaos-en /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/kaos-en /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Khan Academy Health & Medicine
             echo; print_status "Syncing 'Khan Academy Health & Medicine'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/khan_health /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/khan_health /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Math Expression
             echo; print_status "Syncing 'Math Expression'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/math_expression /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/math_expression /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # MedlinePlus Medical Encyclopedia
             echo; print_status "Syncing 'MedlinePlus Medical Encyclopedia'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/medline_plus /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/medline_plus /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Music Theory
             echo; print_status "Syncing 'Music Theory'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/musictheory /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/musictheory /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # OLPC Educational Packages
             echo; print_status "Syncing 'OLPC Educational Packagess'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/olpc /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/olpc /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Powertyping
             echo; print_status "Syncing 'Powertyping'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/powertyping /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/powertyping /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Practical Action
             echo; print_status "Syncing 'Practical Action'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/practical_action /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/practical_action /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # MIT Scratch
             echo; print_status "Syncing 'MIT Scratch'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/scratch /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/scratch /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Understanding Algebra
             echo; print_status "Syncing 'Understanding Algebra'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/understanding_algebra /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/understanding_algebra /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Wikipedia for Schools
             echo; print_status "Syncing 'Wikipedia for Schools'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/wikipedia_for_schools /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/wikipedia_for_schools /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # CK-12 Textbooks
             echo; print_status "Syncing 'CK-12 Textbooks'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/ck12 /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/ck12 /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Rasp Pi User Guide
             echo; print_status "Syncing 'Rasp Pi User Guide'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/rpi_guide /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/rpi_guide /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Windows Applications
             echo; print_status "Syncing 'Windows Applications'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/windows_apps /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/windows_apps /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Medical Information
             echo; print_status "Syncing 'Medical Information'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/asst_medical /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/asst_medical /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # PhET
             echo; print_status "Syncing 'PhET'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/PhET /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/PhET /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # TED
             echo; print_status "Syncing 'TED'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/TED /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/TED /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # GCF
             echo; print_status "Syncing 'GCF'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/GCF /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/GCF /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # radiolab
             echo; print_status "Syncing 'radiolab'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/radiolab /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/radiolab /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             break
         ;;
         Español)
             # Grandes Libros del Mundo
             echo; print_status "Syncing 'Grandes Libros del Mundo'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/ebooks-es /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/ebooks-es /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Khan Academy
             echo; print_status "Syncing 'Khan Academy'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/kaos-es /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/kaos-es /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Aplicaciones Didacticas
             echo; print_status "Syncing 'Aplicaciones Didacticas'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/ap_didact /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/ap_didact /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             # Currículum Nacional Base Guatemala
             echo; print_status "Syncing 'Currículum Nacional Base Guatemala'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/cnbguatemala /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/cnbguatemala /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             break
         ;;
         Français)
             # Khan Academy
             echo; print_status "Syncing 'Khan Academy'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/kaos-fr /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/kaos-fr /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             break
         ;;
         Português)
             # Khan Academy
             echo; print_status "Syncing 'Khan Academy'." | tee -a $RACHELLOG
-            rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/kaos-pt /media/RACHEL/rachel/modules/ 
+            rsync -avz --ignore-existing $RSYNCDIR/rachelmods/kaos-pt /media/RACHEL/rachel/modules/ 
             print_good "Done." | tee -a $RACHELLOG
             break
         ;;
@@ -744,19 +819,20 @@ function content_install () {
 function ka-lite_install () {
     print_header
     echo; print_status "Installing KA Lite."
+
     # Let's install KA Lite under /var 
     if [[ ! -d $KALITEDIR ]]; then
       echo; print_status "Cloning KA Lite from GitHub." | tee -a $RACHELLOG
-      git clone --recursive https://github.com/learningequality/ka-lite.git /var/ka-lite 1>> $RACHELLOG 2>&1
+      $KALITEINSTALL 1>> $RACHELLOG 2>&1
     else
       echo; print_status "KA Lite already exists; updating files." | tee -a $RACHELLOG
-      cd $KALITEDIR; git pull 1>> $RACHELLOG 2>&1
+      cd $KALITEDIR; $KALITEUPDATE
     fi
     print_good "Done." | tee -a $RACHELLOG
 
     # Download/install assessmentitems.json
     echo; print_status "Downloading latest assessmentitems.json from GitHub." | tee -a $RACHELLOG
-    wget -c $GITHUBONLINE/assessmentitems.json -O /var/ka-lite/data/khan/assessmentitems.json 
+    $ASSESSMENTITEMSJSON
     print_good "Done." | tee -a $RACHELLOG
 
     # Linux setup of KA Lite
@@ -784,79 +860,20 @@ function ka-lite_install () {
 
     # Setup KA Lite content
     echo; print_status "The KA Lite content needs to copied to its new home." | tee -a $RACHELLOG
-
-    function kalite-download () {
-        echo; print_status "Downloading ka-lite_content.zip into /media/RACHEL folder."
-        wget -c http://rachelfriends.org/z-holding/ka-lite_content.zip -O /media/RACHEL/ka-lite_content.zip 
-        echo; print_status "Unzipping the archive to the correct folder...be patient, this takes about 45 minutes."
-        unzip -u /media/RACHEL/ka-lite_content.zip -d /media/RACHEL/
-        mv /media/RACHEL/content /media/RACHEL/kacontent
-        if [[ -d /media/RACHEL/kacontent ]]; then
-            rm /media/RACHEL/ka-lite_content.zip
-        else
-            echo; print_error "Failed to create the /media/RACHEL/kacontent folder; check the log file for more details."
-            echo "Zip file was NOT deleted and is available at /media/RACHEL/ka-lite_content.zip"
-        fi
-    }
-
-    function kalite-unzip () {
-        echo; print_question "What is the full path of the ka-lite_content.zip file (eg /media/RACHEL/ka-lite_content.zip)? "; read KALITECONTENT
-        print_status "Unzipping the archive to the correct folder...be patient, this takes about 45 minutes."
-        unzip -c $KALITECONTENT -d /media/RACHEL/
-        mv /media/RACHEL/content /media/RACHEL/kacontent
-    }
-
-    function kalite-rsync () {
-        if [[ -z $KALITERSYNCSRCUSER ]]; then
-            echo; print_question "What is the username on the remote device? "; read KALITERSYNCSRCIP
-        fi
-        if [[ -z $KALITERSYNCSRCIP ]]; then
-            echo; print_question "What is the IP or Domain name of the source device? "; read KALITERSYNCSRCIP
-        fi
-        if [[ -z $KALITERSYNCSRCPATH ]]; then
-            echo; print_question "What is the path to the content on the source device? "; read KALITERSYNCSRCPATH
-        fi
-        mkdir -p /media/RACHEL/kacontent
-        rsync -azhP $KALITERSYNCSRCUSER@$KALITERSYNCSRCIP:$KALITERSYNCSRCPATH /media/RACHEL/kacontent/
-    }
-
-    if [[ -z $KALITEDEFAULT ]]; then
-        echo; print_question "How do you want to download the KA Lite content? " | tee -a $RACHELLOG
-        echo "  - [Download] the content from rachelfriends.org" | tee -a $RACHELLOG
-        echo "  - [Unzip] from locally available location (ie you already copied the zip file to a folder on this device)" | tee -a $RACHELLOG
-        echo "  - [RSync] the content from another remote location via SSH (ie another CAP)" | tee -a $RACHELLOG
-        echo "  - [Exit] and install later" | tee -a $RACHELLOG
-        echo; select class in "Download" "Unzip" "RSync" "Exit"; do
-            case $class in
-            Download)
-                kalite-download
-                break
-            ;;
-            Unzip)
-                kalite-unzip
-                break
-            ;;
-            RSync)
-                kalite-rsync
-                break
-            ;;
-            Exit)
-                echo; print_error "You can download the content folder to $KALITEDIR at a later time." | tee -a $RACHELLOG
-                print_error "Not installing the KA Lite content; moving on." | tee -a $RACHELLOG
-            ;;
-            esac
-        done
-    elif [[ $KALITEDEFAULT = "1" ]]; then
-        kalite-download
-    elif [[ $KALITEDEFAULT = "2" ]]; then
-        kalite-unzip
-    elif [[ $KALITEDEFAULT = "3" ]]; then
-        kalite-rsync
+    $KALITECONTENTINSTALL
+    echo; print_status "Unzipping the archive to the correct folder...be patient, this takes about 45 minutes."
+    unzip -u /media/RACHEL/ka-lite_content.zip -d /media/RACHEL/
+    mv /media/RACHEL/content /media/RACHEL/kacontent
+    if [[ -d /media/RACHEL/kacontent ]]; then
+        rm /media/RACHEL/ka-lite_content.zip
+    else
+        echo; print_error "Failed to create the /media/RACHEL/kacontent folder; check the log file for more details."
+        echo "Zip file was NOT deleted and is available at /media/RACHEL/ka-lite_content.zip"
     fi
 
     # Install module for RACHEL index.php
     echo; print_status "Syncing 'KA Lite module'." | tee -a $RACHELLOG
-    rsync -av $RSYNCONLINE/rachelmods/ka-lite /media/RACHEL/rachel/modules/
+    rsync -avz --ignore-existing $RSYNCDIR/rachelmods/ka-lite /media/RACHEL/rachel/modules/
     print_good "Done." | tee -a $RACHELLOG
 
     # Delete previous setup commands from the /etc/rc.local
@@ -890,7 +907,7 @@ function ka-lite_install () {
 # Loop function to redisplay mhf
 function whattodo {
     echo; print_question "What would you like to do next?"
-    echo "1)New Install  2)Install Content  3)Install KA Lite  4)Utilities  5)Exit"
+    echo "1)New Install  2)Install Content  3)Install KA Lite  4)Install Kiwix  5)Install Sphider  6)Utilities  7)Exit"
 }
 
 ## MAIN MENU
@@ -907,16 +924,16 @@ echo; print_question "What you would like to do:" | tee -a $RACHELLOG
 echo "  - New [Install] RACHEL on a CAP" | tee -a $RACHELLOG
 echo "  - Install/Update RACHEL [Content]" | tee -a $RACHELLOG
 echo "  - Install [KA-Lite]" | tee -a $RACHELLOG
+echo "  - [Install-Kiwix]" | tee -a $RACHELLOG
+echo "  - [Install-Sphider]" | tee -a $RACHELLOG
 echo "  - Other [Utilities]" | tee -a $RACHELLOG
 echo "    - Repair an install of a CAP after a firmware upgrade" | tee -a $RACHELLOG
 echo "    - Sanitize CAP for imaging" | tee -a $RACHELLOG
 echo "    - Symlink all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent" | tee -a $RACHELLOG
-echo "    - Install Kiwix" | tee -a $RACHELLOG
-echo "    - Install Sphider" | tee -a $RACHELLOG
 echo "    - Test script" | tee -a $RACHELLOG
 echo "  - [Exit] the installation script" | tee -a $RACHELLOG
 echo
-select menu in "Install" "Content" "KA-Lite"  "Utilities"  "Exit"; do
+select menu in "Install" "Content" "KA-Lite" "Install-Kiwix" "Install-Sphider" "Utilities" "Exit"; do
         case $menu in
         Install)
         new_install
@@ -932,17 +949,25 @@ select menu in "Install" "Content" "KA-Lite"  "Utilities"  "Exit"; do
         whattodo
         ;;
 
+        Install-Kiwix)
+        kiwix
+        break
+        ;;
+
+        Install-Sphider)
+        sphider_plus.sql
+        break
+        ;;
+
         Utilities)
         echo; print_question "What utility would you like to use?" | tee -a $RACHELLOG
         echo "  - [Repair] an install of a CAP after a firmware upgrade" | tee -a $RACHELLOG
         echo "  - [Sanitize] CAP for imaging" | tee -a $RACHELLOG
         echo "  - [Symlink] all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent" | tee -a $RACHELLOG
-        echo "  - [Install-Kiwix]" | tee -a $RACHELLOG
-        echo "  - [Install-Sphider]" | tee -a $RACHELLOG
         echo "  - [Test] script" | tee -a $RACHELLOG
         echo "  - Return to [Main Menu]" | tee -a $RACHELLOG
         echo
-        select util in "Repair" "Sanitize" "Symlink" "Install-Kiwix" "Install-Sphider" "Test" "Main-Menu"; do
+        select util in "Repair" "Sanitize" "Symlink" "Test" "Main-Menu"; do
             case $util in
                 Repair)
                 repair
@@ -956,16 +981,6 @@ select menu in "Install" "Content" "KA-Lite"  "Utilities"  "Exit"; do
 
                 Symlink)
                 symlink
-                break
-                ;;
-
-                Install-Kiwix)
-                kiwix
-                break
-                ;;
-
-                Install-Sphider)
-                sphider_plus.sql
                 break
                 ;;
 
