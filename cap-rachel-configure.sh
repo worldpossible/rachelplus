@@ -1,23 +1,14 @@
 #!/bin/sh
-# FILE: cap-rachel-configure.sh
+# FILE: cap-rachel-configure-dev.sh
 # ONELINER Download/Install: sudo wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/cap-rachel-configure.sh -O /root/cap-rachel-configure.sh; bash cap-rachel-configure.sh
 
-# For offline build, you will need to run the following script to download content to your computer/drive.  This script is also available when you run this script under the Utilities menu, then select Download-Offline-Content:
-# <SCRIPT START>
-# #!/bin/bash
-# DIRCONTENTOFFLINE="/root/rachel-install-files"
-# git clone https://github.com/rachelproject/rachelplus $DIRCONTENTOFFLINE/rachelplus
-# git clone https://github.com/rachelproject/contentshell $DIRCONTENTOFFLINE/contentshell
-# rsync -avz --ignore-existing $RSYNCONLINE/rachelmods $DIRCONTENTOFFLINE/
-# git clone --recursive https://github.com/learningequality/ka-lite.git $DIRCONTENTOFFLINE/ka-lite
-# wget -c http://rachelfriends.org/z-holding/ka-lite_content.zip -O $DIRCONTENTOFFLINE/ka-lite_content.zip
-# <SCRIPT STOP>
-# Finally, change the variable DIRCONTENTOFFLINE to your "offline folder" location
+# For offline builds, run the Download-Offline-Content script in the Utilities menu.
 
 # COMMON VARIABLES - Change as needed
-VERSION=0813150928 # To get current version - date +%m%d%y%H%M
+VERSION=0813151641 # To get current version - date +%m%d%y%H%M
 DIRCONTENTOFFLINE="/media/RACHEL-Content" # Enter directory of downloaded RACHEL content for offline install (e.g. I mounted my external USB on my CAP but plugging the external USB into and running the command 'fdisk -l' to find the right drive, then 'mkdir /media/RACHEL-Content' to create a folder to mount to, then 'mount /dev/sdb1 /media/RACHEL-Content' to mount the USB drive.)
 RSYNCONLINE="rsync://dev.worldpossible.org" # The current RACHEL rsync repository
+WGETONLINE="http://rachelfriends.org" # RACHEL large file repo (ka-lite_content, etc)
 GITRACHELPLUS="https://raw.githubusercontent.com/rachelproject/rachelplus/master" # RACHELPlus Scripts GitHub Repo
 GITCONTENTSHELL="https://raw.githubusercontent.com/rachelproject/contentshell/master" # RACHELPlus ContentShell GitHub Repo
 
@@ -347,18 +338,76 @@ function sphider_plus.sql () {
 }
 
 function download_offline_content () {
-    echo; git clone https://github.com/rachelproject/rachelplus $DIRCONTENTOFFLINE/rachelplus
-    echo; git clone https://github.com/rachelproject/contentshell $DIRCONTENTOFFLINE/rachel.contentshell
-    echo; git clone https://github.com/learningequality/ka-lite $DIRCONTENTOFFLINE/ka-lite
-    echo; wget -c $GITRACHELPLUS/assessmentitems.json -O $DIRCONTENTOFFLINE/assessmentitems.json
+    trap ctrl_c INT
+    print_header
+    echo; print_status "**BETA** Downloading RACHEL content for OFFLINE installs." | tee -a $RACHELLOG
+
+    echo; print_question "The OFFLINE RACHEL content folder is set to:  $DIRCONTENTOFFLINE" | tee -a $RACHELLOG
+    read -p "Do you want to change the default location? (y/n) " -r <&1
+    if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
+        echo; print_question "What is the location of your content folder? "; read DIRCONTENTOFFLINE
+        if [[ ! -d $DIRCONTENTOFFLINE ]]; then
+            print_error "The folder location does not exist!  Please identify the full path to your OFFLINE content folder and try again." | tee -a $RACHELLOG
+            rm -rf $INSTALLTMPDIR $RACHELTMPDIR
+            exit 1
+        fi
+    fi
+    # List the current directories on rachelfriends with this command:
+    #   for i in $(ls -d */); do echo ${i%%/}; done
+    if [[ ! -f ./dirlist.txt ]]; then
+        echo; print_error "The file $DIRCONTENTOFFLINE/dirlist.txt is missing!" | tee -a $RACHELLOG
+        echo "    This file is a list of rsync folders; without it, I don't know what to rsync." | tee -a $RACHELLOG
+        echo "    Create a newline separated list of directories to rsync in a file called 'dirlist.txt'." | tee -a $RACHELLOG
+        echo "    Put the file in the same directory $DIRCONTENTOFFLINE" | tee -a $RACHELLOG
+    else
+        echo; print_status "Rsyncing core RACHEL content from $RSYNCONLINE" | tee -a $RACHELLOG
+        while read p; do
+            echo; rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/$p $DIRCONTENTOFFLINE/rachelmods
+            command_status
+        done<$DIRCONTENTOFFLINE/dirlist.txt
+        print_good "Done." | tee -a $RACHELLOG
+    fi
+    print_status "Downloading/updating the GitHub repo:  rachelplus" | tee -a $RACHELLOG
+    if [[ -d $DIRCONTENTOFFLINE/rachelplus ]]; then 
+        cd $DIRCONTENTOFFLINE/rachelplus; git pull
+    else
+        echo; git clone https://github.com/rachelproject/rachelplus $DIRCONTENTOFFLINE/rachelplus
+    fi
     command_status
-    echo; wget -c http://rachelfriends.org/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $DIRCONTENTOFFLINE/kiwix-0.9-linux-i686.tar.bz2
+    print_good "Done." | tee -a $RACHELLOG
+
+    echo; print_status "Downloading/updating the GitHub repo:  contentshell" | tee -a $RACHELLOG
+    if [[ -d $DIRCONTENTOFFLINE/contentshell ]]; then 
+        cd $DIRCONTENTOFFLINE/contentshell; git pull
+    else
+        echo; git clone https://github.com/rachelproject/contentshell $DIRCONTENTOFFLINE/contentshell
+    fi
     command_status
-    #echo; wget -c http://rachelfriends.org/z-SQLdatabase/sphider_plus.sql -O $DIRCONTENTOFFLINE/sphider_plus.sql
+    print_good "Done." | tee -a $RACHELLOG
+
+    echo; print_status "Downloading/updating the GitHub repo:  ka-lite" | tee -a $RACHELLOG
+    if [[ -d $DIRCONTENTOFFLINE/ka-lite ]]; then 
+        cd $DIRCONTENTOFFLINE/ka-lite; git pull
+    else
+        echo; git clone https://github.com/learningequality/ka-lite $DIRCONTENTOFFLINE/ka-lite
+    fi
     command_status
-    #echo; wget -c http://rachelfriends.org/z-holding/ka-lite_content.zip -O $DIRCONTENTOFFLINE/ka-lite_content.zip
+    print_good "Done." | tee -a $RACHELLOG
+    
+    echo; print_status "Downloading/updating ka-lite_content.zip" | tee -a $RACHELLOG
+    wget -c $WGETONLINE/z-holding/ka-lite_content.zip -O $DIRCONTENTOFFLINE/ka-lite_content.zip
     command_status
-    #echo; rsync -avz --ignore-existing $RSYNCONLINE/rachelmods $DIRCONTENTOFFLINE/
+    print_good "Done." | tee -a $RACHELLOG
+
+    echo; print_status "Downloading/updating kiwix" | tee -a $RACHELLOG
+    wget -c $WGETONLINE/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $DIRCONTENTOFFLINE/kiwix-0.9-linux-i686.tar.bz2
+    command_status
+    print_good "Done." | tee -a $RACHELLOG
+
+    echo; print_status "Downloading/updating sphider_plus.sql" | tee -a $RACHELLOG
+    wget -c $WGETONLINE/z-SQLdatabase/sphider_plus.sql -O $DIRCONTENTOFFLINE/sphider_plus.sql
+    command_status
+    print_good "Done." | tee -a $RACHELLOG
 }
 
 function new_install () {
@@ -1002,14 +1051,20 @@ select menu in "Install" "Content" "Install-KA-Lite" "Install-Kiwix" "Install-Sp
 
         Utilities)
         echo; print_question "What utility would you like to use?" | tee -a $RACHELLOG
+        echo "  - **BETA** [Download-RACHEL] content for OFFLINE installs" | tee -a $RACHELLOG
         echo "  - [Repair] an install of a CAP after a firmware upgrade" | tee -a $RACHELLOG
         echo "  - [Sanitize] CAP for imaging" | tee -a $RACHELLOG
         echo "  - [Symlink] all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent" | tee -a $RACHELLOG
         echo "  - [Test] script" | tee -a $RACHELLOG
         echo "  - Return to [Main Menu]" | tee -a $RACHELLOG
         echo
-        select util in "Repair" "Sanitize" "Symlink" "Test" "Main-Menu"; do
+        select util in "Download-RACHEL" "Repair" "Sanitize" "Symlink" "Test" "Main-Menu"; do
             case $util in
+                Download-RACHEL)
+                download_offline_content
+                break
+                ;;
+
                 Repair)
                 repair
                 break
