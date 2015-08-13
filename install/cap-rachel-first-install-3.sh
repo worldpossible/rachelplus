@@ -5,12 +5,15 @@
 # Everything below will go to this log directory
 TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
 RACHELLOGDIR="/var/log/RACHEL"
-mkdir -p $RACHELLOGDIR
 RACHELLOGFILE="rachel-install.tmp"
 RACHELLOG="$RACHELLOGDIR/$RACHELLOGFILE"
-RACHELWWW="/media/RACHEL/rachel"
+RACHELPARTITION="/media/RACHEL"
+RACHELWWW="$RACHELPARTITION/rachel"
 KALITEDIR="/var/ka-lite"
+KALITERCONTENTDIR="/media/RACHEL/kacontent"
 INSTALLTMPDIR="/root/cap-rachel-install.tmp"
+RACHELTMPDIR="/media/RACHEL/cap-rachel-install.tmp"
+
 exec 1>> $RACHELLOG 2>&1
 
 function print_good () {
@@ -104,7 +107,7 @@ print_good "Done."
 
 # Deleting the install script commands
 echo; print_status "Deleting the install scripts."
-rm -rf /root/cap-rachel-*
+rm -rf /root/cap-rachel-* $RACHELTMPDIR
 print_good "Done."
 
 # Add header/date/time to install log file
