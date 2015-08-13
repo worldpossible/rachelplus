@@ -16,14 +16,14 @@
 
 # COMMON VARIABLES - Change as needed
 VERSION=0813150928 # To get current version - date +%m%d%y%H%M
-INTERNET="1" # Enter 0 (Offline), 1 (Online), or leave blank and script will check connectivity
 DIRCONTENTOFFLINE="/media/RACHEL-Content" # Enter directory of downloaded RACHEL content for offline install (e.g. I mounted my external USB on my CAP but plugging the external USB into and running the command 'fdisk -l' to find the right drive, then 'mkdir /media/RACHEL-Content' to create a folder to mount to, then 'mount /dev/sdb1 /media/RACHEL-Content' to mount the USB drive.)
 RSYNCONLINE="rsync://dev.worldpossible.org" # The current RACHEL rsync repository
 GITRACHELPLUS="https://raw.githubusercontent.com/rachelproject/rachelplus/master" # RACHELPlus Scripts GitHub Repo
 GITCONTENTSHELL="https://raw.githubusercontent.com/rachelproject/contentshell/master" # RACHELPlus ContentShell GitHub Repo
 
-# CORE RACHEL VARIABLES - Change if you know what you are doing
+# CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
+INTERNET="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 RACHELLOGDIR="/var/log/RACHEL"
 mkdir -p $RACHELLOGDIR
 RACHELLOGFILE="rachel-install.tmp"
@@ -36,6 +36,29 @@ INSTALLTMPDIR="/root/cap-rachel-install.tmp"
 RACHELTMPDIR="/media/RACHEL/cap-rachel-install.tmp"
 mkdir -p $INSTALLTMPDIR $RACHELTMPDIR
 DOWNLOADERROR="0"
+
+# Check root
+if [ "$(id -u)" != "0" ]; then
+    print_error "This step must be run as root; sudo password is 123lkj"
+    exit 1
+fi
+
+function testing-script () {
+    set -x
+    echo; print_status "Syncing 'Scratch'." | tee -a $RACHELLOG
+    rsync -avz --ignore-existing $RSYNCDIR/rachelmods/scratch $RACHELWWW/modules/
+    command_status
+    print_good "Done." | tee -a $RACHELLOG
+    # Great Books of the World
+    echo; print_status "Syncing 'Great Books of the World'." | tee -a $RACHELLOG
+    rsync -avz --ignore-existing $RSYNCDIR/rachelmods/ebooks-en $RACHELWWW/modules/
+    command_status
+    print_good "Done." | tee -a $RACHELLOG
+    if [[ $DOWNLOADERROR == 1 ]]; then
+        echo; print_error "One or more of the updates did not download correctly; for more information, check the log file ($RACHELLOG)." | tee -a $RACHELLOG
+    fi
+    exit 1
+}
 
 function print_good () {
     echo -e "\x1B[01;32m[+]\x1B[0m $1"
@@ -53,56 +76,43 @@ function print_question () {
     echo -e "\x1B[01;33m[?]\x1B[0m $1"
 }
 
-# Check root
-if [ "$(id -u)" != "0" ]; then
-    print_error "This step must be run as root; sudo password is 123lkj"
-    exit 1
-fi
-
-function testing-script () {
-    set -x
-    exit 1
-}
-
-function print_header () {
-    # Add header/date/time to install log file
-    echo; print_good "RACHEL CAP Configuration Script - Version $VERSION" | tee $RACHELLOG
-    print_good "Script started: $(date)" | tee -a $RACHELLOG
-}
-
-function check_internet () {
+function opmode () {
     trap ctrl_c INT
-    if [[ $INTERNET == "1" || -z $INTERNET ]]; then
-        # Check internet connecivity
-        WGET=`which wget`
-        $WGET -q --tries=10 --timeout=5 --spider http://google.com 1>> $RACHELLOG 2>&1
-        if [[ $? -eq 0 ]]; then
-            echo; print_good "Internet connected...continuing install." | tee -a $RACHELLOG
-            INTERNET=1
-        else
-            echo; print_error "No internet connectivity; waiting 10 seconds and then I will try again." | tee -a $RACHELLOG
-            # Progress bar to visualize wait period
-            while true;do echo -n .;sleep 1;done & 
-            sleep 10
-            kill $!; trap 'kill $!' SIGTERM
-            $WGET -q --tries=10 --timeout=5 --spider http://google.com
-            if [[ $? -eq 0 ]]; then
-                echo; print_good "Internet connected...continuing install." | tee -a $RACHELLOG
-                INTERNET=1
-            else
-                echo; print_error "No internet connectivity; entering 'Offline' mode." | tee -a $RACHELLOG
-                INTERNET=0
+    echo; print_question "Do you want to run in ONLINE or OFFLINE mode?" | tee -a $RACHELLOG
+    select MODE in "ONLINE" "OFFLINE"; do
+        case $MODE in
+        # ONLINE
+        ONLINE)
+            echo; print_good "Script set for 'ONLINE' mode." | tee -a $RACHELLOG
+            INTERNET="1"
+            online_variables
+            check_internet
+            break
+        ;;
+        # OFFLINE
+        OFFLINE)
+            echo; print_good "Script set for 'OFFLINE' mode." | tee -a $RACHELLOG
+            INTERNET="0"
+            offline_variables
+            echo; print_question "The OFFLINE RACHEL content folder is set to:  $DIRCONTENTOFFLINE"
+            read -p "Do you want to change the default location? (y/n) " -r <&1
+            if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
+                echo; print_question "What is the location of your content folder? "; read DIRCONTENTOFFLINE
+                if [[ ! -d $DIRCONTENTOFFLINE ]]; then
+                    print_error "The folder location does not exist!  Please identify the full path to your OFFLINE content folder and try again."
+                    rm -rf $INSTALLTMPDIR $RACHELTMPDIR
+                    exit 1
+                fi
             fi
-        fi
-    elif [[ $INTERNET = "0" ]]; then
-        echo; print_good "Script set for 'OFFLINE' mode." | tee -a $RACHELLOG
-    else
-        echo; print_error "Script variable for 'INTERNET' not set correctly; check script and try again." | tee -a $RACHELLOG
-        exit 1
-    fi
+            break
+        ;;
+        esac
+        print_good "Done." | tee -a $RACHELLOG
+        break
+    done
 }
 
-if [[ $INTERNET == "1" ]]; then
+function online_variables () {
     GPGKEY1="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 40976EAF437D05B5"
     GPGKEY2="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 16126D3A3E5C1192"
     SOURCEUS="wget -r $GITRACHELPLUS/sources.list/sources-us.list -O /etc/apt/sources.list"
@@ -124,7 +134,9 @@ if [[ $INTERNET == "1" ]]; then
     KALITECONTENTINSTALL="wget -c http://rachelfriends.org/z-holding/ka-lite_content.zip -O $RACHELTMPDIR/ka-lite_content.zip"
     KIWIXINSTALL="wget -c http://rachelfriends.org/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $RACHELTMPDIR/kiwix-0.9-linux-i686.tar.bz2"
     SPHIDERPLUSSQLINSTALL="wget -c http://rachelfriends.org/z-SQLdatabase/sphider_plus.sql -O $RACHELTMPDIR/sphider_plus.sql"
-else
+}
+
+function offline_variables () {
     GPGKEY1="apt-key add $DIRCONTENTOFFLINE/rachelplus/gpg-keys/437D05B5"
     GPGKEY2="apt-key add $DIRCONTENTOFFLINE/rachelplus/gpg-keys/3E5C1192"
     SOURCEUS="cp $DIRCONTENTOFFLINE/rachelplus/sources.list/sources-us.list /etc/apt/sources.list"
@@ -146,7 +158,41 @@ else
     KALITECONTENTINSTALL=""
     KIWIXINSTALL=""
     SPHIDERPLUSSQLINSTALL=""
-fi
+}
+
+function print_header () {
+    # Add header/date/time to install log file
+    echo; print_good "RACHEL CAP Configuration Script - Version $VERSION" | tee $RACHELLOG
+    print_good "Script started: $(date)" | tee -a $RACHELLOG
+}
+
+function check_internet () {
+    trap ctrl_c INT
+    if [[ $INTERNET == "1" || -z $INTERNET ]]; then
+        # Check internet connecivity
+        WGET=`which wget`
+        $WGET -q --tries=10 --timeout=5 --spider http://google.com 1>> $RACHELLOG 2>&1
+        if [[ $? -eq 0 ]]; then
+            echo; print_good "Internet connection confirmed...continuing install." | tee -a $RACHELLOG
+            INTERNET=1
+        else
+            echo; print_error "No internet connectivity; waiting 10 seconds and then I will try again." | tee -a $RACHELLOG
+            # Progress bar to visualize wait period
+            while true;do echo -n .;sleep 1;done & 
+            sleep 10
+            kill $!; trap 'kill $!' SIGTERM
+            $WGET -q --tries=10 --timeout=5 --spider http://google.com
+            if [[ $? -eq 0 ]]; then
+                echo; print_good "Internet connected confirmed...continuing install." | tee -a $RACHELLOG
+                INTERNET=1
+            else
+                echo; print_error "No internet connectivity; entering 'OFFLINE' mode." | tee -a $RACHELLOG
+                offline_variables
+                INTERNET=0
+            fi
+        fi
+    fi
+}
 
 function ctrl_c () {
     kill $!; trap 'kill $1' SIGTERM
@@ -230,7 +276,7 @@ function sanitize () {
 function symlink () {
     trap ctrl_c INT
     print_header
-    echo; print_status "Symlinking all .mp4 videos in the module kaos-en to $KALITERCONTENTDIR"
+    echo; print_status "Symlinking all .mp4 videos in the module 'kaos-en' to $KALITERCONTENTDIR"
 
     # Write python file for creating symlinks
     cat > /tmp/symlink.py << 'EOF'
@@ -271,8 +317,7 @@ if __name__ == "__main__":
 EOF
 
     # Execute
-    echo; print_status "Starting symlink process." | tee -a $RACHELLOG
-    python /tmp/symlink.py
+    python /tmp/symlink.py 2>> $RACHELLOG 1> /dev/null
     rm -f /tmp/symlink.py
     print_good "Done." | tee -a $RACHELLOG
 }
@@ -294,7 +339,7 @@ function kiwix () {
 }
 
 function sphider_plus.sql () {
-    echo; print_status "Installing sphider_plus.sql" | tee -a $RACHELLOG
+    echo; print_status "Installing sphider_plus.sql...be patient, this takes a couple minutes." | tee -a $RACHELLOG
     $SPHIDERPLUSSQLINSTALL
     if [[ $INTERNET == "0" ]]; then cd $DIRCONTENTOFFLINE; else cd $RACHELTMPDIR; fi
     mysql -u root -proot sphider_plus < sphider_plus.sql
@@ -429,7 +474,7 @@ function new_install () {
     if [[ $DOWNLOADERROR == 0 ]]; then
         echo; print_good "Done." | tee -a $RACHELLOG
     else
-        echo; print_error "One or more files did not download correctly; check log file (/var/log/RACHEL/rachel-install.tmp) and try again." | tee -a $RACHELLOG
+        echo; print_error "One or more files did not download correctly; check log file ($RACHELLOG) and try again." | tee -a $RACHELLOG
         cleanup
         echo; exit 1
     fi
@@ -455,7 +500,7 @@ function new_install () {
         print_good "Done."
 
         # Install packages
-        echo; print_status "Installing Git and PHP" | tee -a $RACHELLOG
+        echo; print_status "Installing Git and PHP." | tee -a $RACHELLOG
         apt-get -y install php5-cgi git-core python-m2crypto 1>> $RACHELLOG 2>&1
         # Add the following line at the end of file
         echo "cgi.fix_pathinfo = 1" >> /etc/php5/cgi/php.ini
@@ -485,7 +530,7 @@ function new_install () {
         print_good "Done." | tee -a $RACHELLOG
 
         # Install MySQL client and server
-        echo; print_status "Installing mysql client and server" | tee -a $RACHELLOG
+        echo; print_status "Installing mysql client and server." | tee -a $RACHELLOG
         debconf-set-selections <<< 'mysql-server mysql-server/root_password password root'
         debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password root'
         cd /
@@ -608,14 +653,19 @@ EOF
 function content_install () {
     trap ctrl_c INT
     print_header
+    DOWNLOADERROR="0"
     echo; print_status "Installing RACHEL content." | tee -a $RACHELLOG
     # Add header/date/time to install log file
     echo; print_good "RACHEL Content Install Script - Version $(date +%m%d%y%H%M)" | tee -a $RACHELLOG
     print_good "Install started: $(date)" | tee -a $RACHELLOG   
-    echo; print_error "WARNING:  This will download the core ENGLISH material for RACHEL.  This process may take quite awhile if you do you not have a fast network connection." | tee -a $RACHELLOG
-    echo; echo "If you get disconnected, you only have to rerun this install again to continue.  It will not re-download content already on the CAP." | tee -a $RACHELLOG
+    echo; print_error "CAUTION:  This process may take quite awhile if you do you not have a fast network connection." | tee -a $RACHELLOG
+    echo "If you get disconnected, you only have to rerun this install again to continue.  It will not re-download content already on the CAP." | tee -a $RACHELLOG
 
-    # Change the source repositories
+    # Check permissions on modules
+    echo; print_status "Verifying proper permissions on modules prior to install." | tee -a $RACHELLOG
+    chown -R root:root $RACHELWWW/modules
+    print_good "Done." | tee -a $RACHELLOG
+    # Ask what content language the user wants to download
     echo; print_question "What language would you like to download content for? " | tee -a $RACHELLOG
     echo; select class in "English" "Español" "Français" "Português" "Hindi" "Exit"; do
         case $class in
@@ -623,94 +673,117 @@ function content_install () {
             # Great Books of the World
             echo; print_status "Syncing 'Great Books of the World'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/ebooks-en $RACHELWWW/modules/
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             # Hesperian Health Guides
             echo; print_status "Syncing 'Hesperian Health Guides'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/hesperian_health $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             # UNESCO's IICBA Electronic Library
             echo; print_status "Syncing 'UNESCO's IICBA Electronic Library'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/iicba $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             # Infonet-Biovision
             echo; print_status "Syncing 'Infonet-Biovision'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/infonet $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             # Khan Academy
             echo; print_status "Syncing 'Khan Academy'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/kaos-en $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             # Khan Academy Health & Medicine
             echo; print_status "Syncing 'Khan Academy Health & Medicine'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/khan_health $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             # Math Expression
             echo; print_status "Syncing 'Math Expression'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/math_expression $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             # MedlinePlus Medical Encyclopedia
             echo; print_status "Syncing 'MedlinePlus Medical Encyclopedia'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/medline_plus $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             # Music Theory
             echo; print_status "Syncing 'Music Theory'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/musictheory $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             # OLPC Educational Packages
             echo; print_status "Syncing 'OLPC Educational Packagess'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/olpc $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             # Powertyping
             echo; print_status "Syncing 'Powertyping'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/powertyping $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             # Practical Action
             echo; print_status "Syncing 'Practical Action'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/practical_action $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             # MIT Scratch
             echo; print_status "Syncing 'MIT Scratch'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/scratch $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             # Understanding Algebra
             echo; print_status "Syncing 'Understanding Algebra'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/understanding_algebra $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             # Wikipedia for Schools
             echo; print_status "Syncing 'Wikipedia for Schools'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/wikipedia_for_schools $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             # CK-12 Textbooks
             echo; print_status "Syncing 'CK-12 Textbooks'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/ck12 $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             # Rasp Pi User Guide
             echo; print_status "Syncing 'Rasp Pi User Guide'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/rpi_guide $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             # Windows Applications
             echo; print_status "Syncing 'Windows Applications'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/windows_apps $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             # Medical Information
             echo; print_status "Syncing 'Medical Information'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/asst_medical $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             # PhET
             echo; print_status "Syncing 'PhET'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/PhET $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             # TED
             echo; print_status "Syncing 'TED'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/TED $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             # GCF
             echo; print_status "Syncing 'GCF'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/GCF $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             # radiolab
             echo; print_status "Syncing 'radiolab'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/radiolab $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             break
         ;;
@@ -718,18 +791,22 @@ function content_install () {
             # Grandes Libros del Mundo
             echo; print_status "Syncing 'Grandes Libros del Mundo'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/ebooks-es $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             # Khan Academy
             echo; print_status "Syncing 'Khan Academy'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/kaos-es $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             # Aplicaciones Didacticas
             echo; print_status "Syncing 'Aplicaciones Didacticas'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/ap_didact $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             # Currículum Nacional Base Guatemala
             echo; print_status "Syncing 'Currículum Nacional Base Guatemala'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/cnbguatemala $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             break
         ;;
@@ -737,6 +814,7 @@ function content_install () {
             # Khan Academy
             echo; print_status "Syncing 'Khan Academy'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/kaos-fr $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             break
         ;;
@@ -744,6 +822,7 @@ function content_install () {
             # Khan Academy
             echo; print_status "Syncing 'Khan Academy'." | tee -a $RACHELLOG
             rsync -avz --ignore-existing $RSYNCDIR/rachelmods/kaos-pt $RACHELWWW/modules/ 
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             break
         ;;
@@ -751,15 +830,18 @@ function content_install () {
             # Toys from Trash
             echo; print_status "Syncing 'Toys from Trash'." | tee -a $RACHELLOG
             rsync -avz rsync://dev.worldpossible.org/rachelmods/bibliofilo ./
+            command_status
             print_good "Done." | tee -a $RACHELLOG
             break
         ;;
         Exit)
-            cleanup
             echo; break
         ;;
         esac
     done
+    if [[ $DOWNLOADERROR == 1 ]]; then
+        echo; print_error "One or more of the updates did not download correctly; for more information, check the log file ($RACHELLOG)." | tee -a $RACHELLOG
+    fi
     # Check that all KA videos are symlinked to /media/RACHEL/kacontent
     echo; print_status "Symbolically linking all KAOS videos to $KALITERCONTENTDIR." | tee -a $RACHELLOG
     symlink
@@ -771,7 +853,6 @@ function content_install () {
     mv $RACHELLOG $RACHELLOGDIR/rachel-content-$TIMESTAMP.log
     echo; print_good "Log file saved to: $RACHELLOGDIR/rachel-content-$TIMESTAMP.log"
     print_good "KA Lite Content Install Complete."
-    cleanup
     echo; print_good "Refresh the RACHEL homepage to view your new content."
 }
 
@@ -874,8 +955,8 @@ function whattodo {
 # Display current script version
 echo; print_good "RACHEL CAP Configuration Script - Version $VERSION"
 
-# Check for internet connectivity
-check_internet
+# Determine the operational mode - ONLINE or OFFLINE
+opmode
 
 # Change directory into $INSTALLTMPDIR
 cd $INSTALLTMPDIR
