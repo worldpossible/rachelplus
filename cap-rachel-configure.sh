@@ -16,7 +16,7 @@
 
 # COMMON VARIABLES - Change as needed
 VERSION=0813150928 # To get current version - date +%m%d%y%H%M
-INTERNET="0" # Enter 0 (Offline), 1 (Online), or leave blank and script will check connectivity
+INTERNET="1" # Enter 0 (Offline), 1 (Online), or leave blank and script will check connectivity
 DIRCONTENTOFFLINE="/media/RACHEL-Content" # Enter directory of downloaded RACHEL content for offline install (e.g. I mounted my external USB on my CAP but plugging the external USB into and running the command 'fdisk -l' to find the right drive, then 'mkdir /media/RACHEL-Content' to create a folder to mount to, then 'mount /dev/sdb1 /media/RACHEL-Content' to mount the USB drive.)
 RSYNCONLINE="rsync://dev.worldpossible.org" # The current RACHEL rsync repository
 GITRACHELPLUS="https://raw.githubusercontent.com/rachelproject/rachelplus/master" # RACHELPlus Scripts GitHub Repo
@@ -761,11 +761,10 @@ function content_install () {
         esac
     done
     # Check that all KA videos are symlinked to /media/RACHEL/kacontent
-    print_status "Symbolically linking all KAOS videos to $KALITERCONTENTDIR." | tee -a $RACHELLOG
+    echo; print_status "Symbolically linking all KAOS videos to $KALITERCONTENTDIR." | tee -a $RACHELLOG
     symlink
-    print_good "Done." | tee -a $RACHELLOG
     # Check that all files are owned by root
-    print_status "Verifying proper permissions on modules." | tee -a $RACHELLOG
+    echo; print_status "Verifying proper permissions on modules." | tee -a $RACHELLOG
     chown -R root:root $RACHELWWW/modules
     print_good "Done." | tee -a $RACHELLOG
     # Cleanup
