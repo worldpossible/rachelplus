@@ -5,8 +5,8 @@
 # For offline builds, run the Download-Offline-Content script in the Utilities menu.
 
 # COMMON VARIABLES - Change as needed
-VERSION=0813151411 # To get current version - date +%m%d%y%H%M
-DIRCONTENTOFFLINE="/media/RACHEL-Content" # Enter directory of downloaded RACHEL content for offline install (e.g. I mounted my external USB on my CAP but plugging the external USB into and running the command 'fdisk -l' to find the right drive, then 'mkdir /media/RACHEL-Content' to create a folder to mount to, then 'mount /dev/sdb1 /media/RACHEL-Content' to mount the USB drive.)
+VERSION=0814151223 # To get current version - date +%m%d%y%H%M
+DIRCONTENTOFFLINE="/media/nascontent/rachel-content" # Enter directory of downloaded RACHEL content for offline install (e.g. I mounted my external USB on my CAP but plugging the external USB into and running the command 'fdisk -l' to find the right drive, then 'mkdir /media/RACHEL-Content' to create a folder to mount to, then 'mount /dev/sdb1 /media/RACHEL-Content' to mount the USB drive.)
 RSYNCONLINE="rsync://dev.worldpossible.org" # The current RACHEL rsync repository
 WGETONLINE="http://rachelfriends.org" # RACHEL large file repo (ka-lite_content, etc)
 GITRACHELPLUS="https://raw.githubusercontent.com/rachelproject/rachelplus/master" # RACHELPlus Scripts GitHub Repo
@@ -89,11 +89,13 @@ function opmode () {
             read -p "Do you want to change the default location? (y/n) " -r <&1
             if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
                 echo; print_question "What is the location of your content folder? "; read DIRCONTENTOFFLINE
-                if [[ ! -d $DIRCONTENTOFFLINE ]]; then
-                    print_error "The folder location does not exist!  Please identify the full path to your OFFLINE content folder and try again."
-                    rm -rf $INSTALLTMPDIR $RACHELTMPDIR
-                    exit 1
-                fi
+            fi
+            if [[ ! -d $DIRCONTENTOFFLINE ]]; then
+                print_error "The folder location does not exist!  Please identify the full path to your OFFLINE content folder and try again."
+                rm -rf $INSTALLTMPDIR $RACHELTMPDIR
+                exit 1
+            else
+                export DIRCONTENTOFFLINE
             fi
             break
         ;;
@@ -120,7 +122,7 @@ function online_variables () {
     GITCLONERACHELCONTENTSHELL="git clone https://github.com/rachelproject/contentshell $RACHELTMPDIR/contentshell"
     RSYNCDIR="$RSYNCONLINE"
     ASSESSMENTITEMSJSON="wget -c $GITRACHELPLUS/assessmentitems.json -O /var/ka-lite/data/khan/assessmentitems.json"
-    KALITEINSTALL="git clone --recursive https://github.com/learningequality/ka-lite.git /var/ka-lite"
+    KALITEINSTALL="git clone https://github.com/learningequality/ka-lite /var/ka-lite"
     KALITEUPDATE="git pull"
     KALITECONTENTINSTALL="wget -c http://rachelfriends.org/z-holding/ka-lite_content.zip -O $RACHELTMPDIR/ka-lite_content.zip"
     KIWIXINSTALL="wget -c http://rachelfriends.org/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $RACHELTMPDIR/kiwix-0.9-linux-i686.tar.bz2"
@@ -952,13 +954,17 @@ function ka-lite_install () {
     $KALITECONTENTINSTALL
     if [[ $INTERNET == "0" ]]; then cd $DIRCONTENTOFFLINE; else cd $RACHELTMPDIR; fi
     echo; print_status "Unzipping the archive to the correct folder...be patient, this takes about 45 minutes."
-    unzip -u ka-lite_content.zip -d /media/RACHEL/
-    mv /media/RACHEL/content /media/RACHEL/kacontent
-    if [[ -d /media/RACHEL/kacontent ]]; then
-        rm /media/RACHEL/ka-lite_content.zip
+    if [[ -d kacontent ]]; then
+        rsync -avzP ./kacontent /media/RACHEL
     else
-        echo; print_error "Failed to create the /media/RACHEL/kacontent folder; check the log file for more details."
-        echo "Zip file was NOT deleted and is available at /media/RACHEL/ka-lite_content.zip"
+        unzip -u ka-lite_content.zip -d /media/RACHEL/
+        mv /media/RACHEL/content /media/RACHEL/kacontent
+        if [[ -d /media/RACHEL/kacontent ]]; then
+            rm /media/RACHEL/ka-lite_content.zip
+        else
+            echo; print_error "Failed to create the /media/RACHEL/kacontent folder; check the log file for more details."
+            echo "Zip file was NOT deleted and is available at /media/RACHEL/ka-lite_content.zip"
+        fi
     fi
 
     # Install module for RACHEL index.php
