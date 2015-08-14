@@ -956,7 +956,7 @@ function ka-lite_install () {
     echo; print_status "Unzipping the archive to the correct folder...be patient, this takes about 45 minutes."
     if [[ -d kacontent ]]; then
         rsync -avzP ./kacontent /media/RACHEL
-    else
+    elif [[ -f ka-lite_content.zip ]]; then
         unzip -u ka-lite_content.zip -d /media/RACHEL/
         mv /media/RACHEL/content /media/RACHEL/kacontent
         if [[ -d /media/RACHEL/kacontent ]]; then
@@ -965,6 +965,8 @@ function ka-lite_install () {
             echo; print_error "Failed to create the /media/RACHEL/kacontent folder; check the log file for more details."
             echo "Zip file was NOT deleted and is available at /media/RACHEL/ka-lite_content.zip"
         fi
+    else
+        echo; print_error "KA Lite content not found."
     fi
 
     # Install module for RACHEL index.php
