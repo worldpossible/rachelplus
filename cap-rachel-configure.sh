@@ -628,6 +628,8 @@ function new_install () {
 function repair () {
     print_header
     echo; print_status "Repairing your CAP after a firmware upgrade."
+    cd $INSTALLTMPDIR
+
     # Download/update to latest RACHEL lighttpd.conf
     echo; print_status "Downloading latest lighttpd.conf" | tee -a $RACHELLOG
     ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies and ensuring the file downloads correctly)
@@ -636,6 +638,8 @@ function repair () {
     if [[ $DOWNLOADERROR == 1 ]]; then
         print_error "The lighttpd.conf file did not download correctly; check log file (/var/log/RACHEL/rachel-install.tmp) and try again." | tee -a $RACHELLOG
         echo; break
+    else
+        mv $INSTALLTMPDIR/lighttpd.conf /usr/local/etc/lighttpd.conf
     fi
     print_good "Done." | tee -a $RACHELLOG
 
@@ -647,18 +651,32 @@ function repair () {
 
     # Fixing /etc/rc.local to start KA Lite on boot
     echo; print_status "Fixing /etc/rc.local" | tee -a $RACHELLOG
-    # Delete previous setup commands from the /etc/rc.local
-    echo; print_status "Setting up KA Lite to start at boot..." | tee -a $RACHELLOG
-    sed -i '/ka-lite/d' /etc/rc.local 1>> $RACHELLOG 2>&1
-    sed -i '/sleep 20/d' /etc/rc.local 1>> $RACHELLOG 2>&1
 
-    # Start KA Lite at boot time
-    sed -i '$e echo "# Start ka-lite at boot time"' /etc/rc.local 1>> $RACHELLOG 2>&1
-    sed -i '$e echo "sleep 20"' /etc/rc.local 1>> $RACHELLOG 2>&1
-    sed -i '$e echo "/var/ka-lite/bin/kalite start"' /etc/rc.local 1>> $RACHELLOG 2>&1
-    print_good "Done." | tee -a $RACHELLOG
+    # Check/re-add Kiwix
+    if [[ -d /var/kiwix ]]; then
+        echo; print_status "Setting up Kiwix to start at boot..." | tee -a $RACHELLOG
+        # Remove old kiwix boot lines from /etc/rc.local
+        sed -i '/kiwix/d' /etc/rc.local 1>> $RACHELLOG 2>&1
+        # Add lines to /etc/rc.local that will start kiwix on boot
+        sed -i '$e echo "\# Start kiwix on boot"' /etc/rc.local 1>> $RACHELLOG 2>&1
+        sed -i '$e echo "bash \/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' /etc/rc.local 1>> $RACHELLOG 2>&1
+        print_good "Done." | tee -a $RACHELLOG
+    fi
 
-    # Delete previous setwanip commands from /etc/rc.local
+    if [[ -d /var/ka-lite ]]; then
+        # Delete previous setup commands from the /etc/rc.local
+        echo; print_status "Setting up KA Lite to start at boot..." | tee -a $RACHELLOG
+        sed -i '/ka-lite/d' /etc/rc.local 1>> $RACHELLOG 2>&1
+        sed -i '/sleep 20/d' /etc/rc.local 1>> $RACHELLOG 2>&1
+
+        # Start KA Lite at boot time
+        sed -i '$e echo "# Start ka-lite at boot time"' /etc/rc.local 1>> $RACHELLOG 2>&1
+        sed -i '$e echo "sleep 20"' /etc/rc.local 1>> $RACHELLOG 2>&1
+        sed -i '$e echo "/var/ka-lite/bin/kalite start"' /etc/rc.local 1>> $RACHELLOG 2>&1
+        print_good "Done." | tee -a $RACHELLOG
+    fi
+
+    # Delete previous setwanip commands from /etc/rc.local - not used anymore
     echo; print_status "Deleting previous setwanip.sh script from /etc/rc.local" | tee -a $RACHELLOG
     sed -i '/setwanip/d' /etc/rc.local
     rm -f /root/setwanip.sh

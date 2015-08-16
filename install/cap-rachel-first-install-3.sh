@@ -74,7 +74,7 @@ cat > /root/iptables-rachel.sh << 'EOF'
 # Added sleep to wait for CAP rcConf and rcConfd to finish initializing
 #
 sleep 60
-iptables -t nat -A OUTPUT -d 10.10.10.10 -j DNAT --to-destination 192.168.88.1
+iptables -t nat -I PREROUTING -d 10.10.10.10 -j DNAT --to-destination 192.168.88.1
 EOF
 
 # Add 10.10.10.10 redirect on every reboot
