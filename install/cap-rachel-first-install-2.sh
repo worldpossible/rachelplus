@@ -6,6 +6,8 @@
 RACHELLOGDIR="/var/log/RACHEL"
 RACHELLOGFILE="rachel-install.tmp"
 RACHELLOG="$RACHELLOGDIR/$RACHELLOGFILE"
+INSTALLTMPDIR="/root/cap-rachel-install.tmp"
+
 exec 1>> $RACHELLOG 2>&1
 
 function print_good () {
@@ -44,7 +46,7 @@ mkfs.ext4 -L "RACHEL" -U 99999999-9999-9999-9999-999999999999 /dev/sda3
 print_good "Done."
 
 # Add lines to /etc/rc.local that will start the next script to run on reboot
-sudo sed -i '$e echo "bash \/root\/cap-rachel-first-install-3.sh&"' /etc/rc.local
+sudo sed -i '$e echo "bash '$INSTALLTMPDIR'\/cap-rachel-first-install-3.sh&"' /etc/rc.local
 
 # Reboot
 echo; print_good "RACHEL CAP Install - Script 2 ended at $(date)"

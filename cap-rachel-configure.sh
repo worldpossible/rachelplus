@@ -119,7 +119,7 @@ function online_variables () {
     RACHELBRANDLOGOCAPTIVE="wget -r $GITRACHELPLUS/captive-portal/RACHELbrandLogo-captive.png -O RACHELbrandLogo-captive.png"
     HFCBRANDLOGOCAPTIVE="wget -r $GITRACHELPLUS/captive-portal/HFCbrandLogo-captive.jpg -O HFCbrandLogo-captive.jpg"
     WORLDPOSSIBLEBRANDLOGOCAPTIVE="wget -r $GITRACHELPLUS/captive-portal/WorldPossiblebrandLogo-captive.png -O WorldPossiblebrandLogo-captive.png"
-    GITCLONERACHELCONTENTSHELL="git clone https://github.com/rachelproject/contentshell $RACHELTMPDIR/contentshell"
+    GITCLONERACHELCONTENTSHELL="git clone https://github.com/rachelproject/contentshell contentshell"
     RSYNCDIR="$RSYNCONLINE"
     ASSESSMENTITEMSJSON="wget -c $GITRACHELPLUS/assessmentitems.json -O /var/ka-lite/data/khan/assessmentitems.json"
     KALITEINSTALL="git clone https://github.com/learningequality/ka-lite /var/ka-lite"
@@ -493,32 +493,24 @@ function new_install () {
     $LIGHTTPDFILE 1>> $RACHELLOG 2>&1
     command_status
 
-    # RACHEL Captive Portal file download
+    # Download RACHEL Captive Portal files
     echo; print_status "Downloading Captive Portal content to $INSTALLTMPDIR." | tee -a $RACHELLOG
+
+    echo; print_status "Downloading captiveportal-redirect.php." | tee -a $RACHELLOG
     $CAPTIVEPORTALREDIRECT 1>> $RACHELLOG 2>&1
     command_status
-    print_good "Downloaded captiveportal-redirect.php." | tee -a $RACHELLOG
-    if [[ ! -f $RACHELWWW/art/RACHELbrandLogo-captive.png ]]; then
-        $RACHELBRANDLOGOCAPTIVE 1>> $RACHELLOG 2>&1
-        command_status
-        echo; print_good "Downloaded RACHELbrandLogo-captive.png." | tee -a $RACHELLOG
-    else
-        echo; print_good "$RACHELWWW/art/RACHELbrandLogo-captive.png exists, skipping." | tee -a $RACHELLOG
-    fi
-    if [[ ! -f $RACHELWWW/art/HFCbrandLogo-captive.jpg ]]; then
-        $HFCBRANDLOGOCAPTIVE 1>> $RACHELLOG 2>&1
-        command_status
-        echo; print_good "Downloaded HFCbrandLogo-captive.jpg." | tee -a $RACHELLOG
-    else
-        echo; print_good "$RACHELWWW/art/HFCbrandLogo-captive.jpg exists, skipping." | tee -a $RACHELLOG
-    fi
-    if [[ ! -f $RACHELWWW/art/WorldPossiblebrandLogo-captive.png ]]; then
-        $WORLDPOSSIBLEBRANDLOGOCAPTIVE 1>> $RACHELLOG 2>&1
-        command_status
-        echo; print_good "Downloaded WorldPossiblebrandLogo-captive.png." | tee -a $RACHELLOG
-    else
-        echo; print_good "$RACHELWWW/art/WorldPossiblebrandLogo-captive.png exists, skipping." | tee -a $RACHELLOG
-    fi
+
+    echo; print_status "Downloading RACHELbrandLogo-captive.png." | tee -a $RACHELLOG
+    $RACHELBRANDLOGOCAPTIVE 1>> $RACHELLOG 2>&1
+    command_status
+    
+    echo; print_status "Downloading HFCbrandLogo-captive.jpg." | tee -a $RACHELLOG
+    $HFCBRANDLOGOCAPTIVE 1>> $RACHELLOG 2>&1
+    command_status
+    
+    echo; print_status "Downloading WorldPossiblebrandLogo-captive.png." | tee -a $RACHELLOG
+    $WORLDPOSSIBLEBRANDLOGOCAPTIVE 1>> $RACHELLOG 2>&1
+    command_status
 
     # Check if files downloaded correctly
     if [[ $DOWNLOADERROR == 0 ]]; then
@@ -557,20 +549,19 @@ function new_install () {
         print_good "Done." | tee -a $RACHELLOG
 
         # Clone or update the RACHEL content shell from GitHub
+        if [[ $INTERNET == "0" ]]; then cd $DIRCONTENTOFFLINE; else cd $INSTALLTMPDIR; fi
         echo; print_status "Checking for pre-existing RACHEL content shell." | tee -a $RACHELLOG
         if [[ ! -d $RACHELWWW ]]; then
             echo; print_status "RACHEL content shell does not exist at $RACHELWWW." | tee -a $RACHELLOG
             echo; print_status "Cloning the RACHEL content shell from GitHub." | tee -a $RACHELLOG
             $GITCLONERACHELCONTENTSHELL
-            if [[ $INTERNET == "0" ]]; then cd $DIRCONTENTOFFLINE; else cd $RACHELTMPDIR; fi
-            cp -r contentshell/* $RACHELWWW/
         else
             if [[ ! -d $RACHELWWW/.git ]]; then
                 echo; print_status "$RACHELWWW exists but it wasn't installed from git; installing RACHEL content shell from GitHub." | tee -a $RACHELLOG
-                rm -rf $RACHELTMPDIR/contentshell 1>> $RACHELLOG 2>&1 # in case of previous failed install
+                rm -rf contentshell 1>> $RACHELLOG 2>&1 # in case of previous failed install
                 $GITCLONERACHELCONTENTSHELL
-                cp -rf $RACHELTMPDIR/contentshell/* $RACHELWWW/ 1>> $RACHELLOG 2>&1 # overwrite current content with contentshell
-                cp -rf $RACHELTMPDIR/contentshell/.git $RACHELWWW/ 1>> $RACHELLOG 2>&1 # copy over GitHub files
+                cp -rf contentshell/* $RACHELWWW/ 1>> $RACHELLOG 2>&1 # overwrite current content with contentshell
+                cp -rf contentshell/.git $RACHELWWW/ 1>> $RACHELLOG 2>&1 # copy over GitHub files
             else
                 echo; print_status "$RACHELWWW exists; updating RACHEL content shell from GitHub." | tee -a $RACHELLOG
                 cd $RACHELWWW; git pull 1>> $RACHELLOG 2>&1
