@@ -105,6 +105,29 @@ else
 fi
 print_good "Done."
 
+# Copy RACHEL Captive Portal files to /media/RACHEL/rachel
+echo; print_status "Copying Captive Portal content to $RACHELWWW." | tee -a $RACHELLOG
+mv $INSTALLTMPDIR/captiveportal-redirect.php $RACHELWWW/ 1>> $RACHELLOG 2>&1
+if [[ ! -f $RACHELWWW/art/RACHELbrandLogo-captive.png ]]; then
+    mv $INSTALLTMPDIR/RACHELbrandLogo-captive.png $RACHELWWW/art/ 1>> $RACHELLOG 2>&1
+    echo; print_good "Downloaded RACHELbrandLogo-captive.png." | tee -a $RACHELLOG
+else
+    echo; print_good "$RACHELWWW/art/RACHELbrandLogo-captive.png exists, skipping." | tee -a $RACHELLOG
+fi
+if [[ ! -f $RACHELWWW/art/HFCbrandLogo-captive.jpg ]]; then
+    mv $INSTALLTMPDIR/HFCbrandLogo-captive.jpg $RACHELWWW/art/ 1>> $RACHELLOG 2>&1
+    echo; print_good "Downloaded HFCbrandLogo-captive.jpg." | tee -a $RACHELLOG
+else
+    echo; print_good "$RACHELWWW/art/HFCbrandLogo-captive.jpg exists, skipping." | tee -a $RACHELLOG
+fi
+if [[ ! -f $RACHELWWW/art/WorldPossiblebrandLogo-captive.png ]]; then
+    mv $INSTALLTMPDIR/WorldPossiblebrandLogo-captive.png $RACHELWWW/art/ 1>> $RACHELLOG 2>&1
+    echo; print_good "Downloaded WorldPossiblebrandLogo-captive.png." | tee -a $RACHELLOG
+else
+    echo; print_good "$RACHELWWW/art/WorldPossiblebrandLogo-captive.png exists, skipping." | tee -a $RACHELLOG
+fi
+print_good "Done."
+
 # Deleting the install script commands
 echo; print_status "Deleting the install scripts."
 rm -rf /root/cap-rachel-* $RACHELTMPDIR
