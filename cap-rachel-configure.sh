@@ -494,8 +494,7 @@ function new_install () {
     command_status
 
     # RACHEL Captive Portal file download
-    cd $RACHELWWW
-    echo; print_status "Downloading Captive Portal content and moving a copy files." | tee -a $RACHELLOG
+    echo; print_status "Downloading Captive Portal content to $INSTALLTMPDIR." | tee -a $RACHELLOG
     $CAPTIVEPORTALREDIRECT 1>> $RACHELLOG 2>&1
     command_status
     print_good "Downloaded captiveportal-redirect.php." | tee -a $RACHELLOG
