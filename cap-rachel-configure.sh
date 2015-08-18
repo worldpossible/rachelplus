@@ -21,6 +21,8 @@ RACHELLOGFILE="rachel-install.tmp"
 RACHELLOG="$RACHELLOGDIR/$RACHELLOGFILE"
 RACHELPARTITION="/media/RACHEL"
 RACHELWWW="$RACHELPARTITION/rachel"
+RACHELSCRIPTSFILE="/root/rachel-scripts.sh"
+RACHELSCRIPTSLOG="/var/log/RACHEL/rachel-scripts.log"
 KALITEDIR="/var/ka-lite"
 KALITERCONTENTDIR="/media/RACHEL/kacontent"
 INSTALLTMPDIR="/root/cap-rachel-install.tmp"
@@ -96,6 +98,7 @@ function opmode () {
                 exit 1
             else
                 export DIRCONTENTOFFLINE
+                offline_variables
             fi
             break
         ;;
@@ -124,9 +127,10 @@ function online_variables () {
     ASSESSMENTITEMSJSON="wget -c $GITRACHELPLUS/assessmentitems.json -O /var/ka-lite/data/khan/assessmentitems.json"
     KALITEINSTALL="git clone https://github.com/learningequality/ka-lite /var/ka-lite"
     KALITEUPDATE="git pull"
-    KALITECONTENTINSTALL="wget -c http://rachelfriends.org/z-holding/ka-lite_content.zip -O $RACHELTMPDIR/ka-lite_content.zip"
-    KIWIXINSTALL="wget -c http://rachelfriends.org/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $RACHELTMPDIR/kiwix-0.9-linux-i686.tar.bz2"
-    SPHIDERPLUSSQLINSTALL="wget -c http://rachelfriends.org/z-SQLdatabase/sphider_plus.sql -O $RACHELTMPDIR/sphider_plus.sql"
+    KALITECONTENTINSTALL="wget -c $WGETONLINE/z-holding/ka-lite_content.zip -O $RACHELTMPDIR/ka-lite_content.zip"
+    KIWIXINSTALL="wget -c $WGETONLINE/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $RACHELTMPDIR/kiwix-0.9-linux-i686.tar.bz2"
+    KIWIXSAMPLEDATA="wget -c $WGETONLINE/z-holding/Ray_Charles.tar.bz -O $RACHELTMPDIR/Ray_Charles.tar.bz"
+    SPHIDERPLUSSQLINSTALL="wget -c $WGETONLINE/z-SQLdatabase/sphider_plus.sql -O $RACHELTMPDIR/sphider_plus.sql"
 }
 
 function offline_variables () {
@@ -150,6 +154,7 @@ function offline_variables () {
     KALITEUPDATE="cp -r $DIRCONTENTOFFLINE/ka-lite /var/"
     KALITECONTENTINSTALL=""
     KIWIXINSTALL=""
+    KIWIXSAMPLEDATA=""
     SPHIDERPLUSSQLINSTALL=""
 }
 
@@ -316,18 +321,29 @@ EOF
 }
 
 function kiwix () {
-    echo; print_status "Setting up kiwix." | tee -a $RACHELLOG
+    echo; print_status "Installing kiwix." | tee -a $RACHELLOG
     $KIWIXINSTALL
+    $KIWIXSAMPLEDATA
     if [[ $INTERNET == "0" ]]; then cd $DIRCONTENTOFFLINE; else cd $RACHELTMPDIR; fi
-    tar -C /var/ -xjvf kiwix-0.9-linux-i686.tar.bz2
+    tar -C /var -xjvf kiwix-0.9-linux-i686.tar.bz2
     chown -R root:root /var/kiwix
-    find /var/kiwix -type d -exec chmod 0755 {} \;
-    find /var/kiwix -type f -exec chmod 0644 {} \;
+    # Make content directory
+    mkdir -p /media/RACHEL/kiwix
+    # Download a test file
+    tar -C /media/RACHEL/kiwix -xjvf Ray_Charles.tar.bz
+    cp /media/RACHEL/kiwix/data/library/wikipedia_en_ray_charles_2015-06.zim.xml  /media/RACHEL/kiwix/data/library/library.xml
+    rm Ray_Charles.tar.bz
+    # Start up Kiwix
+    echo; print_status "Starting Kiwix server." | tee -a $RACHELLOG
+    /var/kiwix/bin/kiwix-serve --daemon --port=81 --library /media/RACHEL/kiwix/data/library/library.xml 1>> $RACHELLOG 2>&1
+    echo; print_status "Setting Kiwix to start on boot." | tee -a $RACHELLOG
     # Remove old kiwix boot lines from /etc/rc.local
     sed -i '/kiwix/d' /etc/rc.local 1>> $RACHELLOG 2>&1
+    # Clean up current rachel-scripts.sh file
+    sed -i '/kiwix/d' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
     # Add lines to /etc/rc.local that will start kiwix on boot
-    sed -i '$e echo "\# Start kiwix on boot"' /etc/rc.local 1>> $RACHELLOG 2>&1
-    sed -i '$e echo "bash \/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' /etc/rc.local 1>> $RACHELLOG 2>&1
+    sed -i '$e echo "\# Start kiwix on boot"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
+    sed -i '$e echo "bash \/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
     cleanup
 }
 
@@ -401,8 +417,9 @@ function download_offline_content () {
     command_status
     print_good "Done." | tee -a $RACHELLOG
 
-    echo; print_status "Downloading/updating kiwix" | tee -a $RACHELLOG
+    echo; print_status "Downloading/updating kiwix and sample data." | tee -a $RACHELLOG
     wget -c $WGETONLINE/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $DIRCONTENTOFFLINE/kiwix-0.9-linux-i686.tar.bz2
+    wget -c $WGETONLINE/z-holding/Ray_Charles.tar.bz -O $DIRCONTENTOFFLINE/Ray_Charles.tar.bz
     command_status
     print_good "Done." | tee -a $RACHELLOG
 
@@ -649,32 +666,59 @@ function repair () {
     echo -e "/dev/sda3\t/media/RACHEL\t\text4\tauto,nobootwait 0\t0" >> /etc/fstab
     print_good "Done." | tee -a $RACHELLOG
 
-    # Fixing /etc/rc.local to start KA Lite on boot
-    echo; print_status "Fixing /etc/rc.local" | tee -a $RACHELLOG
+    # Fixing /root/rachel-scripts.sh
+    echo; print_status "Fixing $RACHELSCRIPTSFILE" | tee -a $RACHELLOG
+
+    # Add rachel-scripts.sh script
+    sed "s,%RACHELSCRIPTSLOG%,$RACHELSCRIPTSLOG,g" > $RACHELSCRIPTSFILE << 'EOF'    
+#!/bin/bash
+# Send output to log file
+rm -f %RACHELSCRIPTSLOG%
+exec 1>> %RACHELSCRIPTSLOG% 2>&1
+# Add the RACHEL iptables rule to redirect 10.10.10.10 to CAP default of 192.168.88.1
+# Added sleep to wait for CAP rcConf and rcConfd to finish initializing
+#
+sleep 60
+iptables -t nat -I PREROUTING -d 10.10.10.10 -j DNAT --to-destination 192.168.88.1
+exit 0
+EOF
+
+    # Add rachel-scripts.sh startup in /etc/rc.local
+    sed -i '/scripts/d' /etc/rc.local
+    sudo sed -i '$e echo "# Add RACHEL startup scripts"' /etc/rc.local
+    sudo sed -i '$e echo "bash /root/rachel-scripts.sh&"' /etc/rc.local
 
     # Check/re-add Kiwix
     if [[ -d /var/kiwix ]]; then
         echo; print_status "Setting up Kiwix to start at boot..." | tee -a $RACHELLOG
         # Remove old kiwix boot lines from /etc/rc.local
         sed -i '/kiwix/d' /etc/rc.local 1>> $RACHELLOG 2>&1
+        # Clean up current rachel-scripts.sh file
+        sed -i '/kiwix/d' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
         # Add lines to /etc/rc.local that will start kiwix on boot
-        sed -i '$e echo "\# Start kiwix on boot"' /etc/rc.local 1>> $RACHELLOG 2>&1
-        sed -i '$e echo "bash \/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' /etc/rc.local 1>> $RACHELLOG 2>&1
+        sed -i '$e echo "\# Start kiwix on boot"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
+        sed -i '$e echo "bash \/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
         print_good "Done." | tee -a $RACHELLOG
     fi
 
     if [[ -d /var/ka-lite ]]; then
-        # Delete previous setup commands from the /etc/rc.local
         echo; print_status "Setting up KA Lite to start at boot..." | tee -a $RACHELLOG
+        # Delete previous setup commands from the /etc/rc.local
         sed -i '/ka-lite/d' /etc/rc.local 1>> $RACHELLOG 2>&1
         sed -i '/sleep 20/d' /etc/rc.local 1>> $RACHELLOG 2>&1
-
+        # Clean up current rachel-scripts.sh file
+        sed -i '/ka-lite/d' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
+        sed -i '/sleep 20/d' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
         # Start KA Lite at boot time
-        sed -i '$e echo "# Start ka-lite at boot time"' /etc/rc.local 1>> $RACHELLOG 2>&1
-        sed -i '$e echo "sleep 20"' /etc/rc.local 1>> $RACHELLOG 2>&1
-        sed -i '$e echo "/var/ka-lite/bin/kalite start"' /etc/rc.local 1>> $RACHELLOG 2>&1
+        sed -i '$e echo "# Start ka-lite at boot time"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
+        sed -i '$e echo "sleep 20"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
+        sed -i '$e echo "/var/ka-lite/bin/kalite restart"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
         print_good "Done." | tee -a $RACHELLOG
     fi
+
+    # Clean up outdated stuff
+    # Remove outdated startup script
+    rm -f /root/iptables-rachel.sh
 
     # Delete previous setwanip commands from /etc/rc.local - not used anymore
     echo; print_status "Deleting previous setwanip.sh script from /etc/rc.local" | tee -a $RACHELLOG
@@ -686,21 +730,6 @@ function repair () {
     echo; print_status "Deleting previous iptables script from /etc/rc.local" | tee -a $RACHELLOG
     sed -i '/iptables/d' /etc/rc.local
     print_good "Done." | tee -a $RACHELLOG
-
-    # Fix the iptables-rachel.sh script
-    cat > /root/iptables-rachel.sh << 'EOF'
-#!/bin/bash
-# Add the RACHEL iptables rule to redirect 10.10.10.10 to CAP default of 192.168.88.1
-# Added sleep to wait for CAP rcConf and rcConfd to finish initializing
-#
-sleep 60
-iptables -t nat -I PREROUTING -d 10.10.10.10 -j DNAT --to-destination 192.168.88.1
-EOF
-
-    # Add 10.10.10.10 redirect on every reboot
-    sudo sed -i '$e echo "# RACHEL iptables - Redirect from 10.10.10.10 to 192.168.88.1"' /etc/rc.local
-    #sudo sed -i '$e echo "iptables -t nat -A OUTPUT -d 10.10.10.10 -j DNAT --to-destination 192.168.88.1&"' /etc/rc.local
-    sudo sed -i '$e echo "bash /root/iptables-rachel.sh&"' /etc/rc.local
 
     echo; print_good "RACHEL CAP Repair Complete." | tee -a $RACHELLOG
     sudo mv $RACHELLOG $RACHELLOGDIR/rachel-repair-$TIMESTAMP.log
