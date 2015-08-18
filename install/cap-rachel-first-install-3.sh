@@ -13,6 +13,8 @@ KALITEDIR="/var/ka-lite"
 KALITERCONTENTDIR="/media/RACHEL/kacontent"
 INSTALLTMPDIR="/root/cap-rachel-install.tmp"
 RACHELTMPDIR="/media/RACHEL/cap-rachel-install.tmp"
+RACHELSCRIPTSFILE="/root/rachel-scripts.sh"
+RACHELSCRIPTSLOG="/var/log/RACHEL/rachel-scripts.log"
 
 exec 1>> $RACHELLOG 2>&1
 
@@ -55,32 +57,70 @@ echo "/dev/sda1        20G   44M   19G   1% /media/preloaded"
 echo "/dev/sda2        99G   60M   94G   1% /media/uploaded"
 echo "/dev/sda3       339G   67M  321G   1% /media/RACHEL"
 
-# Delete previous setwanip commands from /etc/rc.local
-echo; print_status "Deleting previous setwanip.sh script from /etc/rc.local"
-sudo sed -i '/setwanip/d' /etc/rc.local
-rm /root/setwanip.sh
-print_good "Done."
+# Fixing /root/rachel-scripts.sh
+echo; print_status "Fixing $RACHELSCRIPTSFILE" | tee -a $RACHELLOG
 
-# Delete previous iptables commands from /etc/rc.local
-echo; print_status "Deleting previous iptables script from /etc/rc.local"
-sudo sed -i '/iptables/d' /etc/rc.local
-print_good "Done."
-
-# Enable IP forwarding from 10.10.10.10 to 192.168.88.1 (only from wifi)
-#echo 1 > /proc/sys/net/ipv4/ip_forward #line not needed as option already set
-cat > /root/iptables-rachel.sh << 'EOF'
+# Add rachel-scripts.sh script
+sed "s,%RACHELSCRIPTSLOG%,$RACHELSCRIPTSLOG,g" > $RACHELSCRIPTSFILE << 'EOF'
 #!/bin/bash
+# Send output to log file
+rm -f %RACHELSCRIPTSLOG%
+exec 1>> %RACHELSCRIPTSLOG% 2>&1
 # Add the RACHEL iptables rule to redirect 10.10.10.10 to CAP default of 192.168.88.1
 # Added sleep to wait for CAP rcConf and rcConfd to finish initializing
 #
 sleep 60
 iptables -t nat -I PREROUTING -d 10.10.10.10 -j DNAT --to-destination 192.168.88.1
+exit 0
 EOF
 
-# Add 10.10.10.10 redirect on every reboot
-sudo sed -i '$e echo "# RACHEL iptables - Redirect from 10.10.10.10 to 192.168.88.1"' /etc/rc.local
-#sudo sed -i '$e echo "iptables -t nat -A OUTPUT -d 10.10.10.10 -j DNAT --to-destination 192.168.88.1&"' /etc/rc.local
-sudo sed -i '$e echo "bash /root/iptables-rachel.sh&"' /etc/rc.local
+
+# Add rachel-scripts.sh startup in /etc/rc.local
+sed -i '/scripts/d' /etc/rc.local
+sudo sed -i '$e echo "# Add RACHEL startup scripts"' /etc/rc.local
+sudo sed -i '$e echo "bash /root/rachel-scripts.sh&"' /etc/rc.local
+
+# Check/re-add Kiwix
+if [[ -d /var/kiwix ]]; then
+    echo; print_status "Setting up Kiwix to start at boot..."
+    # Remove old kiwix boot lines from /etc/rc.local
+    sed -i '/kiwix/d' /etc/rc.local
+    # Clean up current rachel-scripts.sh file
+    sed -i '/kiwix/d' $RACHELSCRIPTSFILE
+    # Add lines to /etc/rc.local that will start kiwix on boot
+    sed -i '$e echo "\# Start kiwix on boot"' $RACHELSCRIPTSFILE
+    sed -i '$e echo "bash \/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' $RACHELSCRIPTSFILE
+fi
+
+if [[ -d /var/ka-lite ]]; then
+    echo; print_status "Setting up KA Lite to start at boot..."
+    # Delete previous setup commands from the /etc/rc.local
+    sed -i '/ka-lite/d' /etc/rc.local
+    sed -i '/sleep 20/d' /etc/rc.local
+    # Clean up current rachel-scripts.sh file
+    sed -i '/ka-lite/d' $RACHELSCRIPTSFILE
+    sed -i '/sleep 20/d' $RACHELSCRIPTSFILE
+    # Start KA Lite at boot time
+    sed -i '$e echo "# Start ka-lite at boot time"' $RACHELSCRIPTSFILE
+    sed -i '$e echo "sleep 20"' $RACHELSCRIPTSFILE
+    sed -i '$e echo "/var/ka-lite/bin/kalite restart"' $RACHELSCRIPTSFILE
+    print_good "Done." | tee -a $RACHELLOG
+fi
+
+# Clean up outdated stuff
+# Remove outdated startup script
+rm -f /root/iptables-rachel.sh
+
+# Delete previous setwanip commands from /etc/rc.local - not used anymore
+echo; print_status "Deleting previous setwanip.sh script from /etc/rc.local" | tee -a $RACHELLOG
+sed -i '/setwanip/d' /etc/rc.local
+rm -f /root/setwanip.sh
+print_good "Done." | tee -a $RACHELLOG
+
+# Delete previous iptables commands from /etc/rc.local
+echo; print_status "Deleting previous iptables script from /etc/rc.local" | tee -a $RACHELLOG
+sed -i '/iptables/d' /etc/rc.local
+print_good "Done." | tee -a $RACHELLOG
 
 # If $RACHELWWW doesn't exist, set it up
 if [[ ! -d $RACHELWWW ]]; then
