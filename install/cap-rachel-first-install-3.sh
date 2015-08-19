@@ -112,13 +112,13 @@ fi
 rm -f /root/iptables-rachel.sh
 
 # Delete previous setwanip commands from /etc/rc.local - not used anymore
-echo; print_status "Deleting previous setwanip.sh script from /etc/rc.local" | tee -a $RACHELLOG
+echo; print_status "Deleting previous setwanip.sh script from /etc/rc.local"
 sed -i '/setwanip/d' /etc/rc.local
 rm -f /root/setwanip.sh
 print_good "Done." | tee -a $RACHELLOG
 
 # Delete previous iptables commands from /etc/rc.local
-echo; print_status "Deleting previous iptables script from /etc/rc.local" | tee -a $RACHELLOG
+echo; print_status "Deleting previous iptables script from /etc/rc.local"
 sed -i '/iptables/d' /etc/rc.local
 print_good "Done." | tee -a $RACHELLOG
 
