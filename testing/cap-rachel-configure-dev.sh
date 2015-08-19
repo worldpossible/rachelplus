@@ -116,10 +116,10 @@ function online_variables () {
     CAPRACHELFIRSTINSTALL3="wget -r $GITRACHELPLUS/install/cap-rachel-first-install-3.sh -O cap-rachel-first-install-3.sh"
     LIGHTTPDFILE="wget -r $GITRACHELPLUS/lighttpd.conf -O lighttpd.conf"
     CAPTIVEPORTALREDIRECT="wget -r $GITRACHELPLUS/captive-portal/captiveportal-redirect.php -O captiveportal-redirect.php"
-    RACHELBRANDLOGOCAPTIVE="wget -r $GITRACHELPLUS/captive-portal/RACHELbrandLogo-captive.png -O art/RACHELbrandLogo-captive.png"
-    HFCBRANDLOGOCAPTIVE="wget -r $GITRACHELPLUS/captive-portal/HFCbrandLogo-captive.jpg -O art/HFCbrandLogo-captive.jpg"
-    WORLDPOSSIBLEBRANDLOGOCAPTIVE="wget -r $GITRACHELPLUS/captive-portal/WorldPossiblebrandLogo-captive.png -O art/WorldPossiblebrandLogo-captive.png"
-    GITCLONERACHELCONTENTSHELL="git clone https://github.com/rachelproject/contentshell $RACHELTMPDIR/contentshell"
+    RACHELBRANDLOGOCAPTIVE="wget -r $GITRACHELPLUS/captive-portal/RACHELbrandLogo-captive.png -O RACHELbrandLogo-captive.png"
+    HFCBRANDLOGOCAPTIVE="wget -r $GITRACHELPLUS/captive-portal/HFCbrandLogo-captive.jpg -O HFCbrandLogo-captive.jpg"
+    WORLDPOSSIBLEBRANDLOGOCAPTIVE="wget -r $GITRACHELPLUS/captive-portal/WorldPossiblebrandLogo-captive.png -O WorldPossiblebrandLogo-captive.png"
+    GITCLONERACHELCONTENTSHELL="git clone https://github.com/rachelproject/contentshell contentshell"
     RSYNCDIR="$RSYNCONLINE"
     ASSESSMENTITEMSJSON="wget -c $GITRACHELPLUS/assessmentitems.json -O /var/ka-lite/data/khan/assessmentitems.json"
     KALITEINSTALL="git clone https://github.com/learningequality/ka-lite /var/ka-lite"
@@ -493,32 +493,24 @@ function new_install () {
     $LIGHTTPDFILE 1>> $RACHELLOG 2>&1
     command_status
 
-    # RACHEL Captive Portal file download
+    # Download RACHEL Captive Portal files
     echo; print_status "Downloading Captive Portal content to $INSTALLTMPDIR." | tee -a $RACHELLOG
+
+    echo; print_status "Downloading captiveportal-redirect.php." | tee -a $RACHELLOG
     $CAPTIVEPORTALREDIRECT 1>> $RACHELLOG 2>&1
     command_status
-    print_good "Downloaded captiveportal-redirect.php." | tee -a $RACHELLOG
-    if [[ ! -f $RACHELWWW/art/RACHELbrandLogo-captive.png ]]; then
-        $RACHELBRANDLOGOCAPTIVE 1>> $RACHELLOG 2>&1
-        command_status
-        echo; print_good "Downloaded RACHELbrandLogo-captive.png." | tee -a $RACHELLOG
-    else
-        echo; print_good "$RACHELWWW/art/RACHELbrandLogo-captive.png exists, skipping." | tee -a $RACHELLOG
-    fi
-    if [[ ! -f $RACHELWWW/art/HFCbrandLogo-captive.jpg ]]; then
-        $HFCBRANDLOGOCAPTIVE 1>> $RACHELLOG 2>&1
-        command_status
-        echo; print_good "Downloaded HFCbrandLogo-captive.jpg." | tee -a $RACHELLOG
-    else
-        echo; print_good "$RACHELWWW/art/HFCbrandLogo-captive.jpg exists, skipping." | tee -a $RACHELLOG
-    fi
-    if [[ ! -f $RACHELWWW/art/WorldPossiblebrandLogo-captive.png ]]; then
-        $WORLDPOSSIBLEBRANDLOGOCAPTIVE 1>> $RACHELLOG 2>&1
-        command_status
-        echo; print_good "Downloaded WorldPossiblebrandLogo-captive.png." | tee -a $RACHELLOG
-    else
-        echo; print_good "$RACHELWWW/art/WorldPossiblebrandLogo-captive.png exists, skipping." | tee -a $RACHELLOG
-    fi
+
+    echo; print_status "Downloading RACHELbrandLogo-captive.png." | tee -a $RACHELLOG
+    $RACHELBRANDLOGOCAPTIVE 1>> $RACHELLOG 2>&1
+    command_status
+    
+    echo; print_status "Downloading HFCbrandLogo-captive.jpg." | tee -a $RACHELLOG
+    $HFCBRANDLOGOCAPTIVE 1>> $RACHELLOG 2>&1
+    command_status
+    
+    echo; print_status "Downloading WorldPossiblebrandLogo-captive.png." | tee -a $RACHELLOG
+    $WORLDPOSSIBLEBRANDLOGOCAPTIVE 1>> $RACHELLOG 2>&1
+    command_status
 
     # Check if files downloaded correctly
     if [[ $DOWNLOADERROR == 0 ]]; then
@@ -557,20 +549,19 @@ function new_install () {
         print_good "Done." | tee -a $RACHELLOG
 
         # Clone or update the RACHEL content shell from GitHub
+        if [[ $INTERNET == "0" ]]; then cd $DIRCONTENTOFFLINE; else cd $INSTALLTMPDIR; fi
         echo; print_status "Checking for pre-existing RACHEL content shell." | tee -a $RACHELLOG
         if [[ ! -d $RACHELWWW ]]; then
             echo; print_status "RACHEL content shell does not exist at $RACHELWWW." | tee -a $RACHELLOG
             echo; print_status "Cloning the RACHEL content shell from GitHub." | tee -a $RACHELLOG
             $GITCLONERACHELCONTENTSHELL
-            if [[ $INTERNET == "0" ]]; then cd $DIRCONTENTOFFLINE; else cd $RACHELTMPDIR; fi
-            cp -r contentshell/* $RACHELWWW/
         else
             if [[ ! -d $RACHELWWW/.git ]]; then
                 echo; print_status "$RACHELWWW exists but it wasn't installed from git; installing RACHEL content shell from GitHub." | tee -a $RACHELLOG
-                rm -rf $RACHELTMPDIR/contentshell 1>> $RACHELLOG 2>&1 # in case of previous failed install
+                rm -rf contentshell 1>> $RACHELLOG 2>&1 # in case of previous failed install
                 $GITCLONERACHELCONTENTSHELL
-                cp -rf $RACHELTMPDIR/contentshell/* $RACHELWWW/ 1>> $RACHELLOG 2>&1 # overwrite current content with contentshell
-                cp -rf $RACHELTMPDIR/contentshell/.git $RACHELWWW/ 1>> $RACHELLOG 2>&1 # copy over GitHub files
+                cp -rf contentshell/* $RACHELWWW/ 1>> $RACHELLOG 2>&1 # overwrite current content with contentshell
+                cp -rf contentshell/.git $RACHELWWW/ 1>> $RACHELLOG 2>&1 # copy over GitHub files
             else
                 echo; print_status "$RACHELWWW exists; updating RACHEL content shell from GitHub." | tee -a $RACHELLOG
                 cd $RACHELWWW; git pull 1>> $RACHELLOG 2>&1
@@ -637,6 +628,8 @@ function new_install () {
 function repair () {
     print_header
     echo; print_status "Repairing your CAP after a firmware upgrade."
+    cd $INSTALLTMPDIR
+
     # Download/update to latest RACHEL lighttpd.conf
     echo; print_status "Downloading latest lighttpd.conf" | tee -a $RACHELLOG
     ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies and ensuring the file downloads correctly)
@@ -645,6 +638,8 @@ function repair () {
     if [[ $DOWNLOADERROR == 1 ]]; then
         print_error "The lighttpd.conf file did not download correctly; check log file (/var/log/RACHEL/rachel-install.tmp) and try again." | tee -a $RACHELLOG
         echo; break
+    else
+        mv $INSTALLTMPDIR/lighttpd.conf /usr/local/etc/lighttpd.conf
     fi
     print_good "Done." | tee -a $RACHELLOG
 
@@ -656,18 +651,32 @@ function repair () {
 
     # Fixing /etc/rc.local to start KA Lite on boot
     echo; print_status "Fixing /etc/rc.local" | tee -a $RACHELLOG
-    # Delete previous setup commands from the /etc/rc.local
-    echo; print_status "Setting up KA Lite to start at boot..." | tee -a $RACHELLOG
-    sed -i '/ka-lite/d' /etc/rc.local 1>> $RACHELLOG 2>&1
-    sed -i '/sleep 20/d' /etc/rc.local 1>> $RACHELLOG 2>&1
 
-    # Start KA Lite at boot time
-    sed -i '$e echo "# Start ka-lite at boot time"' /etc/rc.local 1>> $RACHELLOG 2>&1
-    sed -i '$e echo "sleep 20"' /etc/rc.local 1>> $RACHELLOG 2>&1
-    sed -i '$e echo "/var/ka-lite/bin/kalite start"' /etc/rc.local 1>> $RACHELLOG 2>&1
-    print_good "Done." | tee -a $RACHELLOG
+    # Check/re-add Kiwix
+    if [[ -d /var/kiwix ]]; then
+        echo; print_status "Setting up Kiwix to start at boot..." | tee -a $RACHELLOG
+        # Remove old kiwix boot lines from /etc/rc.local
+        sed -i '/kiwix/d' /etc/rc.local 1>> $RACHELLOG 2>&1
+        # Add lines to /etc/rc.local that will start kiwix on boot
+        sed -i '$e echo "\# Start kiwix on boot"' /etc/rc.local 1>> $RACHELLOG 2>&1
+        sed -i '$e echo "bash \/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' /etc/rc.local 1>> $RACHELLOG 2>&1
+        print_good "Done." | tee -a $RACHELLOG
+    fi
 
-    # Delete previous setwanip commands from /etc/rc.local
+    if [[ -d /var/ka-lite ]]; then
+        # Delete previous setup commands from the /etc/rc.local
+        echo; print_status "Setting up KA Lite to start at boot..." | tee -a $RACHELLOG
+        sed -i '/ka-lite/d' /etc/rc.local 1>> $RACHELLOG 2>&1
+        sed -i '/sleep 20/d' /etc/rc.local 1>> $RACHELLOG 2>&1
+
+        # Start KA Lite at boot time
+        sed -i '$e echo "# Start ka-lite at boot time"' /etc/rc.local 1>> $RACHELLOG 2>&1
+        sed -i '$e echo "sleep 20"' /etc/rc.local 1>> $RACHELLOG 2>&1
+        sed -i '$e echo "/var/ka-lite/bin/kalite start"' /etc/rc.local 1>> $RACHELLOG 2>&1
+        print_good "Done." | tee -a $RACHELLOG
+    fi
+
+    # Delete previous setwanip commands from /etc/rc.local - not used anymore
     echo; print_status "Deleting previous setwanip.sh script from /etc/rc.local" | tee -a $RACHELLOG
     sed -i '/setwanip/d' /etc/rc.local
     rm -f /root/setwanip.sh
@@ -679,19 +688,19 @@ function repair () {
     print_good "Done." | tee -a $RACHELLOG
 
     # Fix the iptables-rachel.sh script
-    cat > /root/iptables-rachel.sh << 'EOF'
+    cat > /root/rachel-scripts.sh << 'EOF'
 #!/bin/bash
+# Start KA Lite
+/var/ka-lite/bin/kalite restart
 # Add the RACHEL iptables rule to redirect 10.10.10.10 to CAP default of 192.168.88.1
 # Added sleep to wait for CAP rcConf and rcConfd to finish initializing
-#
 sleep 60
 iptables -t nat -I PREROUTING -d 10.10.10.10 -j DNAT --to-destination 192.168.88.1
 EOF
 
     # Add 10.10.10.10 redirect on every reboot
-    sudo sed -i '$e echo "# RACHEL iptables - Redirect from 10.10.10.10 to 192.168.88.1"' /etc/rc.local
-    #sudo sed -i '$e echo "iptables -t nat -A OUTPUT -d 10.10.10.10 -j DNAT --to-destination 192.168.88.1&"' /etc/rc.local
-    sudo sed -i '$e echo "bash /root/iptables-rachel.sh&"' /etc/rc.local
+    sudo sed -i '$e echo "# Run RACHEL Scripts"' /etc/rc.local
+    sudo sed -i '$e echo "bash /root/rachel-scripts.sh&"' /etc/rc.local
 
     echo; print_good "RACHEL CAP Repair Complete." | tee -a $RACHELLOG
     sudo mv $RACHELLOG $RACHELLOGDIR/rachel-repair-$TIMESTAMP.log
@@ -979,9 +988,10 @@ function ka-lite_install () {
     sudo sed -i '/sleep 20/d' /etc/rc.local 1>> $RACHELLOG 2>&1
 
     # Start KA Lite at boot time
+    /var/ka-lite/scripts/runatboot.sh 
     sudo sed -i '$e echo "# Start ka-lite at boot time"' /etc/rc.local 1>> $RACHELLOG 2>&1
     sudo sed -i '$e echo "sleep 20"' /etc/rc.local 1>> $RACHELLOG 2>&1
-    sudo sed -i '$e echo "/var/ka-lite/bin/kalite start"' /etc/rc.local 1>> $RACHELLOG 2>&1
+    sudo sed -i '$e echo "/var/ka-lite/bin/kalite restart"' /etc/rc.local 1>> $RACHELLOG 2>&1
     print_good "Done." | tee -a $RACHELLOG
 
     # Starting KA Lite
