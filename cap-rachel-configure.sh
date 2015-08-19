@@ -1,5 +1,5 @@
 #!/bin/sh
-# FILE: cap-rachel-configure-dev.sh
+# FILE: cap-rachel-configure.sh
 # ONELINER Download/Install: sudo wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/cap-rachel-configure.sh -O /root/cap-rachel-configure.sh; bash cap-rachel-configure.sh
 
 # For offline builds, run the Download-Offline-Content script in the Utilities menu.
@@ -242,7 +242,7 @@ function cleanup () {
     fi
     # Deleting the install script commands
     echo; print_status "Cleaning up install scripts."
-    rm -rf /root/cap-rachel-* $RACHELTMPDIR
+    rm -rf $INSTALLTMPDIR $RACHELTMPDIR $0
     print_good "Done."
 }
 
@@ -265,7 +265,7 @@ function sanitize () {
     echo; print_question "Do you want to run the /root/generate_recovery.sh script?"
     read -p "    Select 'n' to exit. (y/n) " -r <&1
     if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
-        cleanup
+        rm -rf $INSTALLTMPDIR $RACHELTMPDIR
         /root/generate_recovery.sh
     fi
     echo; print_good "Done."
