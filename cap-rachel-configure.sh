@@ -150,7 +150,7 @@ function online_variables () {
     KIWIXINSTALL="wget -c $WGETONLINE/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $RACHELTMPDIR/kiwix-0.9-linux-i686.tar.bz2"
     KIWIXSAMPLEDATA="wget -c $WGETONLINE/z-holding/Ray_Charles.tar.bz -O $RACHELTMPDIR/Ray_Charles.tar.bz"
     SPHIDERPLUSSQLINSTALL="wget -c $WGETONLINE/z-SQLdatabase/sphider_plus.sql -O $RACHELTMPDIR/sphider_plus.sql"
-    DOWNLOADCONTENTSCRIPT="http://dev.worldpossible.org/mods/scripts"
+    DOWNLOADCONTENTSCRIPT="$GITRACHELPLUS/scripts"
 }
 
 function offline_variables () {
