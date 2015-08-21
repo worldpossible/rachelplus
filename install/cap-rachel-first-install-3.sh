@@ -89,7 +89,7 @@ if [[ -d /var/kiwix ]]; then
     sed -i '/kiwix/d' $RACHELSCRIPTSFILE
     # Add lines to /etc/rc.local that will start kiwix on boot
     sed -i '$e echo "\# Start kiwix on boot"' $RACHELSCRIPTSFILE
-    sed -i '$e echo "bash \/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' $RACHELSCRIPTSFILE
+    sed -i '$e echo "\/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' $RACHELSCRIPTSFILE
 fi
 
 if [[ -d /var/ka-lite ]]; then

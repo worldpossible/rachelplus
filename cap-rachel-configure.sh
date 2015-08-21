@@ -42,28 +42,21 @@ function testing-script () {
     print_header
     DOWNLOADERROR="0"
     echo; print_status "Installing RACHEL content." | tee -a $RACHELLOG
-    if [[ $INTERNET == "0" ]]; then cd $DIRCONTENTOFFLINE; else cd $RACHELTMPDIR; fi
 
-    select menu in "English-Test" "Main-Menu"; do
-        case $menu in
-        English-Test)
-        print_status "Installing content for test." | tee -a $RACHELLOG
-        wget -c $DOWNLOADCONTENTSCRIPT/en_test.lst
-        command_status
-        while read p; do
-            echo; print_status "Downloading $p" | tee -a $RACHELLOG
-            rsync -avz $RSYNCDIR/rachelmods/$p $RACHELWWW/modules/
-            command_status
-            print_good "Done." | tee -a $RACHELLOG
-        done <en_test.lst
-        break
-        ;;
-
-        Main-Menu)
-        break
-        ;;
-        esac
-    done
+    FILENAME="kiwix-0.9+wikipedia_en_all_2015-05.zip"
+    print_status "Installing Kiwix content - Wikipedia ALL." | tee -a $RACHELLOG
+    wget -c http://download.kiwix.org/portable/wikipedia/$FILENAME -O $RACHELTMPDIR/$FILENAME
+    command_status
+    unzip -o $RACHELTMPDIR/$FILENAME "data/*" -d "$RACHELPARTITION/kiwix/"
+    if [[ $DOWNLOADERROR == 1 ]]; then
+        echo; print_error "The zip file did not download correctly; if you want to try again, click 'yes' when it asks"
+        echo "  if there were errors. The download will then continue where it left off." | tee -a $RACHELLOG
+        echo "  For more information, check the log file ($RACHELLOG)." | tee -a $RACHELLOG
+    else
+        /var/kiwix/bin/kiwix-manage /media/RACHEL/kiwix/data/library/library.xml  add /media/RACHEL/kiwix/data/content/wikipedia_en_all_2015-05.zim  --indexPath=/media/RACHEL/kiwix/data/index/wikipedia_en_all_2015-05.zim.idx
+        rm -f $RACHELTMPDIR/$FILENAME
+    fi
+    print_good "Done." | tee -a $RACHELLOG
 
     # Check for errors is downloads
     if [[ $DOWNLOADERROR == 1 ]]; then
@@ -760,7 +753,7 @@ EOF
         sed -i '/kiwix/d' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
         # Add lines to /etc/rc.local that will start kiwix on boot
         sed -i '$e echo "\# Start kiwix on boot"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
-        sed -i '$e echo "bash \/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
+        sed -i '$e echo "\/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
         print_good "Done." | tee -a $RACHELLOG
     fi
 
@@ -827,49 +820,104 @@ function content_install () {
     # for loop
 
     echo; print_question "What content you would like to install:" | tee -a $RACHELLOG
-    echo "  - [English-KA] - English content based on KA" | tee -a $RACHELLOG
-    echo "  - [English-Kaos] - English content based on Kaos" | tee -a $RACHELLOG
-    echo "  - [English-Justice] - English content for Justice" | tee -a $RACHELLOG
+    echo "  - [English] - English content" | tee -a $RACHELLOG
+    echo "  - [Español] - Español content" | tee -a $RACHELLOG
+    echo "  - [Français] - Français content" | tee -a $RACHELLOG
+    echo "  - [Português] - Português content" | tee -a $RACHELLOG
+    echo "  - [Hindi] - Hindi content" | tee -a $RACHELLOG
     echo "  - Exit to the [Main Menu]" | tee -a $RACHELLOG
     echo
-    select menu in "English-KALite" "English-Kaos" "English-Justice" "Español" "Français" "Português" "Hindi" "Main-Menu"; do
+    select menu in "English" "Español" "Français" "Português" "Hindi" "Main-Menu"; do
         case $menu in
-        English-KALite)
-        print_status "Installing content for English (KA Lite)." | tee -a $RACHELLOG
-        wget -c $DOWNLOADCONTENTSCRIPT/en_all_kalite.lst
-        command_status
-        while read p; do
-            echo; print_status "Downloading $p" | tee -a $RACHELLOG
-            rsync -avz $RSYNCDIR/rachelmods/$p $RACHELWWW/modules/
+        English)
+        echo; print_question "What content you would like to install:" | tee -a $RACHELLOG
+        echo "  - [English-KA] - English content based on KA" | tee -a $RACHELLOG
+        echo "  - [English-Kaos] - English content based on Kaos" | tee -a $RACHELLOG
+        echo "  - [English-Justice] - English content for Justice" | tee -a $RACHELLOG
+        echo "  - Exit to [Content-Menu]" | tee -a $RACHELLOG
+        echo
+        select submenu in "English-KALite" "English-KAOS" "English-Justice" "Kiwix-Wikipedia-ALL" "Kiwix-Wikipedia-Schools" "Content-Menu"; do
+            case $submenu in
+            English-KALite)
+            print_status "Installing content for English (KA Lite)." | tee -a $RACHELLOG
+            wget -c $DOWNLOADCONTENTSCRIPT/en_all_kalite.lst
             command_status
-            print_good "Done." | tee -a $RACHELLOG
-        done <en_all_kalite.lst
-        break
-        ;;
+            while read p; do
+                echo; print_status "Downloading $p" | tee -a $RACHELLOG
+                rsync -avz $RSYNCDIR/rachelmods/$p $RACHELWWW/modules/
+                command_status
+                print_good "Done." | tee -a $RACHELLOG
+            done <en_all_kalite.lst
+            break
+            ;;
 
-        English-Kaos)
-        print_status "Installing content for English (KA Lite)." | tee -a $RACHELLOG
-        wget -c $DOWNLOADCONTENTSCRIPT/en_all_kaos.lst
-        command_status
-        while read p; do
-            echo; print_status "Downloading $p" | tee -a $RACHELLOG
-            rsync -avz $RSYNCDIR/rachelmods/$p $RACHELWWW/modules/
+            English-KAOS)
+            print_status "Installing content for English (KA Lite)." | tee -a $RACHELLOG
+            wget -c $DOWNLOADCONTENTSCRIPT/en_all_kaos.lst
             command_status
-            print_good "Done." | tee -a $RACHELLOG
-        done <en_all_kaos.lst
-        break
-        ;;
+            while read p; do
+                echo; print_status "Downloading $p" | tee -a $RACHELLOG
+                rsync -avz $RSYNCDIR/rachelmods/$p $RACHELWWW/modules/
+                command_status
+                print_good "Done." | tee -a $RACHELLOG
+            done <en_all_kaos.lst
+            break
+            ;;
 
-        English-Justice)
-        print_status "Installing content for English (Justice)." | tee -a $RACHELLOG
-        wget -c $DOWNLOADCONTENTSCRIPT/en_justice.lst
-        command_status
-        while read p; do
-            echo; print_status "Downloading $p" | tee -a $RACHELLOG
-            rsync -avz $RSYNCDIR/rachelmods/$p $RACHELWWW/modules/
+            English-Justice)
+            print_status "Installing content for English (Justice)." | tee -a $RACHELLOG
+            wget -c $DOWNLOADCONTENTSCRIPT/en_justice.lst
             command_status
+            while read p; do
+                echo; print_status "Downloading $p" | tee -a $RACHELLOG
+                rsync -avz $RSYNCDIR/rachelmods/$p $RACHELWWW/modules/
+                command_status
+                print_good "Done." | tee -a $RACHELLOG
+            done <en_justice.lst
+            break
+            ;;
+
+            Kiwix-Wikipedia-ALL)
+            FILENAME="kiwix-0.9+wikipedia_en_all_2015-05.zip"
+            print_status "Installing Kiwix content - Wikipedia ALL." | tee -a $RACHELLOG
+            wget -c http://download.kiwix.org/portable/wikipedia/$FILENAME -O $RACHELTMPDIR/$FILENAME
+            command_status
+            unzip -o $RACHELTMPDIR/$FILENAME "data/*" -d "$RACHELPARTITION/kiwix/"
+            if [[ $DOWNLOADERROR == 1 ]]; then
+                echo; print_error "The zip file did not download correctly; if you want to try again, click 'yes' when it asks"
+                echo "  if there were errors. The download will then continue where it left off." | tee -a $RACHELLOG
+                echo "  For more information, check the log file ($RACHELLOG)." | tee -a $RACHELLOG
+            else
+                /var/kiwix/bin/kiwix-manage /media/RACHEL/kiwix/data/library/library.xml add /media/RACHEL/kiwix/data/content/wikipedia_en_all_2015-05.zim --indexPath=/media/RACHEL/kiwix/data/index/wikipedia_en_all_2015-05.zim.idx
+            fi
+            print_good "You can view your module by clicking on Wikipedia from the RACHEL homepage."
             print_good "Done." | tee -a $RACHELLOG
-        done <en_justice.lst
+            break
+            ;;
+
+            Kiwix-Wikipedia-Schools)
+            FILENAME="kiwix-0.9+wikipedia_en_for-schools_2013-01.zip"
+            print_status "Installing Kiwix content - Wikipedia for Schools." | tee -a $RACHELLOG
+            wget -c http://download.kiwix.org/portable/wikipedia/$FILENAME -O $RACHELTMPDIR/$FILENAME
+            command_status
+            unzip -o $RACHELTMPDIR/$FILENAME "data/*" -d "$RACHELPARTITION/kiwix/"
+            if [[ $DOWNLOADERROR == 1 ]]; then
+                echo; print_error "The zip file did not download correctly; if you want to try again, click 'yes' when it asks"
+                echo "  if there were errors. The download will then continue where it left off." | tee -a $RACHELLOG
+                echo "  For more information, check the log file ($RACHELLOG)." | tee -a $RACHELLOG
+            else
+                /var/kiwix/bin/kiwix-manage /media/RACHEL/kiwix/data/library/library.xml add /media/RACHEL/kiwix/data/content/wikipedia_en_for_schools_opt_2013.zim --indexPath=/media/RACHEL/kiwix/data/index/wikipedia_en_for_schools_opt_2013.zim.idx
+            fi
+            print_good "You can view your module by clicking on Wikipedia from the RACHEL homepage."
+            print_good "Done." | tee -a $RACHELLOG
+            break
+            ;;
+
+            Content-Menu)
+            break
+            ;;
+            esac
+        done
         break
         ;;
 
@@ -1045,7 +1093,7 @@ function ka-lite_install () {
 # Loop function to redisplay mhf
 function whattodo {
     echo; print_question "What would you like to do next?"
-    echo "1)New Install  2)Install KA Lite  3)Install Kiwix  4)Install Sphider  5)Install Content  6)Utilities  7)Exit"
+    echo "1)Initial Install  2)Install KA Lite  3)Install Kiwix  4)Install Sphider  5)Install Content  6)Utilities  7)Exit"
 }
 
 ## MAIN MENU
@@ -1059,7 +1107,7 @@ opmode
 cd $INSTALLTMPDIR
 
 echo; print_question "What you would like to do:" | tee -a $RACHELLOG
-echo "  - New [Install] RACHEL on a CAP" | tee -a $RACHELLOG
+echo "  - [Initial-Install] of RACHEL on a CAP" | tee -a $RACHELLOG
 echo "  - [Install-KA-Lite]" | tee -a $RACHELLOG
 echo "  - [Install-Kiwix]" | tee -a $RACHELLOG
 echo "  - [Install-Sphider]" | tee -a $RACHELLOG
@@ -1071,9 +1119,9 @@ echo "    - Symlink all .mp4 videos in the module kaos-en to /media/RACHEL/kacon
 echo "    - Test script" | tee -a $RACHELLOG
 echo "  - [Exit] the installation script" | tee -a $RACHELLOG
 echo
-select menu in "Install" "Install-KA-Lite" "Install-Kiwix" "Install-Sphider" "Content" "Utilities" "Exit"; do
+select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Sphider" "Content" "Utilities" "Exit"; do
         case $menu in
-        Install)
+        Initial-Install)
         new_install
         ;;
 
