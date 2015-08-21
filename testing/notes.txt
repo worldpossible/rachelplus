@@ -1,0 +1,29 @@
+# max compression, recursive zip file creation
+zip -r9 ka-lite_content.zip content
+
+# to calculate the SHA1 of each file
+find $DIRCONTENTOFFLINE/. -type f -exec sha1sum {} >> SHA1SUMS \;
+
+# find, chmod files
+find /var/kiwix -type d -exec chmod 0755 {} \;
+find /var/kiwix -type f -exec chmod 0644 {} \;
+find . -type d -user harry -exec chown daisy {} \;
+
+# list # of files by type
+sudo find ./ -type f | grep -E ".*\.[a-zA-Z0-9]*$" | sed -e 's/.*\(\.[a-zA-Z0-9]*\)$/\1/' | sort | uniq -c | sort -n
+
+# find duplicate files (based on size then MD5)
+find -not -empty -type f -printf "%s\n" | sort -rn | uniq -d | xargs -I{} -n1 find -type f -size {}c -print0 | xargs -0 md5sum | sort | uniq -w32 --all-repeated=separate
+
+
+------------------
+
+# Check that all KA videos are symlinked to /media/RACHEL/kacontent
+for f in $RACHELWWW/modules/kaos*; do
+    ## Check if the glob gets expanded to existing files.
+    ## If not, f here will be exactly the pattern above
+    ## and the exists test will evaluate to false.
+    [ -e "$f" ] && echo; symlink
+    ## This is all we needed to know, so we can break after the first iteration
+    break
+done
