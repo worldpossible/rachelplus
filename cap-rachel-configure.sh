@@ -379,16 +379,20 @@ EOF
 function kiwix () {
     echo; print_status "Installing kiwix." | tee -a $RACHELLOG
     $KIWIXINSTALL
-    $KIWIXSAMPLEDATA
     if [[ $INTERNET == "0" ]]; then cd $DIRCONTENTOFFLINE; else cd $RACHELTMPDIR; fi
     tar -C /var -xjvf kiwix-0.9-linux-i686.tar.bz2
     chown -R root:root /var/kiwix
     # Make content directory
     mkdir -p /media/RACHEL/kiwix
-    # Download a test file
-    tar -C /media/RACHEL/kiwix -xjvf Ray_Charles.tar.bz
-    cp /media/RACHEL/kiwix/data/library/wikipedia_en_ray_charles_2015-06.zim.xml  /media/RACHEL/kiwix/data/library/library.xml
-    rm Ray_Charles.tar.bz
+    echo; print_question "Kiwix will not start successfully until either the sample data or actual content is installed."
+    read -p "Do you want to download a small sample data file? (y/n) " -r <&1
+    if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
+        $KIWIXSAMPLEDATA
+        # Download a test file
+        tar -C /media/RACHEL/kiwix -xjvf Ray_Charles.tar.bz
+        cp /media/RACHEL/kiwix/data/library/wikipedia_en_ray_charles_2015-06.zim.xml  /media/RACHEL/kiwix/data/library/library.xml
+        rm Ray_Charles.tar.bz
+    fi
     # Start up Kiwix
     echo; print_status "Starting Kiwix server." | tee -a $RACHELLOG
     /var/kiwix/bin/kiwix-serve --daemon --port=81 --library /media/RACHEL/kiwix/data/library/library.xml 1>> $RACHELLOG 2>&1
@@ -399,16 +403,20 @@ function kiwix () {
     sed -i '/kiwix/d' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
     # Add lines to /etc/rc.local that will start kiwix on boot
     sed -i '$e echo "\# Start kiwix on boot"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
-    sed -i '$e echo "bash \/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
-    cleanup
+    sed -i '$e echo "\/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
 }
 
 function sphider_plus.sql () {
+RESULT=`mysqlshow --user=root --password=root sphider_plus| grep -v Wildcard | grep -o sphider_plus`
+if [ "$RESULT" == "sphider_plus" ]; then
+    echo; print_error "The sphider_plus database is already installed."
+else
     echo; print_status "Installing sphider_plus.sql...be patient, this takes a couple minutes." | tee -a $RACHELLOG
     $SPHIDERPLUSSQLINSTALL
     if [[ $INTERNET == "0" ]]; then cd $DIRCONTENTOFFLINE; else cd $RACHELTMPDIR; fi
     mysql -u root -proot sphider_plus < sphider_plus.sql
-    cleanup
+    echo "1" > /root/
+fi
 }
 
 function download_offline_content () {
@@ -836,7 +844,7 @@ function content_install () {
         echo "  - [English-Justice] - English content for Justice" | tee -a $RACHELLOG
         echo "  - Exit to [Content-Menu]" | tee -a $RACHELLOG
         echo
-        select submenu in "English-KALite" "English-KAOS" "English-Justice" "Kiwix-Wikipedia-ALL" "Kiwix-Wikipedia-Schools" "Content-Menu"; do
+        select submenu in "English-KALite" "English-KAOS" "English-Justice" "Kiwix-Wikipedia-ALL" "Kiwix-Wikipedia-Schools" "Return"; do
             case $submenu in
             English-KALite)
             print_status "Installing content for English (KA Lite)." | tee -a $RACHELLOG
@@ -879,41 +887,51 @@ function content_install () {
 
             Kiwix-Wikipedia-ALL)
             FILENAME="kiwix-0.9+wikipedia_en_all_2015-05.zip"
-            print_status "Installing Kiwix content - Wikipedia ALL." | tee -a $RACHELLOG
-            wget -c http://download.kiwix.org/portable/wikipedia/$FILENAME -O $RACHELTMPDIR/$FILENAME
-            command_status
-            unzip -o $RACHELTMPDIR/$FILENAME "data/*" -d "$RACHELPARTITION/kiwix/"
-            if [[ $DOWNLOADERROR == 1 ]]; then
-                echo; print_error "The zip file did not download correctly; if you want to try again, click 'yes' when it asks"
-                echo "  if there were errors. The download will then continue where it left off." | tee -a $RACHELLOG
-                echo "  For more information, check the log file ($RACHELLOG)." | tee -a $RACHELLOG
+            FILES=$(ls $RACHELPARTITION/kiwix/data/content/wikipedia_en_for_schools_opt_2013.zim* 2> /dev/null | wc -l)
+            if [[ **"$FILES" != "0"** ]]; then
+                echo; print_error "The full Wikipedia is already installed."                
             else
-                /var/kiwix/bin/kiwix-manage /media/RACHEL/kiwix/data/library/library.xml add /media/RACHEL/kiwix/data/content/wikipedia_en_all_2015-05.zim --indexPath=/media/RACHEL/kiwix/data/index/wikipedia_en_all_2015-05.zim.idx
+                echo; print_status "Installing Kiwix content - Wikipedia ALL." | tee -a $RACHELLOG
+                wget -c http://download.kiwix.org/portable/wikipedia/$FILENAME -O $RACHELTMPDIR/$FILENAME
+                command_status
+                unzip -o $RACHELTMPDIR/$FILENAME "data/*" -d "$RACHELPARTITION/kiwix/"
+                if [[ $DOWNLOADERROR == 1 ]]; then
+                    echo; print_error "The zip file did not download correctly; if you want to try again, click 'yes' when it asks"
+                    echo "  if there were errors. The download will then continue where it left off." | tee -a $RACHELLOG
+                    echo "  For more information, check the log file ($RACHELLOG)." | tee -a $RACHELLOG
+                else
+                    /var/kiwix/bin/kiwix-manage $RACHELPARTITION/kiwix/data/library/library.xml add $RACHELPARTITION/kiwix/data/content/wikipedia_en_all_2015-05.zim --indexPath=$RACHELPARTITION/kiwix/data/index/wikipedia_en_all_2015-05.zim.idx
+                fi
             fi
-            print_good "You can view your module by clicking on Wikipedia from the RACHEL homepage."
+            print_good "View your module by clicking on Wikipedia from the RACHEL homepage."
             print_good "Done." | tee -a $RACHELLOG
             break
             ;;
 
             Kiwix-Wikipedia-Schools)
             FILENAME="kiwix-0.9+wikipedia_en_for-schools_2013-01.zip"
-            print_status "Installing Kiwix content - Wikipedia for Schools." | tee -a $RACHELLOG
-            wget -c http://download.kiwix.org/portable/wikipedia/$FILENAME -O $RACHELTMPDIR/$FILENAME
-            command_status
-            unzip -o $RACHELTMPDIR/$FILENAME "data/*" -d "$RACHELPARTITION/kiwix/"
-            if [[ $DOWNLOADERROR == 1 ]]; then
-                echo; print_error "The zip file did not download correctly; if you want to try again, click 'yes' when it asks"
-                echo "  if there were errors. The download will then continue where it left off." | tee -a $RACHELLOG
-                echo "  For more information, check the log file ($RACHELLOG)." | tee -a $RACHELLOG
+            FILES=$(ls $RACHELPARTITION/kiwix/data/content/wikipedia_en_for_schools_opt_2013.zim* 2> /dev/null | wc -l)
+            if [[ **"$FILES" != "0"** ]]; then
+                echo; print_error "Wikipedia for Schools is already installed."                
             else
-                /var/kiwix/bin/kiwix-manage /media/RACHEL/kiwix/data/library/library.xml add /media/RACHEL/kiwix/data/content/wikipedia_en_for_schools_opt_2013.zim --indexPath=/media/RACHEL/kiwix/data/index/wikipedia_en_for_schools_opt_2013.zim.idx
+                echo; print_status "Installing Kiwix content - Wikipedia for Schools." | tee -a $RACHELLOG
+                wget -c http://download.kiwix.org/portable/wikipedia/$FILENAME -O $RACHELTMPDIR/$FILENAME
+                command_status
+                unzip -o $RACHELTMPDIR/$FILENAME "data/*" -d "$RACHELPARTITION/kiwix/"
+                if [[ $DOWNLOADERROR == 1 ]]; then
+                    echo; print_error "The zip file did not download correctly; if you want to try again, click 'yes' when it asks"
+                    echo "  if there were errors. The download will then continue where it left off." | tee -a $RACHELLOG
+                    echo "  For more information, check the log file ($RACHELLOG)." | tee -a $RACHELLOG
+                else
+                    /var/kiwix/bin/kiwix-manage $RACHELPARTITION/kiwix/data/library/library.xml add $RACHELPARTITION/kiwix/data/content/wikipedia_en_for_schools_opt_2013.zim --indexPath=$RACHELPARTITION/kiwix/data/index/wikipedia_en_for_schools_opt_2013.zim.idx
+                fi
             fi
-            print_good "You can view your module by clicking on Wikipedia from the RACHEL homepage."
+            print_good "View your module by clicking on Wikipedia from the RACHEL homepage."
             print_good "Done." | tee -a $RACHELLOG
             break
             ;;
 
-            Content-Menu)
+            Return)
             break
             ;;
             esac
@@ -1132,12 +1150,12 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Sphi
 
         Install-Kiwix)
         kiwix
-        break
+        whattodo
         ;;
 
         Install-Sphider)
         sphider_plus.sql
-        break
+        whattodo
         ;;
 
         Content)
