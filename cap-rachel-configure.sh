@@ -5,7 +5,7 @@
 # For offline builds, run the Download-Offline-Content script in the Utilities menu.
 
 # COMMON VARIABLES - Change as needed
-DIRCONTENTOFFLINE="/media/nascontent/rachel-content" # Enter directory of downloaded RACHEL content for offline install (e.g. I mounted my external USB on my CAP but plugging the external USB into and running the command 'fdisk -l' to find the right drive, then 'mkdir /media/RACHEL-Content' to create a folder to mount to, then 'mount /dev/sdb1 /media/RACHEL-Content' to mount the USB drive.)
+DIRCONTENTOFFLINE="/media/nas/rachel-content" # Enter directory of downloaded RACHEL content for offline install (e.g. I mounted my external USB on my CAP but plugging the external USB into and running the command 'fdisk -l' to find the right drive, then 'mkdir /media/RACHEL-Content' to create a folder to mount to, then 'mount /dev/sdb1 /media/RACHEL-Content' to mount the USB drive.)
 RSYNCONLINE="rsync://dev.worldpossible.org" # The current RACHEL rsync repository
 WGETONLINE="http://rachelfriends.org" # RACHEL large file repo (ka-lite_content, etc)
 GITRACHELPLUS="https://raw.githubusercontent.com/rachelproject/rachelplus/master" # RACHELPlus Scripts GitHub Repo
@@ -144,6 +144,7 @@ function online_variables () {
     KIWIXSAMPLEDATA="wget -c $WGETONLINE/z-holding/Ray_Charles.tar.bz -O $RACHELTMPDIR/Ray_Charles.tar.bz"
     SPHIDERPLUSSQLINSTALL="wget -c $WGETONLINE/z-SQLdatabase/sphider_plus.sql -O $RACHELTMPDIR/sphider_plus.sql"
     DOWNLOADCONTENTSCRIPT="$GITRACHELPLUS/scripts"
+    CONTENTWIKI="wget -c http://download.kiwix.org/portable/wikipedia/$FILENAME -O $RACHELTMPDIR/$FILENAME"
 }
 
 function offline_variables () {
@@ -170,6 +171,7 @@ function offline_variables () {
     KIWIXSAMPLEDATA=""
     SPHIDERPLUSSQLINSTALL=""
     DOWNLOADCONTENTSCRIPT="$DIRCONTENTOFFLINE/rachelplus/scripts"
+    CONTENTWIKIALL=""
 }
 
 function print_header () {
@@ -422,7 +424,7 @@ fi
 function download_offline_content () {
     trap ctrl_c INT
     print_header
-    echo; print_status "**BETA** Downloading RACHEL content for OFFLINE installs." | tee -a $RACHELLOG
+    echo; print_status "** BETA ** Downloading RACHEL content for OFFLINE installs." | tee -a $RACHELLOG
 
     echo; print_question "The OFFLINE RACHEL content folder is set to:  $DIRCONTENTOFFLINE" | tee -a $RACHELLOG
     read -p "Do you want to change the default location? (y/n) " -r <&1
@@ -434,9 +436,10 @@ function download_offline_content () {
             exit 1
         fi
     fi
+    wget -c $WGETONLINE/z-holding/dirlist.txt -O $DIRCONTENTOFFLINE/dirlist.txt        
     # List the current directories on rachelfriends with this command:
     #   for i in $(ls -d */); do echo ${i%%/}; done
-    if [[ ! -f ./dirlist.txt ]]; then
+    if [[ ! -f $DIRCONTENTOFFLINE/dirlist.txt ]]; then
         echo; print_error "The file $DIRCONTENTOFFLINE/dirlist.txt is missing!" | tee -a $RACHELLOG
         echo "    This file is a list of rsync folders; without it, I don't know what to rsync." | tee -a $RACHELLOG
         echo "    Create a newline separated list of directories to rsync in a file called 'dirlist.txt'." | tee -a $RACHELLOG
@@ -481,10 +484,12 @@ function download_offline_content () {
     command_status
     print_good "Done." | tee -a $RACHELLOG
 
-    echo; print_status "Downloading/updating kiwix and sample data." | tee -a $RACHELLOG
+    echo; print_status "Downloading/updating kiwix and data." | tee -a $RACHELLOG
     wget -c $WGETONLINE/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $DIRCONTENTOFFLINE/kiwix-0.9-linux-i686.tar.bz2
-    wget -c $WGETONLINE/z-holding/Ray_Charles.tar.bz -O $DIRCONTENTOFFLINE/Ray_Charles.tar.bz
-    command_status
+    wget -c $WGETONLINE/z-holding/Ray_Charles.tar.bz -O $DIRCONTENTOFFLINE/ay_Charles.tar.bz
+    wget -c http://download.kiwix.org/portable/wikipedia/kiwix-0.9+wikipedia_en_for-schools_2013-01.zip -O $DIRCONTENTOFFLINE/kiwix-0.9+wikipedia_en_for-schools_2013-01.zip
+    wget -c http://download.kiwix.org/portable/wikipedia/kiwix-0.9+wikipedia_en_all_2015-05.zip -O $DIRCONTENTOFFLINE/kiwix-0.9+wikipedia_en_all_2015-05.zip
+
     print_good "Done." | tee -a $RACHELLOG
 
     echo; print_status "Downloading/updating sphider_plus.sql" | tee -a $RACHELLOG
@@ -818,15 +823,6 @@ function content_install () {
     chown -R root:root $RACHELWWW/modules
     print_good "Done." | tee -a $RACHELLOG
 
-    # Export the RSYNCDIR variable so other scripts can use it
-#    export $RSYNCDIR
-
-
-## INSERT CONTENT FIX HERE
-
-    # import file
-    # for loop
-
     echo; print_question "What content you would like to install:" | tee -a $RACHELLOG
     echo "  - [English] - English content" | tee -a $RACHELLOG
     echo "  - [Español] - Español content" | tee -a $RACHELLOG
@@ -892,15 +888,17 @@ function content_install () {
                 echo; print_error "The full Wikipedia is already installed."                
             else
                 echo; print_status "Installing Kiwix content - Wikipedia ALL." | tee -a $RACHELLOG
-                wget -c http://download.kiwix.org/portable/wikipedia/$FILENAME -O $RACHELTMPDIR/$FILENAME
+                $CONTENTWIKI
                 command_status
-                unzip -o $RACHELTMPDIR/$FILENAME "data/*" -d "$RACHELPARTITION/kiwix/"
+                unzip -o $FILENAME "data/*" -d "$RACHELPARTITION/kiwix/"
                 if [[ $DOWNLOADERROR == 1 ]]; then
                     echo; print_error "The zip file did not download correctly; if you want to try again, click 'yes' when it asks"
                     echo "  if there were errors. The download will then continue where it left off." | tee -a $RACHELLOG
                     echo "  For more information, check the log file ($RACHELLOG)." | tee -a $RACHELLOG
                 else
                     /var/kiwix/bin/kiwix-manage $RACHELPARTITION/kiwix/data/library/library.xml add $RACHELPARTITION/kiwix/data/content/wikipedia_en_all_2015-05.zim --indexPath=$RACHELPARTITION/kiwix/data/index/wikipedia_en_all_2015-05.zim.idx
+                    killall /var/kiwix/bin/kiwix-serve
+                    /var/kiwix/bin/kiwix-serve --daemon --port=81 --library /media/RACHEL/kiwix/data/library/library.xml
                 fi
             fi
             print_good "View your module by clicking on Wikipedia from the RACHEL homepage."
@@ -915,15 +913,17 @@ function content_install () {
                 echo; print_error "Wikipedia for Schools is already installed."                
             else
                 echo; print_status "Installing Kiwix content - Wikipedia for Schools." | tee -a $RACHELLOG
-                wget -c http://download.kiwix.org/portable/wikipedia/$FILENAME -O $RACHELTMPDIR/$FILENAME
+                $CONTENTWIKI
                 command_status
-                unzip -o $RACHELTMPDIR/$FILENAME "data/*" -d "$RACHELPARTITION/kiwix/"
+                unzip -o $FILENAME "data/*" -d "$RACHELPARTITION/kiwix/"
                 if [[ $DOWNLOADERROR == 1 ]]; then
                     echo; print_error "The zip file did not download correctly; if you want to try again, click 'yes' when it asks"
                     echo "  if there were errors. The download will then continue where it left off." | tee -a $RACHELLOG
                     echo "  For more information, check the log file ($RACHELLOG)." | tee -a $RACHELLOG
                 else
                     /var/kiwix/bin/kiwix-manage $RACHELPARTITION/kiwix/data/library/library.xml add $RACHELPARTITION/kiwix/data/content/wikipedia_en_for_schools_opt_2013.zim --indexPath=$RACHELPARTITION/kiwix/data/index/wikipedia_en_for_schools_opt_2013.zim.idx
+                    killall /var/kiwix/bin/kiwix-serve
+                    /var/kiwix/bin/kiwix-serve --daemon --port=81 --library /media/RACHEL/kiwix/data/library/library.xml
                 fi
             fi
             print_good "View your module by clicking on Wikipedia from the RACHEL homepage."
@@ -1165,16 +1165,16 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Sphi
 
         Utilities)
         echo; print_question "What utility would you like to use?" | tee -a $RACHELLOG
-        echo "  - **BETA** [Download-RACHEL] content for OFFLINE installs" | tee -a $RACHELLOG
+        echo "  - **BETA** [Download-Content] for OFFLINE RACHEL installs" | tee -a $RACHELLOG
         echo "  - [Repair] an install of a CAP after a firmware upgrade" | tee -a $RACHELLOG
         echo "  - [Sanitize] CAP for imaging" | tee -a $RACHELLOG
         echo "  - [Symlink] all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent" | tee -a $RACHELLOG
         echo "  - [Test] script" | tee -a $RACHELLOG
         echo "  - Return to [Main Menu]" | tee -a $RACHELLOG
         echo
-        select util in "Download-RACHEL" "Repair" "Sanitize" "Symlink" "Test" "Main-Menu"; do
+        select util in "Download-Content" "Repair" "Sanitize" "Symlink" "Test" "Main-Menu"; do
             case $util in
-                Download-RACHEL)
+                Download-Content)
                 download_offline_content
                 break
                 ;;
