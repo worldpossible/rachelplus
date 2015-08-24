@@ -473,7 +473,7 @@ function download_offline_content () {
 
     echo; print_status "Downloading/updating kiwix and data." | tee -a $RACHELLOG
     wget -c $WGETONLINE/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $DIRCONTENTOFFLINE/kiwix-0.9-linux-i686.tar.bz2
-    wget -c $WGETONLINE/z-holding/Ray_Charles.tar.bz -O $DIRCONTENTOFFLINE/ay_Charles.tar.bz
+    wget -c $WGETONLINE/z-holding/Ray_Charles.tar.bz -O $DIRCONTENTOFFLINE/Ray_Charles.tar.bz
     wget -c http://download.kiwix.org/portable/wikipedia/kiwix-0.9+wikipedia_en_for-schools_2013-01.zip -O $DIRCONTENTOFFLINE/kiwix-0.9+wikipedia_en_for-schools_2013-01.zip
     wget -c http://download.kiwix.org/portable/wikipedia/kiwix-0.9+wikipedia_en_all_2015-05.zip -O $DIRCONTENTOFFLINE/kiwix-0.9+wikipedia_en_all_2015-05.zip
 
