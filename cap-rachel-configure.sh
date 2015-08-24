@@ -805,10 +805,15 @@ function content_install () {
     echo; print_error "CAUTION:  This process may take quite awhile if you do you not have a fast network connection." | tee -a $RACHELLOG
     echo "If you get disconnected, you only have to rerun this install again to continue.  It will not re-download content already on the CAP." | tee -a $RACHELLOG
 
-    # Check permissions on modules
-    echo; print_status "Verifying proper permissions on modules prior to install." | tee -a $RACHELLOG
-    chown -R root:root $RACHELWWW/modules
-    print_good "Done." | tee -a $RACHELLOG
+    if [[ -d $RACHELWWW/modules ]]; then
+        # Check permissions on modules
+        echo; print_status "Verifying proper permissions on modules prior to install." | tee -a $RACHELLOG
+        chown -R root:root $RACHELWWW/modules
+        print_good "Done." | tee -a $RACHELLOG
+    else
+        # Create a modules directory
+        mkdir $RACHELWWW/modules
+    fi
 
     echo; print_question "What content you would like to install:" | tee -a $RACHELLOG
     echo "  - [English] - English content" | tee -a $RACHELLOG
