@@ -39,29 +39,16 @@ fi
 function testing-script () {
     set -x
     trap ctrl_c INT
-    print_header
-    DOWNLOADERROR="0"
-    echo; print_status "Installing RACHEL content." | tee -a $RACHELLOG
 
-    FILENAME="kiwix-0.9+wikipedia_en_all_2015-05.zip"
-    print_status "Installing Kiwix content - Wikipedia ALL." | tee -a $RACHELLOG
-    wget -c http://download.kiwix.org/portable/wikipedia/$FILENAME -O $RACHELTMPDIR/$FILENAME
-    command_status
-    unzip -o $RACHELTMPDIR/$FILENAME "data/*" -d "$RACHELPARTITION/kiwix/"
-    if [[ $DOWNLOADERROR == 1 ]]; then
-        echo; print_error "The zip file did not download correctly; if you want to try again, click 'yes' when it asks"
-        echo "  if there were errors. The download will then continue where it left off." | tee -a $RACHELLOG
-        echo "  For more information, check the log file ($RACHELLOG)." | tee -a $RACHELLOG
-    else
-        /var/kiwix/bin/kiwix-manage /media/RACHEL/kiwix/data/library/library.xml  add /media/RACHEL/kiwix/data/content/wikipedia_en_all_2015-05.zim  --indexPath=/media/RACHEL/kiwix/data/index/wikipedia_en_all_2015-05.zim.idx
-        rm -f $RACHELTMPDIR/$FILENAME
-    fi
-    print_good "Done." | tee -a $RACHELLOG
+    print_status "Installing content for English (KA Lite)." | tee -a $RACHELLOG
+    $DOWNLOADCONTENTSCRIPT/en_all_kalite.lst .
+    while read p; do
+        echo; print_status "Downloading $p" | tee -a $RACHELLOG
+        rsync -avz $RSYNCDIR/rachelmods/$p $RACHELWWW/modules/
+        command_status
+        print_good "Done." | tee -a $RACHELLOG
+    done <en_all_kalite.lst
 
-    # Check for errors is downloads
-    if [[ $DOWNLOADERROR == 1 ]]; then
-        echo; print_error "One or more of the updates did not download correctly; for more information, check the log file ($RACHELLOG)." | tee -a $RACHELLOG
-    fi
     exit 1
 }
 
@@ -143,7 +130,7 @@ function online_variables () {
     KIWIXINSTALL="wget -c $WGETONLINE/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $RACHELTMPDIR/kiwix-0.9-linux-i686.tar.bz2"
     KIWIXSAMPLEDATA="wget -c $WGETONLINE/z-holding/Ray_Charles.tar.bz -O $RACHELTMPDIR/Ray_Charles.tar.bz"
     SPHIDERPLUSSQLINSTALL="wget -c $WGETONLINE/z-SQLdatabase/sphider_plus.sql -O $RACHELTMPDIR/sphider_plus.sql"
-    DOWNLOADCONTENTSCRIPT="$GITRACHELPLUS/scripts"
+    DOWNLOADCONTENTSCRIPT="wget -c $GITRACHELPLUS/scripts"
     CONTENTWIKI="wget -c http://download.kiwix.org/portable/wikipedia/$FILENAME -O $RACHELTMPDIR/$FILENAME"
 }
 
@@ -170,7 +157,7 @@ function offline_variables () {
     KIWIXINSTALL=""
     KIWIXSAMPLEDATA=""
     SPHIDERPLUSSQLINSTALL=""
-    DOWNLOADCONTENTSCRIPT="$DIRCONTENTOFFLINE/rachelplus/scripts"
+    DOWNLOADCONTENTSCRIPT="cp $DIRCONTENTOFFLINE/rachelplus/scripts"
     CONTENTWIKIALL=""
 }
 
@@ -416,8 +403,8 @@ else
     echo; print_status "Installing sphider_plus.sql...be patient, this takes a couple minutes." | tee -a $RACHELLOG
     $SPHIDERPLUSSQLINSTALL
     if [[ $INTERNET == "0" ]]; then cd $DIRCONTENTOFFLINE; else cd $RACHELTMPDIR; fi
+    echo "create database sphider_plus" | mysql -u root -proot
     mysql -u root -proot sphider_plus < sphider_plus.sql
-    echo "1" > /root/
 fi
 }
 
@@ -844,8 +831,7 @@ function content_install () {
             case $submenu in
             English-KALite)
             print_status "Installing content for English (KA Lite)." | tee -a $RACHELLOG
-            wget -c $DOWNLOADCONTENTSCRIPT/en_all_kalite.lst
-            command_status
+            $DOWNLOADCONTENTSCRIPT/en_all_kalite.lst .
             while read p; do
                 echo; print_status "Downloading $p" | tee -a $RACHELLOG
                 rsync -avz $RSYNCDIR/rachelmods/$p $RACHELWWW/modules/
@@ -857,8 +843,7 @@ function content_install () {
 
             English-KAOS)
             print_status "Installing content for English (KA Lite)." | tee -a $RACHELLOG
-            wget -c $DOWNLOADCONTENTSCRIPT/en_all_kaos.lst
-            command_status
+            $DOWNLOADCONTENTSCRIPT/en_all_kaos.lst .
             while read p; do
                 echo; print_status "Downloading $p" | tee -a $RACHELLOG
                 rsync -avz $RSYNCDIR/rachelmods/$p $RACHELWWW/modules/
@@ -870,8 +855,7 @@ function content_install () {
 
             English-Justice)
             print_status "Installing content for English (Justice)." | tee -a $RACHELLOG
-            wget -c $DOWNLOADCONTENTSCRIPT/en_justice.lst
-            command_status
+            $DOWNLOADCONTENTSCRIPT/en_justice.lst .
             while read p; do
                 echo; print_status "Downloading $p" | tee -a $RACHELLOG
                 rsync -avz $RSYNCDIR/rachelmods/$p $RACHELWWW/modules/
@@ -941,8 +925,7 @@ function content_install () {
 
         Español)
         print_status "Installing content for Español." | tee -a $RACHELLOG
-        wget -c $DOWNLOADCONTENTSCRIPT/es_all_kaos.lst
-        command_status
+        $DOWNLOADCONTENTSCRIPT/es_all_kaos.lst .
         while read p; do
             echo; print_status "Downloading $p" | tee -a $RACHELLOG
             rsync -avz $RSYNCDIR/rachelmods/$p $RACHELWWW/modules/
@@ -954,8 +937,7 @@ function content_install () {
 
         Français)
         print_status "Installing content for Français." | tee -a $RACHELLOG
-        wget -c $DOWNLOADCONTENTSCRIPT/fr_all_kaos.lst
-        command_status
+        $DOWNLOADCONTENTSCRIPT/fr_all_kaos.lst .
         while read p; do
             echo; print_status "Downloading $p" | tee -a $RACHELLOG
             rsync -avz $RSYNCDIR/rachelmods/$p $RACHELWWW/modules/
@@ -967,8 +949,7 @@ function content_install () {
 
         Português)
         print_status "Installing content for Português." | tee -a $RACHELLOG
-        wget -c $DOWNLOADCONTENTSCRIPT/pt_all_kaos.lst
-        command_status
+        $DOWNLOADCONTENTSCRIPT/pt_all_kaos.lst .
         while read p; do
             echo; print_status "Downloading $p" | tee -a $RACHELLOG
             rsync -avz $RSYNCDIR/rachelmods/$p $RACHELWWW/modules/
@@ -980,8 +961,7 @@ function content_install () {
 
         Hindi)
         print_status "Installing content for Hindi." | tee -a $RACHELLOG
-        wget -c $DOWNLOADCONTENTSCRIPT/hi_all.lst
-        command_status
+        $DOWNLOADCONTENTSCRIPT/hi_all.lst .
         while read p; do
             echo; print_status "Downloading $p" | tee -a $RACHELLOG
             rsync -avz $RSYNCDIR/rachelmods/$p $RACHELWWW/modules/
