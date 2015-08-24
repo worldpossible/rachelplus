@@ -3,20 +3,11 @@ RACHEL Configuration on Intel CAP
 
 [Manufacturers Website](http://www.intel.com/content/www/us/en/education/solutions/content-access-point.html)
 
-## Update your Intel CAP with the latest firmware
-Run the USB recovery to Firmware 1.2.13_rooted
+## 1. Update your Intel CAP with the latest firmware
+Run the USB recovery to Firmware 1.2.15_rooted
 
-## RACHEL initial setup script for Intel CAP
+## 2. RACHEL initial setup script for Intel CAP
 Running the following script will configure the Intel CAP hardware up to the point where you can start loading content onto that harddrive (into the folder /media/RACHEL/rachel).  You are given the option to initialize the script in ONLINE or OFFLINE mode (large content locally stored; still requires internet access for initial install of mysql server).  
-
-At the moment, this script provides the ability to:
-  1. Install RACHEL to a new CAP
-  2. Repair RACHEL after firmware upgrade
-  3. Install all available content for a paticular language
-  4. Install KA Lite
-  5. Install Kiwix
-  6. Sanitize CAP for distribution/imaging
-  7. Download all the large RACHEL content for use in OFFLINE installs
 
 NOTE:  COPY/PASTE BOTH LINES into your CAP shell/console
 ```bash
@@ -24,7 +15,14 @@ wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/cap-rache
 -O /root/cap-rachel-configure.sh; bash /root/cap-rachel-configure.sh
 ```
 
-## Add RACHEL content
+The RACHEL install workflow consists of the following steps:
+  1. Option 1 - Install RACHEL
+  2. Option 2 - Install KA Lite
+  3. Option 3 - Install Kiwix
+  4. Option 4 - Install Sphider database
+  5. Option 5 - Install Content (including Wikipedia)
+
+## 3. Add RACHEL content
 Use script (above) option to download all content for a specific language.
 
 - - - - -
