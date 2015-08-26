@@ -22,7 +22,7 @@ objReq sys setparam wanMacAddr 0
 #
 # clean the SSID
 #
-#redis-cli del WlanSsidT0_ssid
+redis-cli del WlanSsidT0_ssid
 
 sync
 

@@ -24,7 +24,7 @@ check_root() {
 check_parameter() {
     if [ -z "$1" ]; then 
         usage $0
-        echo "please speficy the device node for content disk."
+        echo "Please specify the device node for content disk."
         exit 1
     fi
 }
@@ -61,6 +61,9 @@ format_disk() {
 
     # /uploaded
     mkfs.ext4 -L "uploaded" -U 88888888-8888-8888-8888-888888888888 /dev/sda2
+
+    # /RACHEL
+    mkfs.ext4 -L "RACHEL" -U 99999999-9999-9999-9999-999999999999 /dev/sda3    
 
     gdisk -l $1
 }
