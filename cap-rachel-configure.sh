@@ -40,14 +40,9 @@ function testing-script () {
     set -x
     trap ctrl_c INT
 
-    print_status "Installing content for English (KA Lite)." | tee -a $RACHELLOG
-    $DOWNLOADCONTENTSCRIPT/en_all_kalite.lst .
-    while read p; do
-        echo; print_status "Downloading $p" | tee -a $RACHELLOG
-        rsync -avz $RSYNCDIR/rachelmods/$p $RACHELWWW/modules/
-        command_status
-        print_good "Done." | tee -a $RACHELLOG
-    done <en_all_kalite.lst
+    DOWNLOADERROR="0"
+    echo; print_status "Installing RACHEL content." | tee -a $RACHELLOG
+    if [[ $INTERNET == "0" ]]; then cd $DIRCONTENTOFFLINE; else cd $RACHELTMPDIR; fi
 
     exit 1
 }
@@ -872,25 +867,34 @@ function content_install () {
 
             Kiwix-Wikipedia-ALL)
             FILENAME="kiwix-0.9+wikipedia_en_all_2015-05.zip"
-            FILES=$(ls $RACHELPARTITION/kiwix/data/content/wikipedia_en_for_schools_opt_2013.zim* 2> /dev/null | wc -l)
-            if [[ **"$FILES" != "0"** ]]; then
-                echo; print_error "The full Wikipedia is already installed."                
+            FILES=$(ls $RACHELPARTITION/kiwix/data/content/wikipedia_en_all_2015-05.zim* 2> /dev/null | wc -l)
+            if [[ $FILES != "0" ]]; then
+                echo; print_error "The full Wikipedia is already installed." | tee -a $RACHELLOG
+                if [[ ! -f $RACHELPARTITION/kiwix/data/library/library.xml ]]; then
+                    echo; print_error "The database seems to be corrupt, repairing." | tee -a $RACHELLOG
+                    echo; /var/kiwix/bin/kiwix-manage $RACHELPARTITION/kiwix/data/library/library.xml add $RACHELPARTITION/kiwix/data/content/wikipedia_en_all_2015-05.zim --indexPath=$RACHELPARTITION/kiwix/data/index/wikipedia_en_all_2015-05.zim.idx 1>> $RACHELLOG 2>&1
+                    echo; killall /var/kiwix/bin/kiwix-serve 1>> $RACHELLOG 2>&1
+                    echo; /var/kiwix/bin/kiwix-serve --daemon --port=81 --library /media/RACHEL/kiwix/data/library/library.xml 1>> $RACHELLOG 2>&1
+                    if [[ ! -f $RACHELPARTITION/kiwix/data/library/library.xml ]]; then
+                        print_error "Repair failed.  Please review the log file for additional details."
+                    fi
+                fi
             else
                 echo; print_status "Installing Kiwix content - Wikipedia ALL." | tee -a $RACHELLOG
                 $CONTENTWIKI
                 command_status
                 unzip -o $FILENAME "data/*" -d "$RACHELPARTITION/kiwix/"
                 if [[ $DOWNLOADERROR == 1 ]]; then
-                    echo; print_error "The zip file did not download correctly; if you want to try again, click 'yes' when it asks"
+                    echo; print_error "The zip file did not download correctly; if you want to try again, click 'yes' when it asks" | tee -a $RACHELLOG
                     echo "  if there were errors. The download will then continue where it left off." | tee -a $RACHELLOG
                     echo "  For more information, check the log file ($RACHELLOG)." | tee -a $RACHELLOG
                 else
-                    /var/kiwix/bin/kiwix-manage $RACHELPARTITION/kiwix/data/library/library.xml add $RACHELPARTITION/kiwix/data/content/wikipedia_en_all_2015-05.zim --indexPath=$RACHELPARTITION/kiwix/data/index/wikipedia_en_all_2015-05.zim.idx
-                    killall /var/kiwix/bin/kiwix-serve
-                    /var/kiwix/bin/kiwix-serve --daemon --port=81 --library /media/RACHEL/kiwix/data/library/library.xml
+                    /var/kiwix/bin/kiwix-manage $RACHELPARTITION/kiwix/data/library/library.xml add $RACHELPARTITION/kiwix/data/content/wikipedia_en_all_2015-05.zim --indexPath=$RACHELPARTITION/kiwix/data/index/wikipedia_en_all_2015-05.zim.idx 1>> $RACHELLOG 2>&1
+                    killall /var/kiwix/bin/kiwix-serve 1>> $RACHELLOG 2>&1
+                    /var/kiwix/bin/kiwix-serve --daemon --port=81 --library /media/RACHEL/kiwix/data/library/library.xml 1>> $RACHELLOG 2>&1
                 fi
             fi
-            print_good "View your module by clicking on Wikipedia from the RACHEL homepage."
+            echo; print_good "View your module by clicking on Wikipedia from the RACHEL homepage."
             print_good "Done." | tee -a $RACHELLOG
             break
             ;;
@@ -898,21 +902,30 @@ function content_install () {
             Kiwix-Wikipedia-Schools)
             FILENAME="kiwix-0.9+wikipedia_en_for-schools_2013-01.zip"
             FILES=$(ls $RACHELPARTITION/kiwix/data/content/wikipedia_en_for_schools_opt_2013.zim* 2> /dev/null | wc -l)
-            if [[ **"$FILES" != "0"** ]]; then
+            if [[ $FILES != "0" ]]; then
                 echo; print_error "Wikipedia for Schools is already installed."                
+                if [[ ! -f $RACHELPARTITION/kiwix/data/library/library.xml ]]; then
+                    echo; print_error "The database seems to be corrupt, repairing." | tee -a $RACHELLOG
+                    echo; /var/kiwix/bin/kiwix-manage $RACHELPARTITION/kiwix/data/library/library.xml add $RACHELPARTITION/kiwix/data/content/wikipedia_en_for_schools_opt_2013.zim --indexPath=$RACHELPARTITION/kiwix/data/index/wikipedia_en_for_schools_opt_2013.zim.idx 1>> $RACHELLOG 2>&1
+                    echo; killall /var/kiwix/bin/kiwix-serve 1>> $RACHELLOG 2>&1
+                    echo; /var/kiwix/bin/kiwix-serve --daemon --port=81 --library /media/RACHEL/kiwix/data/library/library.xml 1>> $RACHELLOG 2>&1
+                    if [[ ! -f $RACHELPARTITION/kiwix/data/library/library.xml ]]; then
+                        print_error "Repair failed.  Please review the log file for additional details."
+                    fi
+                fi
             else
                 echo; print_status "Installing Kiwix content - Wikipedia for Schools." | tee -a $RACHELLOG
                 $CONTENTWIKI
                 command_status
                 unzip -o $FILENAME "data/*" -d "$RACHELPARTITION/kiwix/"
                 if [[ $DOWNLOADERROR == 1 ]]; then
-                    echo; print_error "The zip file did not download correctly; if you want to try again, click 'yes' when it asks"
+                    echo; print_error "The zip file did not download correctly; if you want to try again, click 'yes' when it asks" | tee -a $RACHELLOG
                     echo "  if there were errors. The download will then continue where it left off." | tee -a $RACHELLOG
                     echo "  For more information, check the log file ($RACHELLOG)." | tee -a $RACHELLOG
                 else
-                    /var/kiwix/bin/kiwix-manage $RACHELPARTITION/kiwix/data/library/library.xml add $RACHELPARTITION/kiwix/data/content/wikipedia_en_for_schools_opt_2013.zim --indexPath=$RACHELPARTITION/kiwix/data/index/wikipedia_en_for_schools_opt_2013.zim.idx
-                    killall /var/kiwix/bin/kiwix-serve
-                    /var/kiwix/bin/kiwix-serve --daemon --port=81 --library /media/RACHEL/kiwix/data/library/library.xml
+                    echo; /var/kiwix/bin/kiwix-manage $RACHELPARTITION/kiwix/data/library/library.xml add $RACHELPARTITION/kiwix/data/content/wikipedia_en_for_schools_opt_2013.zim --indexPath=$RACHELPARTITION/kiwix/data/index/wikipedia_en_for_schools_opt_2013.zim.idx 1>> $RACHELLOG 2>&1
+                    echo; killall /var/kiwix/bin/kiwix-serve 1>> $RACHELLOG 2>&1
+                    echo; /var/kiwix/bin/kiwix-serve --daemon --port=81 --library /media/RACHEL/kiwix/data/library/library.xml 1>> $RACHELLOG 2>&1
                 fi
             fi
             print_good "View your module by clicking on Wikipedia from the RACHEL homepage."
@@ -1199,3 +1212,4 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Sphi
         ;;
         esac
 done
+
