@@ -9,6 +9,8 @@
 
 curr_dir="$(pwd)"
 partition_dir=$curr_dir
+SCRIPT_ROOT="/boot/efi"
+exec 1>> $SCRIPT_ROOT/update.log 2>&1
 
 usage() {
     echo "
@@ -20,7 +22,7 @@ Usage: `basename $1` [dir_for_patition_images]
 check_parameter() {
     if [ -z "$1" ]; then 
         usage $0
-        echo "please speficy the directory for partition image files."
+        echo "Please specify the directory for partition image files."
         exit 1
     fi
 }
@@ -103,4 +105,5 @@ copy_image /dev/mmcblk0p3 boot.tar.xz
 echo "Copy rootfs partition"
 mkfs.ext4 -L "ec_root" -U 44444444-4444-4444-4444-444444444444 /dev/mmcblk0p4
 copy_rootfs /dev/mmcblk0p4 rootfs.tar.xz
+exit
 

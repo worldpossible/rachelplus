@@ -1,5 +1,8 @@
 #!/bin/sh
 
+SCRIPT_ROOT="/boot/efi"
+exec 1>> $SCRIPT_ROOT/update.log 2>&1
+
 #
 # Author : Lu Ken (bluewish.ken.lu@gmail.com)
 # 
@@ -72,3 +75,4 @@ check_root
 check_parameter $1
 create_disk_image $1
 format_disk $1
+exit

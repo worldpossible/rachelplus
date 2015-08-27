@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 #
 # USB CAP Multitool
@@ -25,10 +25,16 @@
 #        Format hard drive partitions
 #        Copy content shell to /media/RACHEL/rachel
 #
+# Stage RACHEL files on USB using the following commands:
+#	cd <USB-Drive-Root>
+#	git clone https://github.com/rachelproject/contentshell.git contentshell
+#
 
-echo ">>>>>>>>>>>>>>> Update Start >>>>>>>>>>>>>>>"
-METHOD="3" # 1=Recovery (DEFAULT), 2=Imager, 3=Format
-SCRIPT_ROOT="/boot/efi/"
+SCRIPT_ROOT="/boot/efi"
+exec 1> $SCRIPT_ROOT/update.log 2>&1
+
+echo ">>>>>>>>>>>>>>> Update Started $(date) >>>>>>>>>>>>>>>"
+METHOD="1" # 1=Recovery (DEFAULT), 2=Imager, 3=Format
 
 #
 # Put your update script here
@@ -38,36 +44,42 @@ $SCRIPT_ROOT/led_control.sh breath on
 #$SCRIPT_ROOT/led_control.sh issue on
 $SCRIPT_ROOT/led_control.sh 3g on
 
-function command_status () {
-	if [ $? -eq 0 ]; then
-	    echo OK
-	    $SCRIPT_ROOT/led_control.sh breath off 
-	    $SCRIPT_ROOT/led_control.sh issue off 
-	    $SCRIPT_ROOT/led_control.sh normal on
+command_status () {
+	export EXITCODE="$?"
+	if [[ $EXITCODE == 0 ]]; then
+		echo OK
+		$SCRIPT_ROOT/led_control.sh breath off 
+		$SCRIPT_ROOT/led_control.sh issue off 
+		$SCRIPT_ROOT/led_control.sh normal on
 	else
-	    echo FAIL
-	    $SCRIPT_ROOT/led_control.sh breath off
-	    $SCRIPT_ROOT/led_control.sh issue on
+		echo FAIL
+		$SCRIPT_ROOT/led_control.sh breath off
+		$SCRIPT_ROOT/led_control.sh issue on
 	fi
 }
 
-echo "Call partition update script"
+echo; echo "Call partition update script."
+echo "METHOD $METHOD will execute."
 $SCRIPT_ROOT/copy_partitions_to_emmc.sh $SCRIPT_ROOT
-if [[ $METHOD="1" ]]; then
+if [[ $METHOD == 1 ]]; then
 	$SCRIPT_ROOT/init_content_hdd.sh /dev/sda
 	command_status
-elif [[ $METHOD="2" ]]; then
+	echo "Ran METHOD 1"
+elif [[ $METHOD == 2 ]]; then
 	command_status
-elif [[ $METHOD="3" ]]; then
+	echo "Ran METHOD 2"
+elif [[ $METHOD == 3 ]]; then
 	$SCRIPT_ROOT/init_format_content_hdd.sh /dev/sda
 	mkdir -p /mnt/RACHEL
 	mount /dev/sda3 /mnt/RACHEL
 	cp -r $SCRIPT_ROOT/contentshell /mnt/RACHEL/rachel
 	command_status
+	echo "Ran METHOD 3"
 fi
 
 echo "Copy log files"
 cp -rf /var/log $SCRIPT_ROOT/
 sync
+$SCRIPT_ROOT/led_control.sh 3g off
 
-echo "<<<<<<<<<<<<<< Update Over <<<<<<<<<<<<<<<<"
+echo "<<<<<<<<<<<<<< Update Over $(date) <<<<<<<<<<<<<<<<"
