@@ -32,7 +32,7 @@
 SCRIPT_ROOT="/boot/efi"
 exec 1> $SCRIPT_ROOT/update.log 2>&1
 
-echo ">>>>>>>>>>>>>>> Update Started $(date) >>>>>>>>>>>>>>>"
+echo; echo ">>>>>>>>>>>>>>> Update Started $(date) >>>>>>>>>>>>>>>"
 METHOD="1" # 1=Recovery (DEFAULT), 2=Imager, 3=Format
 
 $SCRIPT_ROOT/led_control.sh normal off
@@ -54,16 +54,24 @@ command_status () {
 	fi
 }
 
-echo; echo "Call partition update script."
+backup_GPT () {
+	echo; echo "[+] Current GUID Partition Table (GPT) for the hard disk /dev/sda:"
+	sgdisk -p /dev/sda
+	echo; echo "[+] Backuping up GPT to /recover/sda-backup.gpt"
+	sgdisk -b /recovery/sda-backup.gpt /dev/sda
+}
+
+echo; echo "[-] Call partition update script."
 echo "METHOD $METHOD will execute."
 $SCRIPT_ROOT/copy_partitions_to_emmc.sh $SCRIPT_ROOT
+backup_GPT
 if [[ $METHOD == 1 ]]; then
 	$SCRIPT_ROOT/init_content_hdd.sh /dev/sda
 	command_status
-	echo "Ran METHOD 1"
+	echo; echo "[+] Ran METHOD 1"
 elif [[ $METHOD == 2 ]]; then
 	command_status
-	echo "Ran METHOD 2"
+	echo; echo "[+] Ran METHOD 2"
 elif [[ $METHOD == 3 ]]; then
 	$SCRIPT_ROOT/init_format_content_hdd.sh /dev/sda
 	mkdir -p /mnt/RACHEL
@@ -72,12 +80,12 @@ elif [[ $METHOD == 3 ]]; then
 	cp $SCRIPT_ROOT/rachel-files/*.* /mnt/RACHEL/rachel/
 	cp $SCRIPT_ROOT/rachel-files/art/*.* /mnt/RACHEL/rachel/art/
 	command_status
-	echo "Ran METHOD 3"
+	echo; echo "[+] Ran METHOD 3"
 fi
 
-echo "Copy log files"
+echo; echo "[+] Copy log files"
 cp -rf /var/log $SCRIPT_ROOT/
 sync
 $SCRIPT_ROOT/led_control.sh 3g off
 
-echo "<<<<<<<<<<<<<< Update Over $(date) <<<<<<<<<<<<<<<<"
+echo; echo "<<<<<<<<<<<<<< Update Over $(date) <<<<<<<<<<<<<<<<"

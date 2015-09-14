@@ -693,102 +693,6 @@ function new_install () {
     fi
 }
 
-function repair () {
-    print_header
-    echo; print_status "Repairing your CAP after a firmware upgrade."
-    cd $INSTALLTMPDIR
-
-    # Download/update to latest RACHEL lighttpd.conf
-    echo; print_status "Downloading latest lighttpd.conf" | tee -a $RACHELLOG
-    ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies and ensuring the file downloads correctly)
-    $LIGHTTPDFILE 1>> $RACHELLOG 2>&1
-    command_status
-    if [[ $DOWNLOADERROR == 1 ]]; then
-        print_error "The lighttpd.conf file did not download correctly; check log file (/var/log/RACHEL/rachel-install.tmp) and try again." | tee -a $RACHELLOG
-        echo; break
-    else
-        mv $INSTALLTMPDIR/lighttpd.conf /usr/local/etc/lighttpd.conf
-    fi
-    print_good "Done." | tee -a $RACHELLOG
-
-    # Reapply /etc/fstab entry for /media/RACHEL
-    echo; print_status "Adding /dev/sda3 into /etc/fstab" | tee -a $RACHELLOG
-    sed -i '/\/dev\/sda3/d' /etc/fstab
-    echo -e "/dev/sda3\t/media/RACHEL\t\text4\tauto,nobootwait 0\t0" >> /etc/fstab
-    print_good "Done." | tee -a $RACHELLOG
-
-    # Fixing /root/rachel-scripts.sh
-    echo; print_status "Fixing $RACHELSCRIPTSFILE" | tee -a $RACHELLOG
-
-    # Add rachel-scripts.sh script
-    sed "s,%RACHELSCRIPTSLOG%,$RACHELSCRIPTSLOG,g" > $RACHELSCRIPTSFILE << 'EOF'    
-#!/bin/bash
-# Send output to log file
-rm -f %RACHELSCRIPTSLOG%
-exec 1>> %RACHELSCRIPTSLOG% 2>&1
-# Add the RACHEL iptables rule to redirect 10.10.10.10 to CAP default of 192.168.88.1
-# Added sleep to wait for CAP rcConf and rcConfd to finish initializing
-#
-sleep 60
-iptables -t nat -I PREROUTING -d 10.10.10.10 -j DNAT --to-destination 192.168.88.1
-exit 0
-EOF
-
-    # Add rachel-scripts.sh startup in /etc/rc.local
-    sed -i '/scripts/d' /etc/rc.local
-    sudo sed -i '$e echo "# Add RACHEL startup scripts"' /etc/rc.local
-    sudo sed -i '$e echo "bash /root/rachel-scripts.sh&"' /etc/rc.local
-
-    # Check/re-add Kiwix
-    if [[ -d /var/kiwix ]]; then
-        echo; print_status "Setting up Kiwix to start at boot..." | tee -a $RACHELLOG
-        # Remove old kiwix boot lines from /etc/rc.local
-        sed -i '/kiwix/d' /etc/rc.local 1>> $RACHELLOG 2>&1
-        # Clean up current rachel-scripts.sh file
-        sed -i '/kiwix/d' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
-        # Add lines to /etc/rc.local that will start kiwix on boot
-        sed -i '$e echo "\# Start kiwix on boot"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
-        sed -i '$e echo "\/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
-        print_good "Done." | tee -a $RACHELLOG
-    fi
-
-    if [[ -d /var/ka-lite ]]; then
-        echo; print_status "Setting up KA Lite to start at boot..." | tee -a $RACHELLOG
-        # Delete previous setup commands from the /etc/rc.local
-        sed -i '/ka-lite/d' /etc/rc.local 1>> $RACHELLOG 2>&1
-        sed -i '/sleep 20/d' /etc/rc.local 1>> $RACHELLOG 2>&1
-        # Clean up current rachel-scripts.sh file
-        sed -i '/ka-lite/d' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
-        sed -i '/sleep 20/d' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
-        # Start KA Lite at boot time
-        sed -i '$e echo "# Start ka-lite at boot time"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
-        sed -i '$e echo "sleep 20"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
-        sed -i '$e echo "/var/ka-lite/bin/kalite restart"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
-        print_good "Done." | tee -a $RACHELLOG
-    fi
-
-    # Clean up outdated stuff
-    # Remove outdated startup script
-    rm -f /root/iptables-rachel.sh
-
-    # Delete previous setwanip commands from /etc/rc.local - not used anymore
-    echo; print_status "Deleting previous setwanip.sh script from /etc/rc.local" | tee -a $RACHELLOG
-    sed -i '/setwanip/d' /etc/rc.local
-    rm -f /root/setwanip.sh
-    print_good "Done." | tee -a $RACHELLOG
-
-    # Delete previous iptables commands from /etc/rc.local
-    echo; print_status "Deleting previous iptables script from /etc/rc.local" | tee -a $RACHELLOG
-    sed -i '/iptables/d' /etc/rc.local
-    print_good "Done." | tee -a $RACHELLOG
-
-    echo; print_good "RACHEL CAP Repair Complete." | tee -a $RACHELLOG
-    sudo mv $RACHELLOG $RACHELLOGDIR/rachel-repair-$TIMESTAMP.log
-    echo; print_good "Log file saved to: $RACHELLOGDIR/rachel-repair-$TIMESTAMP.log" | tee -a $RACHELLOG
-    cleanup
-    reboot-CAP
-}
-
 function content_install () {
     trap ctrl_c INT
     print_header
@@ -1009,6 +913,102 @@ function content_install () {
     echo; print_good "Log file saved to: $RACHELLOGDIR/rachel-content-$TIMESTAMP.log"
     print_good "KA Lite Content Install Complete."
     echo; print_good "Refresh the RACHEL homepage to view your new content."
+}
+
+function repair () {
+    print_header
+    echo; print_status "Repairing your CAP after a firmware upgrade."
+    cd $INSTALLTMPDIR
+
+    # Download/update to latest RACHEL lighttpd.conf
+    echo; print_status "Downloading latest lighttpd.conf" | tee -a $RACHELLOG
+    ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies and ensuring the file downloads correctly)
+    $LIGHTTPDFILE 1>> $RACHELLOG 2>&1
+    command_status
+    if [[ $DOWNLOADERROR == 1 ]]; then
+        print_error "The lighttpd.conf file did not download correctly; check log file (/var/log/RACHEL/rachel-install.tmp) and try again." | tee -a $RACHELLOG
+        echo; break
+    else
+        mv $INSTALLTMPDIR/lighttpd.conf /usr/local/etc/lighttpd.conf
+    fi
+    print_good "Done." | tee -a $RACHELLOG
+
+    # Reapply /etc/fstab entry for /media/RACHEL
+    echo; print_status "Adding /dev/sda3 into /etc/fstab" | tee -a $RACHELLOG
+    sed -i '/\/dev\/sda3/d' /etc/fstab
+    echo -e "/dev/sda3\t/media/RACHEL\t\text4\tauto,nobootwait 0\t0" >> /etc/fstab
+    print_good "Done." | tee -a $RACHELLOG
+
+    # Fixing /root/rachel-scripts.sh
+    echo; print_status "Fixing $RACHELSCRIPTSFILE" | tee -a $RACHELLOG
+
+    # Add rachel-scripts.sh script
+    sed "s,%RACHELSCRIPTSLOG%,$RACHELSCRIPTSLOG,g" > $RACHELSCRIPTSFILE << 'EOF'    
+#!/bin/bash
+# Send output to log file
+rm -f %RACHELSCRIPTSLOG%
+exec 1>> %RACHELSCRIPTSLOG% 2>&1
+# Add the RACHEL iptables rule to redirect 10.10.10.10 to CAP default of 192.168.88.1
+# Added sleep to wait for CAP rcConf and rcConfd to finish initializing
+#
+sleep 60
+iptables -t nat -I PREROUTING -d 10.10.10.10 -j DNAT --to-destination 192.168.88.1
+exit 0
+EOF
+
+    # Add rachel-scripts.sh startup in /etc/rc.local
+    sed -i '/scripts/d' /etc/rc.local
+    sudo sed -i '$e echo "# Add RACHEL startup scripts"' /etc/rc.local
+    sudo sed -i '$e echo "bash /root/rachel-scripts.sh&"' /etc/rc.local
+
+    # Check/re-add Kiwix
+    if [[ -d /var/kiwix ]]; then
+        echo; print_status "Setting up Kiwix to start at boot..." | tee -a $RACHELLOG
+        # Remove old kiwix boot lines from /etc/rc.local
+        sed -i '/kiwix/d' /etc/rc.local 1>> $RACHELLOG 2>&1
+        # Clean up current rachel-scripts.sh file
+        sed -i '/kiwix/d' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
+        # Add lines to /etc/rc.local that will start kiwix on boot
+        sed -i '$e echo "\# Start kiwix on boot"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
+        sed -i '$e echo "\/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
+        print_good "Done." | tee -a $RACHELLOG
+    fi
+
+    if [[ -d /var/ka-lite ]]; then
+        echo; print_status "Setting up KA Lite to start at boot..." | tee -a $RACHELLOG
+        # Delete previous setup commands from the /etc/rc.local
+        sed -i '/ka-lite/d' /etc/rc.local 1>> $RACHELLOG 2>&1
+        sed -i '/sleep 20/d' /etc/rc.local 1>> $RACHELLOG 2>&1
+        # Clean up current rachel-scripts.sh file
+        sed -i '/ka-lite/d' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
+        sed -i '/sleep 20/d' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
+        # Start KA Lite at boot time
+        sed -i '$e echo "# Start ka-lite at boot time"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
+        sed -i '$e echo "sleep 20"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
+        sed -i '$e echo "/var/ka-lite/bin/kalite restart"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
+        print_good "Done." | tee -a $RACHELLOG
+    fi
+
+    # Clean up outdated stuff
+    # Remove outdated startup script
+    rm -f /root/iptables-rachel.sh
+
+    # Delete previous setwanip commands from /etc/rc.local - not used anymore
+    echo; print_status "Deleting previous setwanip.sh script from /etc/rc.local" | tee -a $RACHELLOG
+    sed -i '/setwanip/d' /etc/rc.local
+    rm -f /root/setwanip.sh
+    print_good "Done." | tee -a $RACHELLOG
+
+    # Delete previous iptables commands from /etc/rc.local
+    echo; print_status "Deleting previous iptables script from /etc/rc.local" | tee -a $RACHELLOG
+    sed -i '/iptables/d' /etc/rc.local
+    print_good "Done." | tee -a $RACHELLOG
+
+    echo; print_good "RACHEL CAP Repair Complete." | tee -a $RACHELLOG
+    sudo mv $RACHELLOG $RACHELLOGDIR/rachel-repair-$TIMESTAMP.log
+    echo; print_good "Log file saved to: $RACHELLOGDIR/rachel-repair-$TIMESTAMP.log" | tee -a $RACHELLOG
+    cleanup
+    reboot-CAP
 }
 
 function ka-lite_install () {
