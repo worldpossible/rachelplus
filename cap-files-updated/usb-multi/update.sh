@@ -1,7 +1,6 @@
 #!/bin/bash
-
 #
-# USB CAP Multitool
+# USB CAP Multitool - Version 4
 # Description: This is the first script to run when the CAP starts up
 # It will set the LED lights and setup the emmc and hard drive
 #
@@ -13,7 +12,7 @@
 # Install Options:
 #    - "Recovery" for end user CAP recovery (METHOD 1)
 #        Copy boot, efi, and rootfs partitions to emmc
-#        Rewrite the hard drive partitions
+#        Rewrite the hard drive partition table
 #        DO NOT format any hard drive partitions
 #    - "Imager" for large installs when cloning the hard drive (METHOD 2)
 #        Copy boot, efi, and rootfs partitions to emmc
@@ -21,7 +20,7 @@
 #    - "Format" for small installs and/or custom hard drive (METHOD 3)
 #        *WARNING* This will erase all partitions on the hard drive */WARNING*
 #        Copy boot, efi, and rootfs partitions to emmc
-#        Rewrite the hard drive partitions
+#        Rewrite the hard drive partition table
 #        Format hard drive partitions
 #        Copy content shell to /media/RACHEL/rachel
 #
@@ -36,9 +35,6 @@ exec 1> $SCRIPT_ROOT/update.log 2>&1
 echo ">>>>>>>>>>>>>>> Update Started $(date) >>>>>>>>>>>>>>>"
 METHOD="1" # 1=Recovery (DEFAULT), 2=Imager, 3=Format
 
-#
-# Put your update script here
-#
 $SCRIPT_ROOT/led_control.sh normal off
 $SCRIPT_ROOT/led_control.sh breath on
 #$SCRIPT_ROOT/led_control.sh issue on
@@ -72,7 +68,9 @@ elif [[ $METHOD == 3 ]]; then
 	$SCRIPT_ROOT/init_format_content_hdd.sh /dev/sda
 	mkdir -p /mnt/RACHEL
 	mount /dev/sda3 /mnt/RACHEL
-	cp -r $SCRIPT_ROOT/contentshell /mnt/RACHEL/rachel
+	cp -r $SCRIPT_ROOT/rachel-files/contentshell /mnt/RACHEL/rachel
+	cp $SCRIPT_ROOT/rachel-files/*.* /mnt/RACHEL/rachel/
+	cp $SCRIPT_ROOT/rachel-files/art/*.* /mnt/RACHEL/rachel/art/
 	command_status
 	echo "Ran METHOD 3"
 fi
