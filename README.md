@@ -16,11 +16,11 @@ wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/cap-rache
 ```
 
 The RACHEL install workflow consists of the following steps:
-  1. Option 1 - Install RACHEL
-  2. Option 2 - Install KA Lite
-  3. Option 3 - Install Kiwix
-  4. Option 4 - Install Sphider database
-  5. Option 5 - Install Content (including Wikipedia)
+  - Step 1 - Install RACHEL
+  - Step 2 - Install KA Lite
+  - Step 3 - Install Kiwix
+  - Step 4 - Install Sphider database
+  - Step 5 - Install Content (including Wikipedia)
 
 ## 3. Add RACHEL content
 Use script (above) option to download all content for a specific language.
