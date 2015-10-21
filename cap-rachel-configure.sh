@@ -12,7 +12,7 @@ GITRACHELPLUS="https://raw.githubusercontent.com/rachelproject/rachelplus/master
 GITCONTENTSHELL="https://raw.githubusercontent.com/rachelproject/contentshell/master" # RACHELPlus ContentShell GitHub Repo
 
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
-VERSION=0821151051 # To get current version - date +%m%d%y%H%M
+VERSION=1021151706 # To get current version - date +%m%d%y%H%M
 TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
 INTERNET="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 RACHELLOGDIR="/var/log/RACHEL"
@@ -124,6 +124,7 @@ function online_variables () {
     KALITECONTENTINSTALL="wget -c $WGETONLINE/z-holding/ka-lite_content.zip -O $RACHELTMPDIR/ka-lite_content.zip"
     KIWIXINSTALL="wget -c $WGETONLINE/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $RACHELTMPDIR/kiwix-0.9-linux-i686.tar.bz2"
     KIWIXSAMPLEDATA="wget -c $WGETONLINE/z-holding/Ray_Charles.tar.bz -O $RACHELTMPDIR/Ray_Charles.tar.bz"
+    WEAVEDZIP="wget -r http://rachelfriends.org/z-holding/weaved_software.zip"
     SPHIDERPLUSSQLINSTALL="wget -c $WGETONLINE/z-SQLdatabase/sphider_plus.sql -O $RACHELTMPDIR/sphider_plus.sql"
     DOWNLOADCONTENTSCRIPT="wget -c $GITRACHELPLUS/scripts"
     CONTENTWIKI="wget -c http://download.kiwix.org/portable/wikipedia/$FILENAME -O $RACHELTMPDIR/$FILENAME"
@@ -151,6 +152,7 @@ function offline_variables () {
     KALITECONTENTINSTALL=""
     KIWIXINSTALL=""
     KIWIXSAMPLEDATA=""
+    WEAVEDZIP="wget -r http://rachelfriends.org/z-holding/weaved_software.zip"
     SPHIDERPLUSSQLINSTALL=""
     DOWNLOADCONTENTSCRIPT="cp $DIRCONTENTOFFLINE/rachelplus/scripts"
     CONTENTWIKIALL=""
@@ -401,6 +403,28 @@ else
     echo "create database sphider_plus" | mysql -u root -proot
     mysql -u root -proot sphider_plus < sphider_plus.sql
 fi
+}
+
+function install_weaved_service () {
+    echo; print_status "Installing Weaved service." | tee -a $RACHELLOG
+    cd /root
+    # Download weaved files
+    $KIWIXZIP
+    unzip weaved_software.zip
+    # Run installer
+    cd /root/weaved_software
+    bash installer.sh
+    echo; print_good "Weaved service install complete."
+    print_good "NOTE: An Weaved service uninstaller is available from the Utilities menu of this script."
+}
+
+function uninstall_weaved_service () {
+    echo; print_status "Installing Weaved service." | tee -a $RACHELLOG
+    cd /root
+    # Run uninstaller
+    cd /root/weaved_software
+    bash uninstaller.sh
+    echo; print_good "Weaved service uninstall complete."
 }
 
 function download_offline_content () {
@@ -1109,7 +1133,7 @@ function ka-lite_install () {
 # Loop function to redisplay mhf
 function whattodo {
     echo; print_question "What would you like to do next?"
-    echo "1)Initial Install  2)Install KA Lite  3)Install Kiwix  4)Install Sphider  5)Install Content  6)Utilities  7)Exit"
+    echo "1)Initial Install  2)Install KA Lite  3)Install Kiwix  4)Install Sphider  5) Install Weaved Service  6)Install Content  7)Utilities  8)Exit"
 }
 
 ## MAIN MENU
@@ -1127,6 +1151,7 @@ echo "  - [Initial-Install] of RACHEL on a CAP" | tee -a $RACHELLOG
 echo "  - [Install-KA-Lite]" | tee -a $RACHELLOG
 echo "  - [Install-Kiwix]" | tee -a $RACHELLOG
 echo "  - [Install-Sphider]" | tee -a $RACHELLOG
+echo "  - [Install-Weaved-Service]" | tee -a $RACHELLOG
 echo "  - Install/Update RACHEL [Content]" | tee -a $RACHELLOG
 echo "  - Other [Utilities]" | tee -a $RACHELLOG
 echo "    - Repair an install of a CAP after a firmware upgrade" | tee -a $RACHELLOG
@@ -1135,7 +1160,7 @@ echo "    - Symlink all .mp4 videos in the module kaos-en to /media/RACHEL/kacon
 echo "    - Test script" | tee -a $RACHELLOG
 echo "  - [Exit] the installation script" | tee -a $RACHELLOG
 echo
-select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Sphider" "Content" "Utilities" "Exit"; do
+select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Sphider" "Install-Weaved-Service" "Content" "Utilities" "Exit"; do
         case $menu in
         Initial-Install)
         new_install
@@ -1156,6 +1181,11 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Sphi
         whattodo
         ;;
 
+        Install-Weaved-Service)
+        install_weaved_service
+        whattodo
+        ;;
+
         Content)
         content_install
         whattodo
@@ -1164,16 +1194,22 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Sphi
         Utilities)
         echo; print_question "What utility would you like to use?" | tee -a $RACHELLOG
         echo "  - **BETA** [Download-Content] for OFFLINE RACHEL installs" | tee -a $RACHELLOG
+        echo "  - [Uninstall-Weaved-Service]" | tee -a $RACHELLOG
         echo "  - [Repair] an install of a CAP after a firmware upgrade" | tee -a $RACHELLOG
         echo "  - [Sanitize] CAP for imaging" | tee -a $RACHELLOG
         echo "  - [Symlink] all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent" | tee -a $RACHELLOG
         echo "  - [Test] script" | tee -a $RACHELLOG
         echo "  - Return to [Main Menu]" | tee -a $RACHELLOG
         echo
-        select util in "Download-Content" "Repair" "Sanitize" "Symlink" "Test" "Main-Menu"; do
+        select util in "Download-Content" "Uninstall-Weaved-Service" "Repair" "Sanitize" "Symlink" "Test" "Main-Menu"; do
             case $util in
                 Download-Content)
                 download_offline_content
+                break
+                ;;
+
+                Uninstall-Weaved-Service)
+                uninstall_weaved_service
                 break
                 ;;
 
