@@ -453,7 +453,6 @@ function uninstall_weaved_service () {
                 $WEAVEDZIP 1>> $RACHELLOG 2>&1
                 command_status
                 unzip -u weaved_software.zip 1>> $RACHELLOG 2>&1
-                command_status
                 if [[ $DOWNLOADERROR == 0 ]] && [[ -d /root/weaved_software ]]; then
                     rm -f /root/weaved_software.zip
                     weaved_uninstaller
