@@ -418,7 +418,7 @@ function install_weaved_service () {
         unzip -u weaved_software.zip 1>> $RACHELLOG 2>&1
         command_status
         if [[ $DOWNLOADERROR == 0 ]] && [[ -d weaved_software ]]; then
-            rm -f /root/weaved_uninstaller.zip
+            rm -f /root/weaved_software.zip
             echo; print_good "Done." | tee -a $RACHELLOG
             # Run installer
             cd /root/weaved_software
@@ -455,7 +455,7 @@ function uninstall_weaved_service () {
                 unzip -u weaved_software.zip 1>> $RACHELLOG 2>&1
                 command_status
                 if [[ $DOWNLOADERROR == 0 ]] && [[ -d /root/weaved_software ]]; then
-                    rm -f /root/weaved_uninstaller.zip
+                    rm -f /root/weaved_software.zip
                     weaved_uninstaller
                 else
                     print_error "Download failed; check log file ($RACHELLOG) and try again."
