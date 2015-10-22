@@ -12,7 +12,7 @@ GITRACHELPLUS="https://raw.githubusercontent.com/rachelproject/rachelplus/master
 GITCONTENTSHELL="https://raw.githubusercontent.com/rachelproject/contentshell/master" # RACHELPlus ContentShell GitHub Repo
 
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
-VERSION=1021151706 # To get current version - date +%m%d%y%H%M
+VERSION=1022151140 # To get current version - date +%m%d%y%H%M
 TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
 INTERNET="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 RACHELLOGDIR="/var/log/RACHEL"
@@ -406,25 +406,65 @@ fi
 }
 
 function install_weaved_service () {
-    echo; print_status "Installing Weaved service." | tee -a $RACHELLOG
-    cd /root
-    # Download weaved files
-    $KIWIXZIP
-    unzip weaved_software.zip
-    # Run installer
-    cd /root/weaved_software
-    bash installer.sh
-    echo; print_good "Weaved service install complete."
-    print_good "NOTE: An Weaved service uninstaller is available from the Utilities menu of this script."
+    if [[ $INTERNET == "0" ]]; then
+        echo; print_error "The CAP must be online to install/remove Weaved services."
+    else
+        echo; print_status "Installing Weaved service." | tee -a $RACHELLOG
+        cd /root
+        # Download weaved files
+        echo; print_status "Downloading required files."
+        $WEAVEDZIP 1>> $RACHELLOG 2>&1
+        command_status
+        unzip -u weaved_software.zip 1>> $RACHELLOG 2>&1
+        command_status
+        if [[ $DOWNLOADERROR == 0 ]] && [[ -d weaved_software ]]; then
+            rm -f /root/weaved_uninstaller.zip
+            echo; print_good "Done." | tee -a $RACHELLOG
+            # Run installer
+            cd /root/weaved_software
+            bash installer.sh
+            echo; print_good "Weaved service install complete." | tee -a $RACHELLOG
+            print_good "NOTE: An Weaved service uninstaller is available from the Utilities menu of this script." | tee -a $RACHELLOG
+        else
+            echo; print_error "One or more files did not download correctly; check log file ($RACHELLOG) and try again." | tee -a $RACHELLOG
+            cleanup
+            echo; exit 1
+        fi
+    fi
 }
 
 function uninstall_weaved_service () {
-    echo; print_status "Installing Weaved service." | tee -a $RACHELLOG
-    cd /root
-    # Run uninstaller
-    cd /root/weaved_software
-    bash uninstaller.sh
-    echo; print_good "Weaved service uninstall complete."
+    if [[ $INTERNET == "0" ]]; then
+        echo; print_error "The CAP must be online to install/remove Weaved services."
+    else
+        function weaved_uninstaller () {
+            cd /root/weaved_software
+            bash uninstaller.sh
+            echo; print_good "Weaved service uninstall complete." | tee -a $RACHELLOG
+        }
+        echo; print_status "Uninstalling Weaved service." | tee -a $RACHELLOG
+        cd /root
+        # Run uninstaller
+        if [[ -f /root/weaved_software/uninstaller.sh ]]; then 
+            weaved_uninstaller
+        else
+            print_error "The Weaved uninstaller does not exist. Attempting to download..." | tee -a $RACHELLOG
+            if [[ $INTERNET == "1" ]]; then
+                $WEAVEDZIP 1>> $RACHELLOG 2>&1
+                command_status
+                unzip -u weaved_software.zip 1>> $RACHELLOG 2>&1
+                command_status
+                if [[ $DOWNLOADERROR == 0 ]] && [[ -d /root/weaved_software ]]; then
+                    rm -f /root/weaved_uninstaller.zip
+                    weaved_uninstaller
+                else
+                    print_error "Download failed; check log file ($RACHELLOG) and try again."
+                fi
+            else
+                print_error "No internet connection.  Connect the CAP to the internet and try the uninstaller again."
+            fi
+        fi
+    fi
 }
 
 function download_offline_content () {
