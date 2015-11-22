@@ -12,7 +12,7 @@ GITRACHELPLUS="https://raw.githubusercontent.com/rachelproject/rachelplus/master
 GITCONTENTSHELL="https://raw.githubusercontent.com/rachelproject/contentshell/master" # RACHELPlus ContentShell GitHub Repo
 
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
-VERSION=1022151140 # To get current version - date +%m%d%y%H%M
+VERSION=1027151630 # To get current version - date +%m%d%y%H%M
 TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
 INTERNET="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 RACHELLOGDIR="/var/log/RACHEL"
@@ -40,9 +40,31 @@ function testing-script () {
     set -x
     trap ctrl_c INT
 
-    DOWNLOADERROR="0"
-    echo; print_status "Installing RACHEL content." | tee -a $RACHELLOG
-    if [[ $INTERNET == "0" ]]; then cd $DIRCONTENTOFFLINE; else cd $RACHELTMPDIR; fi
+    if [[ $INTERNET == "0" ]]; then
+        echo; print_error "The CAP must be online to install/remove Weaved services."
+    else
+        echo; print_status "Installing Weaved service." | tee -a $RACHELLOG
+        cd /root
+        # Download weaved files
+        echo; print_status "Downloading required files."
+        $WEAVEDZIP 1>> $RACHELLOG 2>&1
+        command_status
+        unzip -u weaved_software.zip 1>> $RACHELLOG 2>&1
+        command_status
+        if [[ $DOWNLOADERROR == 0 ]] && [[ -d weaved_software ]]; then
+            rm -f /root/weaved_software.zip
+            echo; print_good "Done." | tee -a $RACHELLOG
+            # Run installer
+            cd /root/weaved_software
+            bash installer.sh | tee -a $RACHELLOG
+            echo; print_good "Weaved service install complete." | tee -a $RACHELLOG
+            print_good "NOTE: An Weaved service uninstaller is available from the Utilities menu of this script." | tee -a $RACHELLOG
+        else
+            echo; print_error "One or more files did not download correctly; check log file ($RACHELLOG) and try again." | tee -a $RACHELLOG
+            cleanup
+            echo; exit 1
+        fi
+    fi
 
     exit 1
 }
