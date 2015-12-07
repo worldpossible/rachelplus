@@ -399,11 +399,11 @@ kiwix () {
     echo; printStatus "Starting Kiwix server." | tee -a $RACHELLOG
     /var/kiwix/bin/kiwix-serve --daemon --port=81 --library /media/RACHEL/kiwix/data/library/library.xml 1>> $RACHELLOG 2>&1
     echo; printStatus "Setting Kiwix to start on boot." | tee -a $RACHELLOG
-    # Remove old kiwix boot lines from /etc/rc.local
-    sed -i '/kiwix/d' /etc/rc.local 1>> $RACHELLOG 2>&1
+    # Remove old kiwix boot lines from $RACHELSCRIPTSFILE
+    sed -i '/kiwix/d' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
     # Clean up current rachel-scripts.sh file
     sed -i '/kiwix/d' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
-    # Add lines to /etc/rc.local that will start kiwix on boot
+    # Add lines to $RACHELSCRIPTSFILE that will start kiwix on boot
     sed -i '$e echo "\# Start kiwix on boot"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
     sed -i '$e echo "\/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
 }
@@ -571,9 +571,9 @@ new_install () {
     sed -i 's/ec-server/WRTD-303N-Server/g' /etc/hosts 1>> $RACHELLOG 2>&1
     printGood "Done." | tee -a $RACHELLOG
 
-    # Delete previous setup commands from the /etc/rc.local
-    echo; printStatus "Delete previous RACHEL setup commands from /etc/rc.local" | tee -a $RACHELLOG
-    sed -i '/cap-rachel/d' /etc/rc.local 1>> $RACHELLOG 2>&1
+    # Delete previous setup commands from the $RACHELSCRIPTSFILE
+    echo; printStatus "Delete previous RACHEL setup commands from $RACHELSCRIPTSFILE" | tee -a $RACHELLOG
+    sed -i '/cap-rachel/d' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
     printGood "Done." | tee -a $RACHELLOG
 
     ## sources.list - replace the package repos for more reliable ones (/etc/apt/sources.list)
@@ -758,8 +758,8 @@ new_install () {
             echo -e "/dev/sda3\t/media/RACHEL\t\text4\tauto,nobootwait 0\t0" >> /etc/fstab
             printGood "Done." | tee -a $RACHELLOG
 
-            # Add lines to /etc/rc.local that will start the next script to run on reboot
-            sudo sed -i '$e echo "bash '$INSTALLTMPDIR'\/cap-rachel-first-install-2.sh&"' /etc/rc.local 1>> $RACHELLOG 2>&1
+            # Add lines to $RACHELSCRIPTSFILE that will start the next script to run on reboot
+            sudo sed -i '$e echo "bash '$INSTALLTMPDIR'\/cap-rachel-first-install-2.sh&"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
 
             echo; printGood "RACHEL CAP Install - Script ended at $(date)" | tee -a $RACHELLOG
             reboot-CAP
@@ -1047,7 +1047,7 @@ EOF
         sed -i '/kiwix/d' /etc/rc.local 1>> $RACHELLOG 2>&1
         # Clean up current rachel-scripts.sh file
         sed -i '/kiwix/d' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
-        # Add lines to /etc/rc.local that will start kiwix on boot
+        # Add lines to $RACHELSCRIPTSFILE that will start kiwix on boot
         sed -i '$e echo "\# Start kiwix on boot"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
         sed -i '$e echo "\/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
         printGood "Done." | tee -a $RACHELLOG
@@ -1166,10 +1166,14 @@ ka-lite_install () {
     echo; printStatus "Syncing RACHEL web interface 'KA Lite module'."
     rsync -avz --ignore-existing $RSYNCDIR/rachelmods/ka-lite $RACHELWWW/modules/
 
-    # Delete previous setup commands from the /etc/rc.local
-#    echo; printStatus "Setting up KA Lite to start at boot..." | tee -a $RACHELLOG
+    # Delete previous setup commands from /etc/rc.local (not used anymore)
     sudo sed -i '/ka-lite/d' /etc/rc.local
     sudo sed -i '/sleep 20/d' /etc/rc.local
+
+    # Delete previous setup commands from the $RACHELSCRIPTSFILE
+#    echo; printStatus "Setting up KA Lite to start at boot..." | tee -a $RACHELLOG
+    sudo sed -i '/ka-lite/d' $RACHELSCRIPTSFILE
+    sudo sed -i '/sleep 20/d' $RACHELSCRIPTSFILE
 
     # Start KA Lite at boot time
 #    sudo sed -i '$e echo "# Start ka-lite at boot time"' /etc/rc.local 1>> $RACHELLOG 2>&1
