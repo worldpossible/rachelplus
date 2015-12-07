@@ -27,7 +27,7 @@ RACHELSCRIPTSFILE="/root/rachel-scripts.sh"
 RACHELSCRIPTSLOG="/var/log/RACHEL/rachel-scripts.log"
 KALITEDIR="/var/ka-lite"
 KALITERCONTENTDIR="/media/RACHEL/kacontent"
-KALITESETTINGS="/var/ka-lite/.kalite/settings.py"
+KALITESETTINGS="/root/.kalite/settings.py"
 INSTALLTMPDIR="/root/cap-rachel-install.tmp"
 RACHELTMPDIR="/media/RACHEL/cap-rachel-install.tmp"
 mkdir -p $INSTALLTMPDIR $RACHELTMPDIR
@@ -58,7 +58,7 @@ ctrlC(){
 testing-script () {
     set -x
     trap ctrlC INT
-    
+
     exit 1
 }
 
@@ -136,7 +136,8 @@ online_variables () {
     ASSESSMENTITEMSJSON="wget -c $GITRACHELPLUS/assessmentitems.json -O /var/ka-lite/data/khan/assessmentitems.json"
     KALITEINSTALL="git clone https://github.com/learningequality/ka-lite /var/ka-lite"
     KALITEUPDATE="git pull"
-    KALITECONTENTINSTALL="wget -c $WGETONLINE/z-holding/ka-lite_content.zip -O $RACHELTMPDIR/ka-lite_content.zip"
+    KALITECONTENTINSTALL="rsync -avhz --progress $CONTENTONLINE/kacontent/ /media/RACHEL/kacontent/"
+#    KALITECONTENTINSTALL="wget -c $WGETONLINE/z-holding/ka-lite_content.zip -O $RACHELTMPDIR/ka-lite_content.zip"
     KIWIXINSTALL="wget -c $WGETONLINE/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $RACHELTMPDIR/kiwix-0.9-linux-i686.tar.bz2"
     KIWIXSAMPLEDATA="wget -c $WGETONLINE/z-holding/Ray_Charles.tar.bz -O $RACHELTMPDIR/Ray_Charles.tar.bz"
     WEAVEDZIP="wget -r http://rachelfriends.org/z-holding/weaved_software.zip -O /root/weaved_software.zip"
@@ -148,28 +149,28 @@ online_variables () {
 offline_variables () {
     GPGKEY1="apt-key add $DIRCONTENTOFFLINE/rachelplus/gpg-keys/437D05B5"
     GPGKEY2="apt-key add $DIRCONTENTOFFLINE/rachelplus/gpg-keys/3E5C1192"
-    SOURCEUS="cp $DIRCONTENTOFFLINE/rachelplus/sources.list/sources-us.list /etc/apt/sources.list"
-    SOURCEUK="cp $DIRCONTENTOFFLINE/rachelplus/sources.list/sources-uk.list /etc/apt/sources.list"
-    SOURCESG="cp $DIRCONTENTOFFLINE/rachelplus/sources.list/sources-sg.list /etc/apt/sources.list"
-    SOURCECN="cp $DIRCONTENTOFFLINE/rachelplus/sources.list/sources-cn.list /etc/apt/sources.list"
-    CAPRACHELFIRSTINSTALL2="cp $DIRCONTENTOFFLINE/rachelplus/install/cap-rachel-first-install-2.sh ."
-    CAPRACHELFIRSTINSTALL3="cp $DIRCONTENTOFFLINE/rachelplus/install/cap-rachel-first-install-3.sh ."
-    LIGHTTPDFILE="cp $DIRCONTENTOFFLINE/rachelplus/lighttpd.conf ."
-    CAPTIVEPORTALREDIRECT="cp $DIRCONTENTOFFLINE/rachelplus/captive-portal/captiveportal-redirect.php ."
-    RACHELBRANDLOGOCAPTIVE="cp $DIRCONTENTOFFLINE/rachelplus/captive-portal/RACHELbrandLogo-captive.png ."
-    HFCBRANDLOGOCAPTIVE="cp $DIRCONTENTOFFLINE/rachelplus/captive-portal/HFCbrandLogo-captive.jpg ."
-    WORLDPOSSIBLEBRANDLOGOCAPTIVE="cp $DIRCONTENTOFFLINE/rachelplus/captive-portal/WorldPossiblebrandLogo-captive.png ."
+    SOURCEUS="rsync -avhz --progress $DIRCONTENTOFFLINE/rachelplus/sources.list/sources-us.list /etc/apt/sources.list"
+    SOURCEUK="rsync -avhz --progress $DIRCONTENTOFFLINE/rachelplus/sources.list/sources-uk.list /etc/apt/sources.list"
+    SOURCESG="rsync -avhz --progress $DIRCONTENTOFFLINE/rachelplus/sources.list/sources-sg.list /etc/apt/sources.list"
+    SOURCECN="rsync -avhz --progress $DIRCONTENTOFFLINE/rachelplus/sources.list/sources-cn.list /etc/apt/sources.list"
+    CAPRACHELFIRSTINSTALL2="rsync -avhz --progress $DIRCONTENTOFFLINE/rachelplus/install/cap-rachel-first-install-2.sh ."
+    CAPRACHELFIRSTINSTALL3="rsync -avhz --progress $DIRCONTENTOFFLINE/rachelplus/install/cap-rachel-first-install-3.sh ."
+    LIGHTTPDFILE="rsync -avhz --progress $DIRCONTENTOFFLINE/rachelplus/lighttpd.conf ."
+    CAPTIVEPORTALREDIRECT="rsync -avhz --progress $DIRCONTENTOFFLINE/rachelplus/captive-portal/captiveportal-redirect.php ."
+    RACHELBRANDLOGOCAPTIVE="rsync -avhz --progress $DIRCONTENTOFFLINE/rachelplus/captive-portal/RACHELbrandLogo-captive.png ."
+    HFCBRANDLOGOCAPTIVE="rsync -avhz --progress $DIRCONTENTOFFLINE/rachelplus/captive-portal/HFCbrandLogo-captive.jpg ."
+    WORLDPOSSIBLEBRANDLOGOCAPTIVE="rsync -avhz --progress $DIRCONTENTOFFLINE/rachelplus/captive-portal/WorldPossiblebrandLogo-captive.png ."
     GITCLONERACHELCONTENTSHELL=""
     RSYNCDIR="$DIRCONTENTOFFLINE"
-    ASSESSMENTITEMSJSON="cp $DIRCONTENTOFFLINE/rachelplus/assessmentitems.json /var/ka-lite/data/khan/assessmentitems.json"
-    KALITEINSTALL="cp -r $DIRCONTENTOFFLINE/ka-lite /var/"
-    KALITEUPDATE="cp -r $DIRCONTENTOFFLINE/ka-lite /var/"
-    KALITECONTENTINSTALL=""
+    ASSESSMENTITEMSJSON="rsync -avhz --progress $DIRCONTENTOFFLINE/rachelplus/assessmentitems.json /var/ka-lite/data/khan/assessmentitems.json"
+    KALITEINSTALL="rsync -avhz --progress $DIRCONTENTOFFLINE/ka-lite /var/"
+    KALITEUPDATE="rsync -avhz --progress $DIRCONTENTOFFLINE/ka-lite /var/"
+    KALITECONTENTINSTALL="rsync -avhz --progress $DIRCONTENTOFFLINE/kacontent/ /media/RACHEL/kacontent/"
     KIWIXINSTALL=""
     KIWIXSAMPLEDATA=""
     WEAVEDZIP=""
     SPHIDERPLUSSQLINSTALL=""
-    DOWNLOADCONTENTSCRIPT="cp $DIRCONTENTOFFLINE/rachelplus/scripts"
+    DOWNLOADCONTENTSCRIPT="rsync -avhz --progress $DIRCONTENTOFFLINE/rachelplus/scripts"
     CONTENTWIKIALL=""
 }
 
@@ -251,7 +252,7 @@ reboot-CAP () {
 cleanup () {
     # No log as it won't clean up the tmp file
     echo; printQuestion "Were there errors?"
-    read -p "Enter 'y' to exit without cleaning up temporary folders/files. (y/n) " -r <&1
+    read -p "Enter 'y' to exit without cleaning up temporary folders/files. (y/N) " REPLY <&1
     if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
         exit 1
     fi
@@ -1091,7 +1092,7 @@ EOF
 
 ka-lite_install () {
     # Logging
-    exec &> >(tee "$HOME/$RACHELLOG")
+    exec &> >(tee "$RACHELLOG")
     
     print_header
     echo; printStatus "Installing KA Lite."
@@ -1119,20 +1120,20 @@ ka-lite_install () {
 
             # Downloading KA Lite 0.15
             echo; printStatus "Downloading KA Lite 0.15"
-            wget -c https://learningequality.org/r/deb-bundle-installer-0-15 -O /root/ka-lite-bundle-0.15.0.deb
+            wget -c https://learningequality.org/r/deb-bundle-installer-0-15 -O /tmp/ka-lite-bundle-0.15.0.deb
             echo; printStatus "Installing KA Lite 0.15"
             echo "NOTE:  When prompted, press enter on the default entries for the questions asked."
-            dpkg -i /root/ka-lite-bundle-0.15.0.deb
+            echo; dpkg -i /tmp/ka-lite-bundle-0.15.0.deb
         else
-            printStatus "Exiting."
-            break
+            echo; printStatus "Exiting."
+            echo; break
         fi
-    elif [[ -d $KALITEDIR/.kalite ]]; then
-        printGood "KA Lite 0.15 installed."
     fi
+    printGood "KA Lite 0.15 installed."
 
     # Ask if there is local copy of the assessmentitems.json
     echo; printStatus "Downloading assessment items."
+
     echo; read -p "Do you have a local copy of the file khan_assessment.zip? (y/N) " -n 1 -r
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo; printQuestion "What is the full path to the file location for assessment items ZIP file (i.e. /root/khan_assessment.zip)?"; read JSONFILE || return
@@ -1156,69 +1157,10 @@ ka-lite_install () {
         fi
     fi
 
-# OLD?
-#    if [[ ! -f /var/ka-lite/data/khan/assessmentitems.json ]]; then
-#        echo; printStatus "Downloading latest assessmentitems.json." | tee -a $RACHELLOG
-#        $ASSESSMENTITEMSJSON
-#        printGood "Done." | tee -a $RACHELLOG
-#    fi
-
-#    # Linux setup of KA Lite
-#    echo; printStatus "Use the following inputs when answering the setup questions:" | tee -a $RACHELLOG
-#    echo; printQuestion "For new installs:"
-#    echo "User - rachel"  | tee -a $RACHELLOG
-#    echo "Password (x2) - rachel" | tee -a $RACHELLOG
-#    echo "Name and describe server as desired" | tee -a $RACHELLOG
-#    echo "Download exercise pack? no" | tee -a $RACHELLOG
-#    echo "Already downloaded? no" | tee -a $RACHELLOG
-#    echo "Start at boot? n" | tee -a $RACHELLOG
-#    echo; printQuestion "For previous installs:"
-#    echo "Keep database file - yes (if you want to keep your progress data)"
-#    echo "Keep database file - no (if you want to destroy your progress data and start over)"
-#    echo "Download exercise pack? no" | tee -a $RACHELLOG
-#    echo "Already downloaded? no" | tee -a $RACHELLOG
-#    echo "Start at boot? n" | tee -a $RACHELLOG
-#    echo
-#    $KALITEDIR/setup_unix.sh
-
     # Configure ka-lite
     echo; printStatus "Configuring KA Lite content directory in $KALITESETTINGS"
-    sed -i '/CONTENT_ROOT/d' /var/ka-lite/.kalite/settings.py
-    echo 'CONTENT_ROOT = "/media/RACHEL/kacontent"' >> /var/ka-lite/.kalite/settings.py
-
-    # Setup KA Lite content
-    if [[ `ls /media/RACHEL/kacontent/*.mp4 | wc -l` == 0 ]]; then
-        echo; printStatus "The KA Lite content needs to copied to its new home."
-        $KALITECONTENTINSTALL
-        if [[ $INTERNET == "0" ]]; then cd $DIRCONTENTOFFLINE; else cd $RACHELTMPDIR; fi
-        echo; printStatus "Unzipping the archive to the correct folder...be patient, this takes about 45 minutes."
-        if [[ -d kacontent ]]; then
-            rsync -avzP ./kacontent /media/RACHEL
-        elif [[ -f ka-lite_content.zip ]]; then
-            unzip -u ka-lite_content.zip -d /media/RACHEL/
-            mv /media/RACHEL/content /media/RACHEL/kacontent 
-            if [[ -d /media/RACHEL/kacontent ]]; then
-                rm /media/RACHEL/ka-lite_content.zip
-            else
-                echo; printError "Failed to create the /media/RACHEL/kacontent folder; check the log file for more details."
-                echo "Zip file was NOT deleted and is available at /media/RACHEL/ka-lite_content.zip"
-            fi
-        else
-            echo; printError "KA Lite content not found."
-        fi
-    else
-        if [[ $INTERNET == "1" ]]; then
-            echo; printStatus "Checking for KA Lite content updates; only downloaded new or changed content."
-            rsync -avhz --progress $CONTENTONLINE/kacontent/ /media/RACHEL/kacontent/
-        else
-            echo; printError "You must connect to the internet to check for KA Lite content updates."
-            echo "NOTE:  The content check on downloads new or changed content."
-        fi
-    fi
-
-    # Re-scanning content folder 
-    echo; printStatus "Restarting KA Lite in order to re-scan the content folder."
-    kalite restart
+    sed -i '/CONTENT_ROOT/d' $KALITESETTINGS
+    echo 'CONTENT_ROOT = "/media/RACHEL/kacontent"' >> $KALITESETTINGS
 
     # Install module for RACHEL index.php
     echo; printStatus "Syncing RACHEL web interface 'KA Lite module'."
@@ -1252,8 +1194,31 @@ ka-lite_install () {
 #    reboot-CAP
 }
 
+download_ka_content () {
+    # Setup KA Lite content
+    echo; printStatus "The KA Lite content needs to downloaded/updated to its new home."
+    mkdir -p KALITERCONTENTDIR
+    $KALITECONTENTINSTALL
+#    if [[ $INTERNET == "0" ]]; then cd $DIRCONTENTOFFLINE; else cd $RACHELTMPDIR; fi
+#    echo; printStatus "Unzipping the archive to the correct folder...be patient, this takes about 45 minutes."
+#    if [[ -d kacontent ]]; then
+#        rsync -avzP ./kacontent /media/RACHEL
+#    elif [[ -f ka-lite_content.zip ]]; then
+#        unzip -u ka-lite_content.zip -d /media/RACHEL/
+#        mv /media/RACHEL/content /media/RACHEL/kacontent 
+#        if [[ -d /media/RACHEL/kacontent ]]; then
+#            rm /media/RACHEL/ka-lite_content.zip
+#        else
+#            echo; printError "Failed to create the /media/RACHEL/kacontent folder; check the log file for more details."
+#            echo "Zip file was NOT deleted and is available at /media/RACHEL/ka-lite_content.zip"
+#        fi
+#    else
+#        echo; printError "KA Lite content not found."
+#    fi
+}
+
 # Loop to redisplay mhf
-whattodo {
+whattodo () {
     echo; printQuestion "What would you like to do next?"
     echo "1)Initial Install  2)Install KA Lite  3)Install Kiwix  4)Install Sphider  5) Install Weaved Service  6)Install Content  7)Utilities  8)Exit"
 }
@@ -1289,7 +1254,11 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Sphi
         ;;
 
         Install-KA-Lite)
-        ka-lite_install
+        ka-lite_install `
+        download_ka_content
+        # Re-scanning content folder 
+        echo; printStatus "Restarting KA Lite in order to re-scan the content folder."
+        kalite restart
         whattodo
         ;;
 
