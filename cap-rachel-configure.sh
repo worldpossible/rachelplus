@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # FILE: cap-rachel-configure.sh
 # ONELINER Download/Install: sudo wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/cap-rachel-configure.sh -O /root/cap-rachel-configure.sh; bash cap-rachel-configure.sh
 
@@ -27,14 +27,14 @@ RACHELPARTITION="/media/RACHEL"
 RACHELWWW="$RACHELPARTITION/rachel"
 RACHELSCRIPTSFILE="/root/rachel-scripts.sh"
 RACHELSCRIPTSLOG="/var/log/RACHEL/rachel-scripts.log"
-KALITEDIR="/root/.kalite"
+KALITEUSER="root"
+KALITEDIR="/root/.kalite" # Installed as user 'root'
 KALITERCONTENTDIR="/media/RACHEL/kacontent"
-KALITECURRENTVERSION="0.15.0"
+KALITECURRENTVERSION="0.15.1"
 KALITEINSTALLER="ka-lite-bundle-$KALITECURRENTVERSION.deb"
 KALITESETTINGS="$KALITEDIR/settings.py"
 INSTALLTMPDIR="/root/cap-rachel-install.tmp"
 RACHELTMPDIR="/media/RACHEL/cap-rachel-install.tmp"
-mkdir -p $INSTALLTMPDIR $RACHELTMPDIR
 ERRORCODE="0"
 
 # Check root
@@ -43,11 +43,17 @@ if [ "$(id -u)" != "0" ]; then
     exit 1
 fi
 
-# Fix backspace
+# Reset terminal
 stty sane
+#reset
 
 #in case you wish to kill it
 trap 'exit 3' 1 2 3 15
+
+# Logging
+logging_start () {
+    exec &> >(tee "$RACHELLOG")
+}
 
 # Capture a users Ctrl-C
 ctrlC(){
@@ -60,6 +66,10 @@ testing-script () {
     set -x
     trap ctrlC INT
 
+    KALITEVERSIONDATE=2
+    ka-lite_remove
+
+    set +x
     exit 1
 }
 
@@ -267,7 +277,7 @@ cleanup () {
     fi
     # Deleting the install script commands
     echo; printStatus "Cleaning up install scripts."
-    rm -rf $INSTALLTMPDIR $RACHELTMPDIR
+    rm -rf $INSTALLTMPDIR $RACHELTMPDIR $0&
     printGood "Done."
 }
 
@@ -1005,102 +1015,6 @@ content_install () {
     echo; printGood "Refresh the RACHEL homepage to view your new content."
 }
 
-repair () {
-    print_header
-    echo; printStatus "Repairing your CAP after a firmware upgrade."
-    cd $INSTALLTMPDIR
-
-    # Download/update to latest RACHEL lighttpd.conf
-    echo; printStatus "Downloading latest lighttpd.conf"
-    ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies and ensuring the file downloads correctly)
-    $LIGHTTPDFILE
-    command_status
-    if [[ $ERRORCODE == 1 ]]; then
-        printError "The lighttpd.conf file did not download correctly; check log file (/var/log/RACHEL/rachel-install.tmp) and try again."
-        echo; break
-    else
-        mv $INSTALLTMPDIR/lighttpd.conf /usr/local/etc/lighttpd.conf
-    fi
-    printGood "Done."
-
-    # Reapply /etc/fstab entry for /media/RACHEL
-    echo; printStatus "Adding /dev/sda3 into /etc/fstab"
-    sed -i '/\/dev\/sda3/d' /etc/fstab
-    echo -e "/dev/sda3\t/media/RACHEL\t\text4\tauto,nobootwait 0\t0" >> /etc/fstab
-    printGood "Done."
-
-    # Fixing /root/rachel-scripts.sh
-    echo; printStatus "Fixing $RACHELSCRIPTSFILE"
-
-    # Add rachel-scripts.sh script
-    sed "s,%RACHELSCRIPTSLOG%,$RACHELSCRIPTSLOG,g" > $RACHELSCRIPTSFILE << 'EOF'    
-#!/bin/bash
-# Send output to log file
-rm -f %RACHELSCRIPTSLOG%
-exec 1>> %RACHELSCRIPTSLOG% 2>&1
-# Add the RACHEL iptables rule to redirect 10.10.10.10 to CAP default of 192.168.88.1
-# Added sleep to wait for CAP rcConf and rcConfd to finish initializing
-#
-sleep 60
-iptables -t nat -I PREROUTING -d 10.10.10.10 -j DNAT --to-destination 192.168.88.1
-exit 0
-EOF
-
-    # Add rachel-scripts.sh startup in /etc/rc.local
-    sed -i '/scripts/d' /etc/rc.local
-    sudo sed -i '$e echo "# Add RACHEL startup scripts"' /etc/rc.local
-    sudo sed -i '$e echo "bash /root/rachel-scripts.sh&"' /etc/rc.local
-
-    # Check/re-add Kiwix
-    if [[ -d /var/kiwix ]]; then
-        echo; printStatus "Setting up Kiwix to start at boot..."
-        # Remove old kiwix boot lines from /etc/rc.local
-        sed -i '/kiwix/d' /etc/rc.local
-        # Clean up current rachel-scripts.sh file
-        sed -i '/kiwix/d' $RACHELSCRIPTSFILE
-        # Add lines to $RACHELSCRIPTSFILE that will start kiwix on boot
-        sed -i '$e echo "\# Start kiwix on boot"' $RACHELSCRIPTSFILE
-        sed -i '$e echo "\/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' $RACHELSCRIPTSFILE
-        printGood "Done."
-    fi
-
-#    if [[ -d /var/ka-lite ]]; then
-#        echo; printStatus "Setting up KA Lite to start at boot..." | tee -a $RACHELLOG
-#        # Delete previous setup commands from the /etc/rc.local
-#        sed -i '/ka-lite/d' /etc/rc.local 1>> $RACHELLOG 2>&1
-#        sed -i '/sleep 20/d' /etc/rc.local 1>> $RACHELLOG 2>&1
-#        # Clean up current rachel-scripts.sh file
-#        sed -i '/ka-lite/d' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
-#        sed -i '/sleep 20/d' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
-#        # Start KA Lite at boot time
-#        sed -i '$e echo "# Start ka-lite at boot time"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
-#        sed -i '$e echo "sleep 20"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
-#        sed -i '$e echo "/var/ka-lite/bin/kalite restart"' $RACHELSCRIPTSFILE 1>> $RACHELLOG 2>&1
-#        printGood "Done." | tee -a $RACHELLOG
-#    fi
-
-    # Clean up outdated stuff
-    # Remove outdated startup script
-    rm -f /root/iptables-rachel.sh
-
-    # Delete previous setwanip commands from /etc/rc.local - not used anymore
-    echo; printStatus "Deleting previous setwanip.sh script from /etc/rc.local"
-    sed -i '/setwanip/d' /etc/rc.local
-    rm -f /root/setwanip.sh
-    printGood "Done."
-
-    # Delete previous iptables commands from /etc/rc.local
-    echo; printStatus "Deleting previous iptables script from /etc/rc.local"
-    sed -i '/iptables/d' /etc/rc.local
-    printGood "Done."
-
-    echo; printGood "RACHEL CAP Repair Complete."
-    sudo mv $RACHELLOG $RACHELLOGDIR/rachel-repair-$TIMESTAMP.log
-    echo; printGood "Log file saved to: $RACHELLOGDIR/rachel-repair-$TIMESTAMP.log"
-    cleanup
-    reboot-CAP
-}
-
 ka-lite_remove () {
     # Removing old version
     echo; printStatus "Cleaning any previous KA Lite installation files."
@@ -1123,27 +1037,33 @@ ka-lite_remove () {
         # Uninstall KA Lite
         apt-get -y remove ka-lite-bundle --purge
         # Remove old folders
-        rm -rf /var/ka-lite /root/.kalite /etc/ka-lite
-        if [[ -f /etc/ka-lite/username ]]; then
-            rm -rf /var/$KALITEUSER
-        fi
+        rm -rf ~/.kalite
+        rm -rf /etc/ka-lite
+        KALITEUSER="root"
     fi
 }
 
 ka-lite_install () {
     # Downloading KA Lite 0.15
-    echo; printStatus "Downloading KA Lite Version $KALITEVERSION"
+    echo; printStatus "Downloading KA Lite Version $KALITECURRENTVERSION"
     $KALITEINSTALL
     echo; printStatus "Installing KA Lite Version $KALITECURRENTVERSION"
-    echo; printError "NOTE:  When prompted, enter 'yes' for start on boot and 'root' for user."
-    echo; dpkg -i $INSTALLTMPDIR/$KALITEINSTALLER
+    echo; printError "NOTE:  When prompted, enter default answer yes for start on boot and root for user."
+    echo; mkdir -p /etc/ka-lite
+    echo "root" > /etc/ka-lite/username
+    # Turn off logging b/c KA Lite using a couple graphical screens; if on, causes issues
+    exec &>/dev/tty
+    dpkg -i $INSTALLTMPDIR/$KALITEINSTALLER
     command_status
+    # Turn logging back on
+    exec &> >(tee -a "$RACHELLOG")
     if [[ $ERRORCODE == 0 ]]; then
         echo; printGood "KA Lite $KALITECURRENTVERSION installed."
     else
         echo; printError "Something went wrong, please check the log file ($RACHELLOG) and try again."
         break
     fi
+    update-rc.d ka-lite disable
 }
 
 ka-lite_setup () {
@@ -1154,7 +1074,8 @@ ka-lite_setup () {
         KALITEVERSION=$(/var/ka-lite/bin/kalite manage --version)
         echo; printError "KA Lite Version $KALITEVERSION is no longer supported and should be updated."
         KALITEVERSIONDATE=1
-        read -p "Do you want to update to KA Lite Version $KALITECURRENTVERSION? (y/N) " REPLY
+        printQuestion "Do you want to update to KA Lite Version $KALITECURRENTVERSION?"
+        read -p "Enter (y/N) " REPLY
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             # Remove previous KA Lite
             ka-lite_remove
@@ -1165,38 +1086,22 @@ ka-lite_setup () {
         fi
     elif [[ -f /etc/ka-lite/username ]]; then
         KALITEUSER=$(cat /etc/ka-lite/username)
-        KALITEVERSION=0
-        echo; printStatus "KA Lite is installed under user:  $KALITEUSER"
+        KALITEVERSION=$(kalite manage --version)
+        printGood "KA Lite installed under user:  $KALITEUSER"
+        printGood "Current KA Lite Version Installed:  $KALITEVERSION"
+        printGood "Lastest KA Lite Version Available:  $KALITECURRENTVERSION"
         KALITEVERSIONDATE=2
-        echo; printQuestion "Do you want to update or re-install KA Lite?"
-        select KAMODE in "Update" "Re-Install" "Exit"; do
-            case $KAMODE in
-            Update)
-                echo; printStatus "Downloading KA Lite Version $KALITEVERSION"
-                $KALITEINSTALL
-                echo; printStatus "Updating to KA Lite Version $KALITECURRENTVERSION"
-                mv $INSTALLTMPDIR/$KALITEINSTALLER /var/cache/apt/archives/
-                apt-get -y upgrade ka-lite-bundle
-                break
-            ;;
-            Re-Install)
-                echo; printStatus "Re-installing KA Lite."
-                # Remove previous KA Lite
-                ka-lite_remove
-                # Install KA Lite
-                ka-lite_install
-                break
-            ;;
-            Exit)
-                echo; printStatus "Skipping install."
-                break
-            ;;
-            esac
-
-            break
-        done
+        echo; printQuestion "Do you want to upgrade or re-install KA Lite?"
+        read -p "Enter (y/N) " REPLY
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            echo; printStatus "Downloading KA Lite Version $KALITECURRENTVERSION"
+            $KALITEINSTALL
+            # Install KA Lite
+            ka-lite_install
+        fi
     else
         echo; printStatus "It doesn't look like KA Lite is installed; installing now."
+        KALITEUSER="ka-lite"
         KALITEVERSIONDATE=0
         # Remove previous KA Lite
         ka-lite_remove
@@ -1205,7 +1110,7 @@ ka-lite_setup () {
     fi
 
     # Configure ka-lite
-    echo; printStatus "Configuring KA Lite content directory in $KALITESETTINGS"
+    echo; printStatus "Configuring KA Lite content settings file:  $KALITESETTINGS"
     printStatus "KA Lite content directory being set to:  $KALITERCONTENTDIR"
     sed -i '/^CONTENT_ROOT/d' $KALITESETTINGS
     sed -i '/^DATABASES/d' $KALITESETTINGS
@@ -1234,8 +1139,11 @@ ka-lite_setup () {
         echo; printQuestion "Do you want to attempt to download khan_assessment.zip from the RACHEL repository online (warning, this file is near 500MB)?"
         read -p "Enter (y/N) " REPLY
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-#            kalite manage unpack_assessment_zip https://learningequality.org/downloads/ka-lite/0.15/content/khan_assessment.zip -f
-            kalite manage unpack_assessment_zip https://$CONTENTONLINE/khan_assessment.zip -f
+            rsync -avhP $CONTENTONLINE/khan_assessment.zip $INSTALLTMPDIR/khan_assessment.zip
+            kalite manage unpack_assessment_zip $INSTALLTMPDIR/khan_assessment.zip -f
+            if [[ $ERRORCODE == 1 ]]; then
+                kalite manage unpack_assessment_zip https://learningequality.org/downloads/ka-lite/0.15/content/khan_assessment.zip -f
+            fi
         else
             echo; printStatus "Skipping assessment items download."
         fi
@@ -1252,18 +1160,13 @@ ka-lite_setup () {
     # Delete previous setup commands from the $RACHELSCRIPTSFILE
 #    echo; printStatus "Setting up KA Lite to start at boot..."
     sudo sed -i '/ka-lite/d' $RACHELSCRIPTSFILE
+    sudo sed -i '/kalite/d' $RACHELSCRIPTSFILE
     sudo sed -i '/sleep 20/d' $RACHELSCRIPTSFILE
 
     # Start KA Lite at boot time
-#    sudo sed -i '$e echo "# Start ka-lite at boot time"' /etc/rc.local
-#    sudo sed -i '$e echo "sleep 20"' /etc/rc.local
-#    sudo sed -i '$e echo "/var/ka-lite/bin/kalite start"' /etc/rc.local
-#    printGood "Done."
-
-    # Starting KA Lite
-#    echo; printStatus "Starting KA Lite..."
-#    /var/ka-lite/bin/kalite start
-#    printGood "Done."
+    sudo sed -i '$e echo "# Start kalite at boot time"' $RACHELSCRIPTSFILE
+    sudo sed -i '$e echo "sudo /usr/bin/kalite start"' $RACHELSCRIPTSFILE
+    printGood "Done."
 }
 
 download_ka_content () {
@@ -1280,21 +1183,24 @@ download_ka_content () {
     fi
 }
 
-# Loop to redisplay mhf
+# Loop to redisplay main menu
 whattodo () {
     echo; printQuestion "What would you like to do next?"
-    echo "1)Initial Install  2)Install KA Lite  3)Install Kiwix  4)Install Sphider  5) Install Weaved Service  6)Install Content  7)Utilities  8)Exit"
+    echo "1)Initial Install  2)Install KA Lite  3)Install Kiwix  4)Install Weaved Service  5)Install/Update Content  6)Utilities  7)Exit"
 }
 
 #### MAIN MENU ####
 
 # Logging
-exec &> >(tee "$RACHELLOG")
+logging_start
 
 # Display current script version
 echo; echo "RACHEL CAP Configuration Script - Version $VERSION"
 printGood "Started:  $(date)"
 printGood "Configuration and logging directory:  $RACHELLOGDIR"
+
+# Create temp directories
+mkdir -p $INSTALLTMPDIR $RACHELTMPDIR
 
 # Check OS version
 osCheck
@@ -1309,17 +1215,15 @@ echo; printQuestion "What you would like to do:"
 echo "  - [Initial-Install] of RACHEL on a CAP"
 echo "  - [Install-KA-Lite]"
 echo "  - [Install-Kiwix]"
-echo "  - [Install-Sphider]"
 echo "  - [Install-Weaved-Service]"
-echo "  - Install/Update RACHEL [Content]"
+echo "  - [Install-Update-Content] for RACHEL"
 echo "  - Other [Utilities]"
-echo "    - Repair an install of a CAP after a firmware upgrade"
 echo "    - Sanitize CAP for imaging"
 echo "    - Symlink all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent"
 echo "    - Test script"
 echo "  - [Exit] the installation script"
 echo
-select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Sphider" "Install-Weaved-Service" "Content" "Utilities" "Exit"; do
+select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weaved-Service" "Install-Update-Content" "Utilities" "Exit"; do
         case $menu in
         Initial-Install)
         new_install
@@ -1348,17 +1252,12 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Sphi
         whattodo
         ;;
 
-        Install-Sphider)
-        sphider_plus.sql
-        whattodo
-        ;;
-
         Install-Weaved-Service)
         install_weaved_service
         whattodo
         ;;
 
-        Content)
+        Install-Update-Content)
         content_install
         whattodo
         ;;
@@ -1382,11 +1281,6 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Sphi
 
                 Uninstall-Weaved-Service)
                 uninstall_weaved_service
-                break
-                ;;
-
-                Repair)
-                repair
                 break
                 ;;
 
