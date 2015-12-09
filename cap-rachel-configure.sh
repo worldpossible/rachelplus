@@ -7,8 +7,7 @@
 # COMMON VARIABLES - Change as needed
 DIRCONTENTOFFLINE="/media/nas/rachel-content" # Enter directory of downloaded RACHEL content for offline install (e.g. I mounted my external USB on my CAP but plugging the external USB into and running the command 'fdisk -l' to find the right drive, then 'mkdir /media/RACHEL-Content' to create a folder to mount to, then 'mount /dev/sdb1 /media/RACHEL-Content' to mount the USB drive.)
 RSYNCONLINE="rsync://dev.worldpossible.org" # The current RACHEL rsync repository
-#CONTENTONLINE="rsync://rachel.golearn.us/content" # Another RACHEL rsync repository
-CONTENTONLINE="rsync://192.168.255.4/content" # Another RACHEL rsync repository
+CONTENTONLINE="rsync://rachel.golearn.us/content" # Another RACHEL rsync repository
 WGETONLINE="http://rachelfriends.org" # RACHEL large file repo (ka-lite_content, etc)
 GITRACHELPLUS="https://raw.githubusercontent.com/rachelproject/rachelplus/master" # RACHELPlus Scripts GitHub Repo
 GITCONTENTSHELL="https://raw.githubusercontent.com/rachelproject/contentshell/master" # RACHELPlus ContentShell GitHub Repo
@@ -158,7 +157,6 @@ online_variables () {
     ASSESSMENTITEMSJSON="wget -c $GITRACHELPLUS/assessmentitems.json -O /var/ka-lite/data/khan/assessmentitems.json"
     KALITEINSTALL="rsync -avhz --progress $CONTENTONLINE/$KALITEINSTALLER $INSTALLTMPDIR/$KALITEINSTALLER"
     KALITECONTENTINSTALL="rsync -avhz --progress $CONTENTONLINE/kacontent/ /media/RACHEL/kacontent/"
-#    KALITECONTENTINSTALL="wget -c $WGETONLINE/z-holding/ka-lite_content.zip -O $RACHELTMPDIR/ka-lite_content.zip"
     KIWIXINSTALL="wget -c $WGETONLINE/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $RACHELTMPDIR/kiwix-0.9-linux-i686.tar.bz2"
     KIWIXSAMPLEDATA="wget -c $WGETONLINE/z-holding/Ray_Charles.tar.bz -O $RACHELTMPDIR/Ray_Charles.tar.bz"
     WEAVEDZIP="wget -r http://rachelfriends.org/z-holding/weaved_software.zip -O /root/weaved_software.zip"
@@ -277,7 +275,7 @@ cleanup () {
     fi
     # Deleting the install script commands
     echo; printStatus "Cleaning up install scripts."
-    rm -rf $INSTALLTMPDIR $RACHELTMPDIR $0&
+    rm -rf $INSTALLTMPDIR $RACHELTMPDIR /root/$0&
     printGood "Done."
 }
 
@@ -1048,7 +1046,7 @@ ka-lite_install () {
     echo; printStatus "Downloading KA Lite Version $KALITECURRENTVERSION"
     $KALITEINSTALL
     echo; printStatus "Installing KA Lite Version $KALITECURRENTVERSION"
-    echo; printError "NOTE:  When prompted, enter default answer yes for start on boot and root for user."
+    echo; printError "CAUTION:  When prompted, enter 'yes' for start on boot and change the user to 'root'."
     echo; mkdir -p /etc/ka-lite
     echo "root" > /etc/ka-lite/username
     # Turn off logging b/c KA Lite using a couple graphical screens; if on, causes issues
@@ -1136,10 +1134,11 @@ ka-lite_setup () {
         kalite manage unpack_assessment_zip $JSONFILE -f
     # If needed, download/install assessmentitems.json
     else
-        echo; printQuestion "Do you want to attempt to download khan_assessment.zip from the RACHEL repository online (warning, this file is near 500MB)?"
+        echo; printQuestion "Do you want to attempt to download khan_assessment.zip from the RACHEL repository online (caution...the file is nearly 500MB)?"
         read -p "Enter (y/N) " REPLY
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             rsync -avhP $CONTENTONLINE/khan_assessment.zip $INSTALLTMPDIR/khan_assessment.zip
+            echo; printStatus "Installing khan_assessment.zip (the install may take a minute or two)."
             kalite manage unpack_assessment_zip $INSTALLTMPDIR/khan_assessment.zip -f
             if [[ $ERRORCODE == 1 ]]; then
                 kalite manage unpack_assessment_zip https://learningequality.org/downloads/ka-lite/0.15/content/khan_assessment.zip -f
@@ -1176,7 +1175,15 @@ download_ka_content () {
         read -p "Enter (y/N) " REPLY
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             mkdir -p KALITERCONTENTDIR
+            echo; printStatus "Downloading from primary repository."
+            echo "WEBSITE:  $CONTENTONLINE/kacontent"
             $KALITECONTENTINSTALL
+            command_status
+            if [[ $ERRORCODE == 1 ]]; then
+                echo; printError "Primary repository for KA Content is not responding; attempting to download from the backup repository."
+                echo "WEBSITE:  $WGETONLINE/z-holding/ka-lite_content.zip"
+                wget -c $WGETONLINE/z-holding/ka-lite_content.zip -O $RACHELTMPDIR/ka-lite_content.zip
+            fi
         else
             echo; printStatus "Skipping content download/check."
         fi
