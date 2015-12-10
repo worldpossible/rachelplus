@@ -15,7 +15,7 @@ GITCONTENTSHELL="https://raw.githubusercontent.com/rachelproject/contentshell/ma
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 OS="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 OSVERSION=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-VERSION=1209152324 # To get current version - date +%m%d%y%H%M
+VERSION=1210151428 # To get current version - date +%m%d%y%H%M
 TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
 INTERNET="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 RACHELLOGDIR="/var/log/RACHEL"
@@ -1273,13 +1273,12 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weav
         echo; printQuestion "What utility would you like to use?"
         echo "  - **BETA** [Download-Content] for OFFLINE RACHEL installs"
         echo "  - [Uninstall-Weaved-Service]"
-        echo "  - [Repair] an install of a CAP after a firmware upgrade"
         echo "  - [Sanitize] CAP for imaging"
         echo "  - [Symlink] all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent"
         echo "  - [Test] script"
         echo "  - Return to [Main Menu]"
         echo
-        select util in "Download-Content" "Uninstall-Weaved-Service" "Repair" "Sanitize" "Symlink" "Test" "Main-Menu"; do
+        select util in "Download-Content" "Uninstall-Weaved-Service" "Sanitize" "Symlink" "Test" "Main-Menu"; do
             case $util in
                 Download-Content)
                 download_offline_content
