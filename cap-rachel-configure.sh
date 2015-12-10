@@ -15,7 +15,7 @@ GITCONTENTSHELL="https://raw.githubusercontent.com/rachelproject/contentshell/ma
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 OS="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 OSVERSION=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-VERSION=1209151352 # To get current version - date +%m%d%y%H%M
+VERSION=1209152324 # To get current version - date +%m%d%y%H%M
 TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
 INTERNET="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 RACHELLOGDIR="/var/log/RACHEL"
@@ -1115,9 +1115,13 @@ ka-lite_setup () {
     echo 'CONTENT_ROOT = "/media/RACHEL/kacontent"' >> $KALITESETTINGS
     echo "DATABASES['assessment_items']['NAME'] = os.path.join(CONTENT_ROOT, 'assessmentitems.sqlite')" >> $KALITESETTINGS
 
+    # The current khan_assessment.zip installer provided by KA Lite throws on error on our system 
+    echo; printStatus "Fixing the KA Lite provider khan_assessment.zip installer."
+    sed -i "s/os.rename/shutil.move/g" /usr/lib/python2.7/dist-packages/kalite/contentload/management/commands/unpack_assessment_zip.py
+    sed -i '6 a import shutil' /usr/lib/python2.7/dist-packages/kalite/contentload/management/commands/unpack_assessment_zip.py
+
     # Ask if there is local copy of the assessmentitems.json
     echo; printStatus "Downloading assessment items."
-
     echo; printQuestion "Do you have a local copy of the file khan_assessment.zip?"
     read -p "Enter (y/N) " REPLY
     if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -1239,18 +1243,14 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weav
         Install-KA-Lite)
         ka-lite_setup
         download_ka_content
-        # Re-scanning content folder 
+        # Re-scanning content folder and exercise data 
         echo; printStatus "Restarting KA Lite in order to re-scan the content folder."
         kalite restart
-        # Add RACHEL IP
         echo; printGood "Login using wifi at http://192.168.88.1:8008 and register device."
         echo "After you register, click the new tab called 'Manage', then 'Videos' and download all the missing videos."
         echo; printGood "Log file saved to: $RACHELLOGDIR/rachel-kalite-$TIMESTAMP.log"
         printGood "KA Lite Install Complete."
         mv $RACHELLOG $RACHELLOGDIR/rachel-kalite-$TIMESTAMP.log
-        # Reboot CAP
-    #    cleanup
-    #    reboot-CAP
         whattodo
         ;;
 
