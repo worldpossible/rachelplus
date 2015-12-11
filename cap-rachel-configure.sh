@@ -516,6 +516,7 @@ uninstall_weaved_service () {
         # Run uninstaller
         if [[ -f /root/weaved_software/uninstaller.sh ]]; then 
             weaved_uninstaller
+            rm -rf /root/Weaved* /root/weaved_software*
         else
             printError "The Weaved uninstaller does not exist. Attempting to download..."
             if [[ $INTERNET == "1" ]]; then
@@ -1256,6 +1257,102 @@ download_ka_content () {
     fi
 }
 
+function repair () {
+    print_header
+    echo; printStatus "Repairing your CAP after a firmware upgrade."
+    cd $INSTALLTMPDIR
+
+    # Download/update to latest RACHEL lighttpd.conf
+    echo; printStatus "Downloading latest lighttpd.conf"
+    ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies and ensuring the file downloads correctly)
+    $LIGHTTPDFILE
+    command_status
+    if [[ $ERRORCODE == 1 ]]; then
+        print_error "The lighttpd.conf file did not download correctly; check log file (/var/log/RACHEL/rachel-install.tmp) and try again."
+        echo; break
+    else
+        mv $INSTALLTMPDIR/lighttpd.conf /usr/local/etc/lighttpd.conf
+    fi
+    printGood "Done."
+
+    # Reapply /etc/fstab entry for /media/RACHEL
+    echo; printStatus "Adding /dev/sda3 into /etc/fstab"
+    sed -i '/\/dev\/sda3/d' /etc/fstab
+    echo -e "/dev/sda3\t/media/RACHEL\t\text4\tauto,nobootwait 0\t0" >> /etc/fstab
+    printGood "Done."
+
+    # Fixing /root/rachel-scripts.sh
+    echo; printStatus "Fixing $RACHELSCRIPTSFILE"
+
+    # Add rachel-scripts.sh script
+    sed "s,%RACHELSCRIPTSLOG%,$RACHELSCRIPTSLOG,g" > $RACHELSCRIPTSFILE << 'EOF'
+#!/bin/bash
+# Send output to log file
+rm -f %RACHELSCRIPTSLOG%
+exec 1>> %RACHELSCRIPTSLOG% 2>&1
+# Add the RACHEL iptables rule to redirect 10.10.10.10 to CAP default of 192.168.88.1
+# Added sleep to wait for CAP rcConf and rcConfd to finish initializing
+#
+sleep 60
+iptables -t nat -I PREROUTING -d 10.10.10.10 -j DNAT --to-destination 192.168.88.1
+exit 0
+EOF
+
+    # Add rachel-scripts.sh startup in /etc/rc.local
+    sed -i '/scripts/d' /etc/rc.local
+    sudo sed -i '$e echo "# Add RACHEL startup scripts"' /etc/rc.local
+    sudo sed -i '$e echo "bash /root/rachel-scripts.sh&"' /etc/rc.local
+
+    # Check/re-add Kiwix
+    if [[ -d /var/kiwix ]]; then
+        echo; printStatus "Setting up Kiwix to start at boot..."
+        # Remove old kiwix boot lines from /etc/rc.local
+        sed -i '/kiwix/d' /etc/rc.local
+        # Clean up current rachel-scripts.sh file
+        sed -i '/kiwix/d' $RACHELSCRIPTSFILE
+        # Add lines to /etc/rc.local that will start kiwix on boot
+        sed -i '$e echo "\# Start kiwix on boot"' $RACHELSCRIPTSFILE
+        sed -i '$e echo "\/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' $RACHELSCRIPTSFILE
+        printGood "Done."
+    fi
+
+    if [[ -d $KALITEDIR ]]; then
+        echo; printStatus "Setting up KA Lite to start at boot..."
+        # Delete previous setup commands from /etc/rc.local (not used anymore)
+        sudo sed -i '/ka-lite/d' /etc/rc.local
+        sudo sed -i '/sleep 20/d' /etc/rc.local
+        # Delete previous setup commands from the $RACHELSCRIPTSFILE
+        sudo sed -i '/ka-lite/d' $RACHELSCRIPTSFILE
+        sudo sed -i '/kalite/d' $RACHELSCRIPTSFILE
+        sudo sed -i '/sleep 20/d' $RACHELSCRIPTSFILE
+        # Start KA Lite at boot time
+        sudo sed -i '$e echo "# Start kalite at boot time"' $RACHELSCRIPTSFILE
+        sudo sed -i '$e echo "sudo /usr/bin/kalite start"' $RACHELSCRIPTSFILE
+        printGood "Done."
+    fi
+
+    # Clean up outdated stuff
+    # Remove outdated startup script
+    rm -f /root/iptables-rachel.sh
+
+    # Delete previous setwanip commands from /etc/rc.local - not used anymore
+    echo; printStatus "Deleting previous setwanip.sh script from /etc/rc.local"
+    sed -i '/setwanip/d' /etc/rc.local
+    rm -f /root/setwanip.sh
+    printGood "Done."
+
+    # Delete previous iptables commands from /etc/rc.local
+    echo; printStatus "Deleting previous iptables script from /etc/rc.local"
+    sed -i '/iptables/d' /etc/rc.local
+    printGood "Done."
+
+    echo; printGood "RACHEL CAP Repair Complete."
+    sudo mv $RACHELLOG $RACHELLOGDIR/rachel-repair-$TIMESTAMP.log
+    echo; printGood "Log file saved to: $RACHELLOGDIR/rachel-repair-$TIMESTAMP.log"
+    cleanup
+    reboot-CAP
+}
+
 # Loop to redisplay main menu
 whattodo () {
     echo; printQuestion "What would you like to do next?"
@@ -1294,6 +1391,10 @@ echo "  - [Install-Kiwix]"
 echo "  - [Install-Weaved-Service]"
 echo "  - [Install-Update-Content] for RACHEL"
 echo "  - Other [Utilities]"
+echo "    - Check your local file's MD5 against our database"
+echo "    - Download RACHEL content to stage for OFFLINE installs"
+echo "    - Uninstall a Weaved service"
+echo "    - Repair an install of a CAP after a firmware upgrade"
 echo "    - Sanitize CAP for imaging"
 echo "    - Symlink all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent"
 echo "    - Test script"
@@ -1339,12 +1440,13 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weav
         echo "  - [Check-MD5] will check a file you provide against our hash database"
         echo "  - **BETA** [Download-Content] for OFFLINE RACHEL installs"
         echo "  - [Uninstall-Weaved-Service]"
+        echo "  - [Repair] an install of a CAP after a firmware upgrade"
         echo "  - [Sanitize] CAP for imaging"
         echo "  - [Symlink] all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent"
         echo "  - [Test] script"
         echo "  - Return to [Main Menu]"
         echo
-        select util in "Check-MD5" "Download-Content" "Uninstall-Weaved-Service" "Sanitize" "Symlink" "Test" "Main-Menu"; do
+        select util in "Check-MD5" "Download-Content" "Uninstall-Weaved-Service" "Repair" "Sanitize" "Symlink" "Test" "Main-Menu"; do
             case $util in
                 Check-MD5)
                 echo; printStatus "This function will compare the MD5 of the file you provide against our list of known hashes."
@@ -1360,6 +1462,11 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weav
 
                 Uninstall-Weaved-Service)
                 uninstall_weaved_service
+                break
+                ;;
+
+                Repair)
+                repair
                 break
                 ;;
 
