@@ -15,7 +15,7 @@ GITCONTENTSHELL="https://raw.githubusercontent.com/rachelproject/contentshell/ma
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 OS="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 OSVERSION=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-VERSION=1210151428 # To get current version - date +%m%d%y%H%M
+VERSION=1211151448 # To get current version - date +%m%d%y%H%M
 TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
 INTERNET="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 RACHELLOGDIR="/var/log/RACHEL"
@@ -309,7 +309,7 @@ cleanup () {
     fi
     # Deleting the install script commands
     echo; printStatus "Cleaning up install scripts."
-    rm -rf $INSTALLTMPDIR $RACHELTMPDIR /root/$0&
+    rm -rf $0 $INSTALLTMPDIR $RACHELTMPDIR&
     printGood "Done."
 }
 
@@ -319,10 +319,10 @@ sanitize () {
     rm -rf /var/log/rachel-install* /var/log/RACHEL/*
     rm -f /root/.ssh/known_hosts
     rm -f /media/RACHEL/ka-lite_content.zip
-    rm -rf /recovery/2015*
+    rm -rf /recovery/201*
     echo "" > /root/.bash_history
     # Stop script from defaulting the SSID
-    sed -i 's/redis-cli del WlanSsidT0_ssid/#redis-cli del WlanSsidT0_ssid/g' /root/generate_recovery.sh
+    sed -i 's/^redis-cli del WlanSsidT0_ssid/#redis-cli del WlanSsidT0_ssid/g' /root/generate_recovery.sh
     # KA Lite
     echo; printStatus "Stopping KA Lite."
 #    /var/ka-lite/bin/kalite stop
@@ -332,10 +332,12 @@ sanitize () {
 #    /var/ka-lite/bin/kalite manage runcode "from django.conf import settings; settings.DEBUG_ALLOW_DELETIONS = True; from securesync.models import Device; Device.objects.all().delete(); from fle_utils.config.models import Settings; Settings.objects.all().delete()"
     kalite manage runcode "from django.conf import settings; settings.DEBUG_ALLOW_DELETIONS = True; from securesync.models import Device; Device.objects.all().delete(); from fle_utils.config.models import Settings; Settings.objects.all().delete()"
     echo; printQuestion "Do you want to run the /root/generate_recovery.sh script?"
-    read -p "    Select 'n' to exit. (y/n) " -r
+    echo "NOTE:  You MUST be logged in via wifi or you will get disconnected and your script will fail during script execution."
+    echo "The script will save the *.tar.xz files to /media/RACHEL/recovery"
+    read -p "    Select 'n' to exit. (y/N) " -r
     if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
-        rm -rf $INSTALLTMPDIR $RACHELTMPDIR
-        /root/generate_recovery.sh
+        rm -rf $0 $INSTALLTMPDIR $RACHELTMPDIR
+        /root/generate_recovery.sh /media/RACHEL/recovery/
     fi
     echo; printGood "Done."
 }
@@ -1112,7 +1114,7 @@ ka-lite_setup () {
         echo; printError "KA Lite Version $KALITEVERSION is no longer supported and should be updated."
         KALITEVERSIONDATE=1
         printQuestion "Do you want to update to KA Lite Version $KALITECURRENTVERSION?"
-        read -p "Enter (y/N) " REPLY
+        read -p "    Enter (y/N) " REPLY
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             # Remove previous KA Lite
             ka-lite_remove
@@ -1163,8 +1165,8 @@ ka-lite_setup () {
 
     # Ask if there is local copy of the assessmentitems.json
     echo; printStatus "Downloading assessment items."
-    echo; printQuestion "Do you have a local copy of the file khan_assessment.zip?"
-    read -p "Enter (y/N) " REPLY
+    echo; printQuestion "Do you want to use a local copy of the file khan_assessment.zip?"
+    read -p "    nter (y/N) " REPLY
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo; printQuestion "What is the full path to the file location for assessment items ZIP file (i.e. /root/khan_assessment.zip)?"; read ASSESSMENTFILE || return
         while :; do
@@ -1184,7 +1186,7 @@ ka-lite_setup () {
     # If needed, download/install assessmentitems.json
     else
         echo; printQuestion "Do you want to attempt to download khan_assessment.zip from the RACHEL repository online (caution...the file is nearly 500MB)?"
-        read -p "Enter (y/N) " REPLY
+        read -p "    Enter (y/N) " REPLY
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             # Primary download server
             wget -c https://learningequality.org/downloads/ka-lite/0.15/content/khan_assessment.zip -O $INSTALLTMPDIR/khan_assessment.zip
@@ -1229,9 +1231,23 @@ ka-lite_setup () {
 
 download_ka_content () {
     # Setup KA Lite content
-    if [[ $INTERNET == 1 ]]; then
+    echo; printStatus "KA Lite Content Installer"
+    echo; printQuestion "Do you want to install KA Lite video content located on a local USB or folder?"
+    read -p "    Enter (y/N) " REPLY
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        while :; do
+            echo; printQuestion "What is the full path to the file location for KA Lite content (i.e. /path/to/your-usb-drive-or-folder)?"; read KACONTENTFOLDER || return
+            if [[ ! -d $KACONTENTFOLDER ]]; then
+                echo; printError "FOLDER NOT FOUND - You must provide a full path to a location accessible from the CAP."
+            else
+                break
+            fi
+        done
+        echo; printStatus "Copying KA Lite content files from $KACONTENTFOLDER to $KALITERCONTENTDIR"
+        rsync -avhP $KACONTENTFOLDER/ $KALITERCONTENTDIR/
+    elif [[ $INTERNET == 1 ]]; then
         echo; printQuestion "Do you want to download or check for updates to your KA Lite video content?"
-        read -p "Enter (y/N) " REPLY
+        read -p "    Enter (y/N) " REPLY
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             mkdir -p KALITERCONTENTDIR
             echo; printStatus "Downloading from primary repository."
@@ -1367,7 +1383,8 @@ logging_start
 # Display current script version
 echo; echo "RACHEL CAP Configuration Script - Version $VERSION"
 printGood "Started:  $(date)"
-printGood "Configuration and logging directory:  $RACHELLOGDIR"
+printGood "Log directory:  $RACHELLOGDIR"
+printGood "Temporary file directory:  $INSTALLTMPDIR"
 
 # Create temp directories
 mkdir -p $INSTALLTMPDIR $RACHELTMPDIR
