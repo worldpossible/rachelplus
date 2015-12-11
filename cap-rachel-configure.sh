@@ -1163,49 +1163,51 @@ ka-lite_setup () {
     sed -i "s/os.rename/shutil.move/g" /usr/lib/python2.7/dist-packages/kalite/contentload/management/commands/unpack_assessment_zip.py
     sed -i '6 a import shutil' /usr/lib/python2.7/dist-packages/kalite/contentload/management/commands/unpack_assessment_zip.py
 
-    # Ask if there is local copy of the assessmentitems.json
-    echo; printStatus "Downloading assessment items."
-    echo; printQuestion "Do you want to use a local copy of the file khan_assessment.zip?"
-    read -p "    nter (y/N) " REPLY
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        echo; printQuestion "What is the full path to the file location for assessment items ZIP file (i.e. /root/khan_assessment.zip)?"; read ASSESSMENTFILE || return
-        while :; do
-            if [[ ! -f $ASSESSMENTFILE ]]; then
-                echo; printError "FILE NOT FOUND - You must provide a file path of a location accessible from the CAP."
-                echo; printQuestion "What is the full path to the file location for assessment items ZIP file?"; read ASSESSMENTFILE
-            else
-                break
-            fi
-        done
-        # Checking user provided file MD5 against known good version
-        check_md5 $ASSESSMENTFILE
-        if [[ $MD5STATUS == 1 ]]; then
-            echo; printGood "Installing the assessment items."
-            kalite manage unpack_assessment_zip $ASSESSMENTFILE -f
-        fi
-    # If needed, download/install assessmentitems.json
-    else
-        echo; printQuestion "Do you want to attempt to download khan_assessment.zip from the RACHEL repository online (caution...the file is nearly 500MB)?"
-        read -p "    Enter (y/N) " REPLY
+    if [[ ! $(dpkg -s ka-lite-bundle) ]]; then
+        # Ask if there is local copy of the assessmentitems.json
+        echo; printStatus "Downloading assessment items."
+        echo; printQuestion "Do you want to use a local copy of the file khan_assessment.zip?"
+        read -p "    nter (y/N) " REPLY
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            # Primary download server
-            wget -c https://learningequality.org/downloads/ka-lite/0.15/content/khan_assessment.zip -O $INSTALLTMPDIR/khan_assessment.zip
-            command_status
-                if [[ $ERRORCODE == 1 ]]; then
-                # Secondary download server
-                rsync -avhP $CONTENTONLINE/khan_assessment.zip $INSTALLTMPDIR/khan_assessment.zip
-            fi
+            echo; printQuestion "What is the full path to the file location for assessment items ZIP file (i.e. /root/khan_assessment.zip)?"; read ASSESSMENTFILE || return
+            while :; do
+                if [[ ! -f $ASSESSMENTFILE ]]; then
+                    echo; printError "FILE NOT FOUND - You must provide a file path of a location accessible from the CAP."
+                    echo; printQuestion "What is the full path to the file location for assessment items ZIP file?"; read ASSESSMENTFILE
+                else
+                    break
+                fi
+            done
             # Checking user provided file MD5 against known good version
-            check_md5 $INSTALLTMPDIR/khan_assessment.zip
+            check_md5 $ASSESSMENTFILE
             if [[ $MD5STATUS == 1 ]]; then
                 echo; printGood "Installing the assessment items."
                 kalite manage unpack_assessment_zip $ASSESSMENTFILE -f
             fi
-            # Installing khan_assessment.zip
-            echo; printStatus "Installing khan_assessment.zip (the install may take a minute or two)."
-            kalite manage unpack_assessment_zip $INSTALLTMPDIR/khan_assessment.zip -f
+        # If needed, download/install assessmentitems.json
         else
-            echo; printStatus "Skipping assessment items download."
+            echo; printQuestion "Do you want to attempt to download khan_assessment.zip from the RACHEL repository online (caution...the file is nearly 500MB)?"
+            read -p "    Enter (y/N) " REPLY
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                # Primary download server
+                wget -c https://learningequality.org/downloads/ka-lite/0.15/content/khan_assessment.zip -O $INSTALLTMPDIR/khan_assessment.zip
+                command_status
+                    if [[ $ERRORCODE == 1 ]]; then
+                    # Secondary download server
+                    rsync -avhP $CONTENTONLINE/khan_assessment.zip $INSTALLTMPDIR/khan_assessment.zip
+                fi
+                # Checking user provided file MD5 against known good version
+                check_md5 $INSTALLTMPDIR/khan_assessment.zip
+                if [[ $MD5STATUS == 1 ]]; then
+                    echo; printGood "Installing the assessment items."
+                    kalite manage unpack_assessment_zip $ASSESSMENTFILE -f
+                fi
+                # Installing khan_assessment.zip
+                echo; printStatus "Installing khan_assessment.zip (the install may take a minute or two)."
+                kalite manage unpack_assessment_zip $INSTALLTMPDIR/khan_assessment.zip -f
+            else
+                echo; printStatus "Skipping assessment items download."
+            fi
         fi
     fi
 
