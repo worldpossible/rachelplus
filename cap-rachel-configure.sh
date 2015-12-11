@@ -7,7 +7,8 @@
 # COMMON VARIABLES - Change as needed
 DIRCONTENTOFFLINE="/media/nas/rachel-content" # Enter directory of downloaded RACHEL content for offline install (e.g. I mounted my external USB on my CAP but plugging the external USB into and running the command 'fdisk -l' to find the right drive, then 'mkdir /media/RACHEL-Content' to create a folder to mount to, then 'mount /dev/sdb1 /media/RACHEL-Content' to mount the USB drive.)
 RSYNCONLINE="rsync://dev.worldpossible.org" # The current RACHEL rsync repository
-CONTENTONLINE="rsync://rachel.golearn.us/content" # Another RACHEL rsync repository
+#CONTENTONLINE="rsync://rachel.golearn.us/content" # Another RACHEL rsync repository
+CONTENTONLINE="rsync://192.168.255.4/content" # Another RACHEL rsync repository
 WGETONLINE="http://rachelfriends.org" # RACHEL large file repo (ka-lite_content, etc)
 GITRACHELPLUS="https://raw.githubusercontent.com/rachelproject/rachelplus/master" # RACHELPlus Scripts GitHub Repo
 GITCONTENTSHELL="https://raw.githubusercontent.com/rachelproject/contentshell/master" # RACHELPlus ContentShell GitHub Repo
@@ -35,6 +36,20 @@ KALITESETTINGS="$KALITEDIR/settings.py"
 INSTALLTMPDIR="/root/cap-rachel-install.tmp"
 RACHELTMPDIR="/media/RACHEL/cap-rachel-install.tmp"
 ERRORCODE="0"
+
+# MD5 hash list
+build_hash_list () {
+    cat > $INSTALLTMPDIR/hashes.md5 << 'EOF'
+15b6aa51d8292b7b0cbfe36927b8e714 khan_assessment.zip
+65fe77df27169637f20198901591dff0 ka-lite_content.zip
+bd905efe7046423c1f736717a59ef82c ka-lite-bundle-0.15.0.deb
+18998e1253ca720adb2b54159119ce80 ka-lite-bundle-0.15.1.deb
+922b05e10e42bc3869e8b8f8bf625f07 kiwix-0.9+wikipedia_en_all_2015-05.zip
+31963611e46e717e00b30f6f6d8833ac kiwix-0.9+wikipedia_en_for-schools_2013-01.zip
+b61fdc3937aa226f34f685ba0bc29db1 kiwix-0.9-linux-i686.tar.bz2
+4150c320a03bdae01a805fc4c3f6eb9a sphider_plus.sql
+EOF
+}
 
 # Check root
 if [ "$(id -u)" != "0" ]; then
@@ -65,8 +80,13 @@ testing-script () {
     set -x
     trap ctrlC INT
 
-    KALITEVERSIONDATE=2
-    ka-lite_remove
+    ASSESSMENTFILE="/root/cap-rachel-install.tmp/khan_assessment.zip"
+
+    # Checking user provided file MD5 against known good version
+    check_md5 $ASSESSMENTFILE
+    if [[ $MD5STATUS == 1 ]]; then
+        echo; printGood "Yeah."
+    fi
 
     set +x
     exit 1
@@ -247,7 +267,22 @@ command_status () {
 check_sha1 () {
     CALCULATEDHASH=$(openssl sha1 $1)
     KNOWNHASH=$(cat $INSTALLTMPDIR/rachelplus/hashes.txt | grep $1 | cut -f1 -d" ")
-    if [ "SHA1(${1})= $2" = "${CALCULATEDHASH}" ]; then printGood "Good hash!" && export GOODHASH=1; else printError "Bad hash!"  && export GOODHASH=0; fi
+    if [[ "SHA1(${1})= $2" == "${CALCULATEDHASH}" ]]; then printGood "Good hash!" && export GOODHASH=1; else printError "Bad hash!"  && export GOODHASH=0; fi
+}
+
+check_md5 () {
+    echo; printStatus "Checking MD5 of: $MD5CHKFILE"
+    MD5_1=$(cat $INSTALLTMPDIR/hashes.md5 | grep $(basename $1) | awk '{print $1}')
+    if [[ -z $MD5_1 ]]; then printError "Sorry, we do not have a hash for that file in our database."; break; fi
+    printStatus "NOTE:  This process may take a minute on larger files...be patient."
+    MD5_2=$(md5sum $1 | awk '{print $1}')
+    if [[ $MD5_1 != $MD5_2 ]]; then
+      printError "MD5 check failed.  Please check your file and the RACHEL log ($RACHELLOG) for errors."
+      MD5STATUS=0
+    else
+      printGood "Yeah...MD5's match; your file is okay."
+      MD5STATUS=1
+    fi
 }
 
 reboot-CAP () {
@@ -1045,23 +1080,27 @@ ka-lite_install () {
     # Downloading KA Lite 0.15
     echo; printStatus "Downloading KA Lite Version $KALITECURRENTVERSION"
     $KALITEINSTALL
-    echo; printStatus "Installing KA Lite Version $KALITECURRENTVERSION"
-    echo; printError "CAUTION:  When prompted, enter 'yes' for start on boot and change the user to 'root'."
-    echo; mkdir -p /etc/ka-lite
-    echo "root" > /etc/ka-lite/username
-    # Turn off logging b/c KA Lite using a couple graphical screens; if on, causes issues
-    exec &>/dev/tty
-    dpkg -i $INSTALLTMPDIR/$KALITEINSTALLER
-    command_status
-    # Turn logging back on
-    exec &> >(tee -a "$RACHELLOG")
-    if [[ $ERRORCODE == 0 ]]; then
-        echo; printGood "KA Lite $KALITECURRENTVERSION installed."
-    else
-        echo; printError "Something went wrong, please check the log file ($RACHELLOG) and try again."
-        break
+    # Checking user provided file MD5 against known good version
+    check_md5 $INSTALLTMPDIR/$KALITEINSTALLER
+    if [[ $MD5STATUS == 1 ]]; then
+        echo; printStatus "Installing KA Lite Version $KALITECURRENTVERSION"
+        echo; printError "CAUTION:  When prompted, enter 'yes' for start on boot and change the user to 'root'."
+        echo; mkdir -p /etc/ka-lite
+        echo "root" > /etc/ka-lite/username
+        # Turn off logging b/c KA Lite using a couple graphical screens; if on, causes issues
+        exec &>/dev/tty
+        dpkg -i $INSTALLTMPDIR/$KALITEINSTALLER
+        command_status
+        # Turn logging back on
+        exec &> >(tee -a "$RACHELLOG")
+        if [[ $ERRORCODE == 0 ]]; then
+            echo; printGood "KA Lite $KALITECURRENTVERSION installed."
+        else
+            echo; printError "Something went wrong, please check the log file ($RACHELLOG) and try again."
+            break
+        fi
+        update-rc.d ka-lite disable
     fi
-    update-rc.d ka-lite disable
 }
 
 ka-lite_setup () {
@@ -1085,6 +1124,7 @@ ka-lite_setup () {
     elif [[ -f /etc/ka-lite/username ]]; then
         KALITEUSER=$(cat /etc/ka-lite/username)
         KALITEVERSION=$(kalite manage --version)
+        if [[ -z $KALITEVERSION ]]; then KALITEVERSION="UNKNOWN"; fi
         printGood "KA Lite installed under user:  $KALITEUSER"
         printGood "Current KA Lite Version Installed:  $KALITEVERSION"
         printGood "Lastest KA Lite Version Available:  $KALITECURRENTVERSION"
@@ -1092,8 +1132,6 @@ ka-lite_setup () {
         echo; printQuestion "Do you want to upgrade or re-install KA Lite?"
         read -p "Enter (y/N) " REPLY
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            echo; printStatus "Downloading KA Lite Version $KALITECURRENTVERSION"
-            $KALITEINSTALL
             # Install KA Lite
             ka-lite_install
         fi
@@ -1106,6 +1144,9 @@ ka-lite_setup () {
         # Install KA Lite
         ka-lite_install
     fi
+
+    # For debug purposes, print ka-lite user
+    echo; printStatus "KA Lite is installed as user:  $(cat /etc/ka-lite/username)"
 
     # Configure ka-lite
     echo; printStatus "Configuring KA Lite content settings file:  $KALITESETTINGS"
@@ -1125,28 +1166,42 @@ ka-lite_setup () {
     echo; printQuestion "Do you have a local copy of the file khan_assessment.zip?"
     read -p "Enter (y/N) " REPLY
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        echo; printQuestion "What is the full path to the file location for assessment items ZIP file (i.e. /root/khan_assessment.zip)?"; read JSONFILE || return
+        echo; printQuestion "What is the full path to the file location for assessment items ZIP file (i.e. /root/khan_assessment.zip)?"; read ASSESSMENTFILE || return
         while :; do
-            if [[ ! -f $JSONFILE ]]; then
+            if [[ ! -f $ASSESSMENTFILE ]]; then
                 echo; printError "FILE NOT FOUND - You must provide a file path of a location accessible from the CAP."
-                echo; printQuestion "What is the full path to the file location for assessment items ZIP file?"; read JSONFILE
+                echo; printQuestion "What is the full path to the file location for assessment items ZIP file?"; read ASSESSMENTFILE
             else
                 break
             fi
         done
-        echo; printGood "Installing the assessment items."
-        kalite manage unpack_assessment_zip $JSONFILE -f
+        # Checking user provided file MD5 against known good version
+        check_md5 $ASSESSMENTFILE
+        if [[ $MD5STATUS == 1 ]]; then
+            echo; printGood "Installing the assessment items."
+            kalite manage unpack_assessment_zip $ASSESSMENTFILE -f
+        fi
     # If needed, download/install assessmentitems.json
     else
         echo; printQuestion "Do you want to attempt to download khan_assessment.zip from the RACHEL repository online (caution...the file is nearly 500MB)?"
         read -p "Enter (y/N) " REPLY
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            rsync -avhP $CONTENTONLINE/khan_assessment.zip $INSTALLTMPDIR/khan_assessment.zip
+            # Primary download server
+            wget -c https://learningequality.org/downloads/ka-lite/0.15/content/khan_assessment.zip -O $INSTALLTMPDIR/khan_assessment.zip
+            command_status
+                if [[ $ERRORCODE == 1 ]]; then
+                # Secondary download server
+                rsync -avhP $CONTENTONLINE/khan_assessment.zip $INSTALLTMPDIR/khan_assessment.zip
+            fi
+            # Checking user provided file MD5 against known good version
+            check_md5 $INSTALLTMPDIR/khan_assessment.zip
+            if [[ $MD5STATUS == 1 ]]; then
+                echo; printGood "Installing the assessment items."
+                kalite manage unpack_assessment_zip $ASSESSMENTFILE -f
+            fi
+            # Installing khan_assessment.zip
             echo; printStatus "Installing khan_assessment.zip (the install may take a minute or two)."
             kalite manage unpack_assessment_zip $INSTALLTMPDIR/khan_assessment.zip -f
-            if [[ $ERRORCODE == 1 ]]; then
-                kalite manage unpack_assessment_zip https://learningequality.org/downloads/ka-lite/0.15/content/khan_assessment.zip -f
-            fi
         else
             echo; printStatus "Skipping assessment items download."
         fi
@@ -1187,6 +1242,14 @@ download_ka_content () {
                 echo; printError "Primary repository for KA Content is not responding; attempting to download from the backup repository."
                 echo "WEBSITE:  $WGETONLINE/z-holding/ka-lite_content.zip"
                 wget -c $WGETONLINE/z-holding/ka-lite_content.zip -O $RACHELTMPDIR/ka-lite_content.zip
+                # Checking user provided file MD5 against known good version
+                check_md5 $RACHELTMPDIR/ka-lite_content.zip
+                if [[ $MD5STATUS == 1 ]]; then
+                    echo; printGood "Installing the KA Lite Content."
+                fi
+                unzip -o $RACHELTMPDIR/ka-lite_content.zip "kacontent/*" -d "$KALITERCONTENTDIR/"
+                command_status
+                if [[ $ERRORCODE == 1 ]]; then printError "Something went wrong; check $RACHELLOG for errors."; fi
             fi
         else
             echo; printStatus "Skipping content download/check."
@@ -1218,6 +1281,9 @@ osCheck
 
 # Determine the operational mode - ONLINE or OFFLINE
 opmode
+
+# Build the hash list 
+build_hash_list
 
 # Change directory into $INSTALLTMPDIR
 cd $INSTALLTMPDIR
@@ -1271,6 +1337,7 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weav
 
         Utilities)
         echo; printQuestion "What utility would you like to use?"
+        echo "  - [Check-MD5] will check a file you provide against our hash database"
         echo "  - **BETA** [Download-Content] for OFFLINE RACHEL installs"
         echo "  - [Uninstall-Weaved-Service]"
         echo "  - [Sanitize] CAP for imaging"
@@ -1278,8 +1345,15 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weav
         echo "  - [Test] script"
         echo "  - Return to [Main Menu]"
         echo
-        select util in "Download-Content" "Uninstall-Weaved-Service" "Sanitize" "Symlink" "Test" "Main-Menu"; do
+        select util in "Check-MD5" "Download-Content" "Uninstall-Weaved-Service" "Sanitize" "Symlink" "Test" "Main-Menu"; do
             case $util in
+                Check-MD5)
+                echo; printStatus "This function will compare the MD5 of the file you provide against our list of known hashes."
+                printQuestion "What is the full path to the file you want to check?"; read MD5CHKFILE
+                check_md5 $MD5CHKFILE
+                break
+                ;;
+
                 Download-Content)
                 download_offline_content
                 break
