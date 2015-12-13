@@ -15,7 +15,7 @@ GITCONTENTSHELL="https://raw.githubusercontent.com/rachelproject/contentshell/ma
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 OS="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 OSVERSION=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-VERSION=1209152324 # To get current version - date +%m%d%y%H%M
+VERSION=1211151448 # To get current version - date +%m%d%y%H%M
 TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
 INTERNET="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 RACHELLOGDIR="/var/log/RACHEL"
@@ -35,6 +35,20 @@ KALITESETTINGS="$KALITEDIR/settings.py"
 INSTALLTMPDIR="/root/cap-rachel-install.tmp"
 RACHELTMPDIR="/media/RACHEL/cap-rachel-install.tmp"
 ERRORCODE="0"
+
+# MD5 hash list
+build_hash_list () {
+    cat > $INSTALLTMPDIR/hashes.md5 << 'EOF'
+15b6aa51d8292b7b0cbfe36927b8e714 khan_assessment.zip
+65fe77df27169637f20198901591dff0 ka-lite_content.zip
+bd905efe7046423c1f736717a59ef82c ka-lite-bundle-0.15.0.deb
+18998e1253ca720adb2b54159119ce80 ka-lite-bundle-0.15.1.deb
+922b05e10e42bc3869e8b8f8bf625f07 kiwix-0.9+wikipedia_en_all_2015-05.zip
+31963611e46e717e00b30f6f6d8833ac kiwix-0.9+wikipedia_en_for-schools_2013-01.zip
+b61fdc3937aa226f34f685ba0bc29db1 kiwix-0.9-linux-i686.tar.bz2
+4150c320a03bdae01a805fc4c3f6eb9a sphider_plus.sql
+EOF
+}
 
 # Check root
 if [ "$(id -u)" != "0" ]; then
@@ -64,9 +78,6 @@ ctrlC(){
 testing-script () {
     set -x
     trap ctrlC INT
-
-    KALITEVERSIONDATE=2
-    ka-lite_remove
 
     set +x
     exit 1
@@ -247,7 +258,22 @@ command_status () {
 check_sha1 () {
     CALCULATEDHASH=$(openssl sha1 $1)
     KNOWNHASH=$(cat $INSTALLTMPDIR/rachelplus/hashes.txt | grep $1 | cut -f1 -d" ")
-    if [ "SHA1(${1})= $2" = "${CALCULATEDHASH}" ]; then printGood "Good hash!" && export GOODHASH=1; else printError "Bad hash!"  && export GOODHASH=0; fi
+    if [[ "SHA1(${1})= $2" == "${CALCULATEDHASH}" ]]; then printGood "Good hash!" && export GOODHASH=1; else printError "Bad hash!"  && export GOODHASH=0; fi
+}
+
+check_md5 () {
+    echo; printStatus "Checking MD5 of: $MD5CHKFILE"
+    MD5_1=$(cat $INSTALLTMPDIR/hashes.md5 | grep $(basename $1) | awk '{print $1}')
+    if [[ -z $MD5_1 ]]; then printError "Sorry, we do not have a hash for that file in our database."; break; fi
+    printStatus "NOTE:  This process may take a minute on larger files...be patient."
+    MD5_2=$(md5sum $1 | awk '{print $1}')
+    if [[ $MD5_1 != $MD5_2 ]]; then
+      printError "MD5 check failed.  Please check your file and the RACHEL log ($RACHELLOG) for errors."
+      MD5STATUS=0
+    else
+      printGood "Yeah...MD5's match; your file is okay."
+      MD5STATUS=1
+    fi
 }
 
 reboot-CAP () {
@@ -275,7 +301,7 @@ cleanup () {
     fi
     # Deleting the install script commands
     echo; printStatus "Cleaning up install scripts."
-    rm -rf $INSTALLTMPDIR $RACHELTMPDIR /root/$0&
+    rm -rf $0 $INSTALLTMPDIR $RACHELTMPDIR&
     printGood "Done."
 }
 
@@ -285,10 +311,10 @@ sanitize () {
     rm -rf /var/log/rachel-install* /var/log/RACHEL/*
     rm -f /root/.ssh/known_hosts
     rm -f /media/RACHEL/ka-lite_content.zip
-    rm -rf /recovery/2015*
+    rm -rf /recovery/201*
     echo "" > /root/.bash_history
     # Stop script from defaulting the SSID
-    sed -i 's/redis-cli del WlanSsidT0_ssid/#redis-cli del WlanSsidT0_ssid/g' /root/generate_recovery.sh
+    sed -i 's/^redis-cli del WlanSsidT0_ssid/#redis-cli del WlanSsidT0_ssid/g' /root/generate_recovery.sh
     # KA Lite
     echo; printStatus "Stopping KA Lite."
 #    /var/ka-lite/bin/kalite stop
@@ -298,10 +324,12 @@ sanitize () {
 #    /var/ka-lite/bin/kalite manage runcode "from django.conf import settings; settings.DEBUG_ALLOW_DELETIONS = True; from securesync.models import Device; Device.objects.all().delete(); from fle_utils.config.models import Settings; Settings.objects.all().delete()"
     kalite manage runcode "from django.conf import settings; settings.DEBUG_ALLOW_DELETIONS = True; from securesync.models import Device; Device.objects.all().delete(); from fle_utils.config.models import Settings; Settings.objects.all().delete()"
     echo; printQuestion "Do you want to run the /root/generate_recovery.sh script?"
-    read -p "    Select 'n' to exit. (y/n) " -r
+    echo "NOTE:  You MUST be logged in via wifi or you will get disconnected and your script will fail during script execution."
+    echo "The script will save the *.tar.xz files to /media/RACHEL/recovery"
+    read -p "    Select 'n' to exit. (y/N) " -r
     if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
-        rm -rf $INSTALLTMPDIR $RACHELTMPDIR
-        /root/generate_recovery.sh
+        rm -rf $0 $INSTALLTMPDIR $RACHELTMPDIR
+        /root/generate_recovery.sh /media/RACHEL/recovery/
     fi
     echo; printGood "Done."
 }
@@ -482,6 +510,7 @@ uninstall_weaved_service () {
         # Run uninstaller
         if [[ -f /root/weaved_software/uninstaller.sh ]]; then 
             weaved_uninstaller
+            rm -rf /root/Weaved* /root/weaved_software*
         else
             printError "The Weaved uninstaller does not exist. Attempting to download..."
             if [[ $INTERNET == "1" ]]; then
@@ -791,7 +820,44 @@ new_install () {
     fi
 }
 
-content_install () {
+content_module_install () {
+    if [[ -f /tmp/module.lst ]]; then
+        echo; printStatus "Your selected module list:"
+        # Sort/unique the module list
+        cat /tmp/module.lst
+        echo; printQuestion "Do you want to use this module list?"
+        read -p "    Enter (Y/n) " REPLY
+        if [[ $REPLY =~ ^[Nn]$ ]]; then rm -f /tmp/module.lst; fi
+    fi
+    SELECTMODULE=1
+    MODULELIST=$(rsync --list-only rsync://dev.worldpossible.org/rachelmods | egrep '^d' | awk '{print $5}' | tail -n +2)
+    while [[ $SELECTMODULE == 1 ]]; do
+        echo; printStatus "What RACHEL module would you like to select for download or update?"
+        select module in $MODULELIST; do 
+            echo "$module" >> /tmp/module.lst
+            echo; printStatus "Added module $module to the install/update cue."
+            break
+        done
+        echo; printStatus "Your selected module list:"
+        sort -u /tmp/module.lst > /tmp/module.tmp; mv /tmp/module.tmp /tmp/module.lst
+        cat /tmp/module.lst
+        echo; printQuestion "Do you want to select another module?"
+        read -p "    Enter (y/N) " REPLY
+        if [[ $REPLY =~ ^[Yy]$ ]]; then SELECTMODULE=1; else SELECTMODULE=0; fi
+    done
+    echo; printQuestion "Are you ready to install your selected modules?"
+    read -p "    Enter (y/N) " REPLY
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        while read m; do
+            echo; printStatus "Downloading $m"
+            rsync -avz $RSYNCDIR/rachelmods/$m $RACHELWWW/modules/
+            command_status
+            printGood "Done."
+        done < /tmp/module.lst
+    fi
+}
+
+content_list_install () {
     trap ctrlC INT
     print_header
     ERRORCODE="0"
@@ -1045,23 +1111,27 @@ ka-lite_install () {
     # Downloading KA Lite 0.15
     echo; printStatus "Downloading KA Lite Version $KALITECURRENTVERSION"
     $KALITEINSTALL
-    echo; printStatus "Installing KA Lite Version $KALITECURRENTVERSION"
-    echo; printError "CAUTION:  When prompted, enter 'yes' for start on boot and change the user to 'root'."
-    echo; mkdir -p /etc/ka-lite
-    echo "root" > /etc/ka-lite/username
-    # Turn off logging b/c KA Lite using a couple graphical screens; if on, causes issues
-    exec &>/dev/tty
-    dpkg -i $INSTALLTMPDIR/$KALITEINSTALLER
-    command_status
-    # Turn logging back on
-    exec &> >(tee -a "$RACHELLOG")
-    if [[ $ERRORCODE == 0 ]]; then
-        echo; printGood "KA Lite $KALITECURRENTVERSION installed."
-    else
-        echo; printError "Something went wrong, please check the log file ($RACHELLOG) and try again."
-        break
+    # Checking user provided file MD5 against known good version
+    check_md5 $INSTALLTMPDIR/$KALITEINSTALLER
+    if [[ $MD5STATUS == 1 ]]; then
+        echo; printStatus "Installing KA Lite Version $KALITECURRENTVERSION"
+        echo; printError "CAUTION:  When prompted, enter 'yes' for start on boot and change the user to 'root'."
+        echo; mkdir -p /etc/ka-lite
+        echo "root" > /etc/ka-lite/username
+        # Turn off logging b/c KA Lite using a couple graphical screens; if on, causes issues
+        exec &>/dev/tty
+        dpkg -i $INSTALLTMPDIR/$KALITEINSTALLER
+        command_status
+        # Turn logging back on
+        exec &> >(tee -a "$RACHELLOG")
+        if [[ $ERRORCODE == 0 ]]; then
+            echo; printGood "KA Lite $KALITECURRENTVERSION installed."
+        else
+            echo; printError "Something went wrong, please check the log file ($RACHELLOG) and try again."
+            break
+        fi
+        update-rc.d ka-lite disable
     fi
-    update-rc.d ka-lite disable
 }
 
 ka-lite_setup () {
@@ -1073,7 +1143,7 @@ ka-lite_setup () {
         echo; printError "KA Lite Version $KALITEVERSION is no longer supported and should be updated."
         KALITEVERSIONDATE=1
         printQuestion "Do you want to update to KA Lite Version $KALITECURRENTVERSION?"
-        read -p "Enter (y/N) " REPLY
+        read -p "    Enter (y/N) " REPLY
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             # Remove previous KA Lite
             ka-lite_remove
@@ -1085,6 +1155,7 @@ ka-lite_setup () {
     elif [[ -f /etc/ka-lite/username ]]; then
         KALITEUSER=$(cat /etc/ka-lite/username)
         KALITEVERSION=$(kalite manage --version)
+        if [[ -z $KALITEVERSION ]]; then KALITEVERSION="UNKNOWN"; fi
         printGood "KA Lite installed under user:  $KALITEUSER"
         printGood "Current KA Lite Version Installed:  $KALITEVERSION"
         printGood "Lastest KA Lite Version Available:  $KALITECURRENTVERSION"
@@ -1092,8 +1163,6 @@ ka-lite_setup () {
         echo; printQuestion "Do you want to upgrade or re-install KA Lite?"
         read -p "Enter (y/N) " REPLY
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            echo; printStatus "Downloading KA Lite Version $KALITECURRENTVERSION"
-            $KALITEINSTALL
             # Install KA Lite
             ka-lite_install
         fi
@@ -1106,6 +1175,9 @@ ka-lite_setup () {
         # Install KA Lite
         ka-lite_install
     fi
+
+    # For debug purposes, print ka-lite user
+    echo; printStatus "KA Lite is installed as user:  $(cat /etc/ka-lite/username)"
 
     # Configure ka-lite
     echo; printStatus "Configuring KA Lite content settings file:  $KALITESETTINGS"
@@ -1120,35 +1192,51 @@ ka-lite_setup () {
     sed -i "s/os.rename/shutil.move/g" /usr/lib/python2.7/dist-packages/kalite/contentload/management/commands/unpack_assessment_zip.py
     sed -i '6 a import shutil' /usr/lib/python2.7/dist-packages/kalite/contentload/management/commands/unpack_assessment_zip.py
 
-    # Ask if there is local copy of the assessmentitems.json
-    echo; printStatus "Downloading assessment items."
-    echo; printQuestion "Do you have a local copy of the file khan_assessment.zip?"
-    read -p "Enter (y/N) " REPLY
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        echo; printQuestion "What is the full path to the file location for assessment items ZIP file (i.e. /root/khan_assessment.zip)?"; read JSONFILE || return
-        while :; do
-            if [[ ! -f $JSONFILE ]]; then
-                echo; printError "FILE NOT FOUND - You must provide a file path of a location accessible from the CAP."
-                echo; printQuestion "What is the full path to the file location for assessment items ZIP file?"; read JSONFILE
-            else
-                break
-            fi
-        done
-        echo; printGood "Installing the assessment items."
-        kalite manage unpack_assessment_zip $JSONFILE -f
-    # If needed, download/install assessmentitems.json
-    else
-        echo; printQuestion "Do you want to attempt to download khan_assessment.zip from the RACHEL repository online (caution...the file is nearly 500MB)?"
-        read -p "Enter (y/N) " REPLY
+    if [[ ! $(dpkg -s ka-lite-bundle) ]]; then
+        # Ask if there is local copy of the assessmentitems.json
+        echo; printStatus "Downloading assessment items."
+        echo; printQuestion "Do you want to use a local copy of the file khan_assessment.zip?"
+        read -p "    nter (y/N) " REPLY
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            rsync -avhP $CONTENTONLINE/khan_assessment.zip $INSTALLTMPDIR/khan_assessment.zip
-            echo; printStatus "Installing khan_assessment.zip (the install may take a minute or two)."
-            kalite manage unpack_assessment_zip $INSTALLTMPDIR/khan_assessment.zip -f
-            if [[ $ERRORCODE == 1 ]]; then
-                kalite manage unpack_assessment_zip https://learningequality.org/downloads/ka-lite/0.15/content/khan_assessment.zip -f
+            echo; printQuestion "What is the full path to the file location for assessment items ZIP file (i.e. /root/khan_assessment.zip)?"; read ASSESSMENTFILE || return
+            while :; do
+                if [[ ! -f $ASSESSMENTFILE ]]; then
+                    echo; printError "FILE NOT FOUND - You must provide a file path of a location accessible from the CAP."
+                    echo; printQuestion "What is the full path to the file location for assessment items ZIP file?"; read ASSESSMENTFILE
+                else
+                    break
+                fi
+            done
+            # Checking user provided file MD5 against known good version
+            check_md5 $ASSESSMENTFILE
+            if [[ $MD5STATUS == 1 ]]; then
+                echo; printGood "Installing the assessment items."
+                kalite manage unpack_assessment_zip $ASSESSMENTFILE -f
             fi
+        # If needed, download/install assessmentitems.json
         else
-            echo; printStatus "Skipping assessment items download."
+            echo; printQuestion "Do you want to attempt to download khan_assessment.zip from the RACHEL repository online (caution...the file is nearly 500MB)?"
+            read -p "    Enter (y/N) " REPLY
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                # Primary download server
+                wget -c https://learningequality.org/downloads/ka-lite/0.15/content/khan_assessment.zip -O $INSTALLTMPDIR/khan_assessment.zip
+                command_status
+                    if [[ $ERRORCODE == 1 ]]; then
+                    # Secondary download server
+                    rsync -avhP $CONTENTONLINE/khan_assessment.zip $INSTALLTMPDIR/khan_assessment.zip
+                fi
+                # Checking user provided file MD5 against known good version
+                check_md5 $INSTALLTMPDIR/khan_assessment.zip
+                if [[ $MD5STATUS == 1 ]]; then
+                    echo; printGood "Installing the assessment items."
+                    kalite manage unpack_assessment_zip $ASSESSMENTFILE -f
+                fi
+                # Installing khan_assessment.zip
+                echo; printStatus "Installing khan_assessment.zip (the install may take a minute or two)."
+                kalite manage unpack_assessment_zip $INSTALLTMPDIR/khan_assessment.zip -f
+            else
+                echo; printStatus "Skipping assessment items download."
+            fi
         fi
     fi
 
@@ -1174,9 +1262,23 @@ ka-lite_setup () {
 
 download_ka_content () {
     # Setup KA Lite content
-    if [[ $INTERNET == 1 ]]; then
+    echo; printStatus "KA Lite Content Installer"
+    echo; printQuestion "Do you want to install KA Lite video content located on a local USB or folder?"
+    read -p "    Enter (y/N) " REPLY
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        while :; do
+            echo; printQuestion "What is the full path to the file location for KA Lite content (i.e. /path/to/your-usb-drive-or-folder)?"; read KACONTENTFOLDER || return
+            if [[ ! -d $KACONTENTFOLDER ]]; then
+                echo; printError "FOLDER NOT FOUND - You must provide a full path to a location accessible from the CAP."
+            else
+                break
+            fi
+        done
+        echo; printStatus "Copying KA Lite content files from $KACONTENTFOLDER to $KALITERCONTENTDIR"
+        rsync -avhP $KACONTENTFOLDER/ $KALITERCONTENTDIR/
+    elif [[ $INTERNET == 1 ]]; then
         echo; printQuestion "Do you want to download or check for updates to your KA Lite video content?"
-        read -p "Enter (y/N) " REPLY
+        read -p "    Enter (y/N) " REPLY
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             mkdir -p KALITERCONTENTDIR
             echo; printStatus "Downloading from primary repository."
@@ -1187,6 +1289,14 @@ download_ka_content () {
                 echo; printError "Primary repository for KA Content is not responding; attempting to download from the backup repository."
                 echo "WEBSITE:  $WGETONLINE/z-holding/ka-lite_content.zip"
                 wget -c $WGETONLINE/z-holding/ka-lite_content.zip -O $RACHELTMPDIR/ka-lite_content.zip
+                # Checking user provided file MD5 against known good version
+                check_md5 $RACHELTMPDIR/ka-lite_content.zip
+                if [[ $MD5STATUS == 1 ]]; then
+                    echo; printGood "Installing the KA Lite Content."
+                fi
+                unzip -o $RACHELTMPDIR/ka-lite_content.zip "kacontent/*" -d "$KALITERCONTENTDIR/"
+                command_status
+                if [[ $ERRORCODE == 1 ]]; then printError "Something went wrong; check $RACHELLOG for errors."; fi
             fi
         else
             echo; printStatus "Skipping content download/check."
@@ -1194,10 +1304,106 @@ download_ka_content () {
     fi
 }
 
+function repair () {
+    print_header
+    echo; printStatus "Repairing your CAP after a firmware upgrade."
+    cd $INSTALLTMPDIR
+
+    # Download/update to latest RACHEL lighttpd.conf
+    echo; printStatus "Downloading latest lighttpd.conf"
+    ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies and ensuring the file downloads correctly)
+    $LIGHTTPDFILE
+    command_status
+    if [[ $ERRORCODE == 1 ]]; then
+        print_error "The lighttpd.conf file did not download correctly; check log file (/var/log/RACHEL/rachel-install.tmp) and try again."
+        echo; break
+    else
+        mv $INSTALLTMPDIR/lighttpd.conf /usr/local/etc/lighttpd.conf
+    fi
+    printGood "Done."
+
+    # Reapply /etc/fstab entry for /media/RACHEL
+    echo; printStatus "Adding /dev/sda3 into /etc/fstab"
+    sed -i '/\/dev\/sda3/d' /etc/fstab
+    echo -e "/dev/sda3\t/media/RACHEL\t\text4\tauto,nobootwait 0\t0" >> /etc/fstab
+    printGood "Done."
+
+    # Fixing /root/rachel-scripts.sh
+    echo; printStatus "Fixing $RACHELSCRIPTSFILE"
+
+    # Add rachel-scripts.sh script
+    sed "s,%RACHELSCRIPTSLOG%,$RACHELSCRIPTSLOG,g" > $RACHELSCRIPTSFILE << 'EOF'
+#!/bin/bash
+# Send output to log file
+rm -f %RACHELSCRIPTSLOG%
+exec 1>> %RACHELSCRIPTSLOG% 2>&1
+# Add the RACHEL iptables rule to redirect 10.10.10.10 to CAP default of 192.168.88.1
+# Added sleep to wait for CAP rcConf and rcConfd to finish initializing
+#
+sleep 60
+iptables -t nat -I PREROUTING -d 10.10.10.10 -j DNAT --to-destination 192.168.88.1
+exit 0
+EOF
+
+    # Add rachel-scripts.sh startup in /etc/rc.local
+    sed -i '/scripts/d' /etc/rc.local
+    sudo sed -i '$e echo "# Add RACHEL startup scripts"' /etc/rc.local
+    sudo sed -i '$e echo "bash /root/rachel-scripts.sh&"' /etc/rc.local
+
+    # Check/re-add Kiwix
+    if [[ -d /var/kiwix ]]; then
+        echo; printStatus "Setting up Kiwix to start at boot..."
+        # Remove old kiwix boot lines from /etc/rc.local
+        sed -i '/kiwix/d' /etc/rc.local
+        # Clean up current rachel-scripts.sh file
+        sed -i '/kiwix/d' $RACHELSCRIPTSFILE
+        # Add lines to /etc/rc.local that will start kiwix on boot
+        sed -i '$e echo "\# Start kiwix on boot"' $RACHELSCRIPTSFILE
+        sed -i '$e echo "\/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' $RACHELSCRIPTSFILE
+        printGood "Done."
+    fi
+
+    if [[ -d $KALITEDIR ]]; then
+        echo; printStatus "Setting up KA Lite to start at boot..."
+        # Delete previous setup commands from /etc/rc.local (not used anymore)
+        sudo sed -i '/ka-lite/d' /etc/rc.local
+        sudo sed -i '/sleep 20/d' /etc/rc.local
+        # Delete previous setup commands from the $RACHELSCRIPTSFILE
+        sudo sed -i '/ka-lite/d' $RACHELSCRIPTSFILE
+        sudo sed -i '/kalite/d' $RACHELSCRIPTSFILE
+        sudo sed -i '/sleep 20/d' $RACHELSCRIPTSFILE
+        # Start KA Lite at boot time
+        sudo sed -i '$e echo "# Start kalite at boot time"' $RACHELSCRIPTSFILE
+        sudo sed -i '$e echo "sudo /usr/bin/kalite start"' $RACHELSCRIPTSFILE
+        printGood "Done."
+    fi
+
+    # Clean up outdated stuff
+    # Remove outdated startup script
+    rm -f /root/iptables-rachel.sh
+
+    # Delete previous setwanip commands from /etc/rc.local - not used anymore
+    echo; printStatus "Deleting previous setwanip.sh script from /etc/rc.local"
+    sed -i '/setwanip/d' /etc/rc.local
+    rm -f /root/setwanip.sh
+    printGood "Done."
+
+    # Delete previous iptables commands from /etc/rc.local
+    echo; printStatus "Deleting previous iptables script from /etc/rc.local"
+    sed -i '/iptables/d' /etc/rc.local
+    printGood "Done."
+
+    echo; printGood "RACHEL CAP Repair Complete."
+    sudo mv $RACHELLOG $RACHELLOGDIR/rachel-repair-$TIMESTAMP.log
+    echo; printGood "Log file saved to: $RACHELLOGDIR/rachel-repair-$TIMESTAMP.log"
+    cleanup
+    reboot-CAP
+}
+
 # Loop to redisplay main menu
 whattodo () {
     echo; printQuestion "What would you like to do next?"
-    echo "1)Initial Install  2)Install KA Lite  3)Install Kiwix  4)Install Weaved Service  5)Install/Update Content  6)Utilities  7)Exit"
+    echo "1)Initial Install  2)Install KA Lite  3)Install Kiwix  4)Install Weaved Service  5)Add/Update Module  6)Add/Update Module List  7)Utilities  8)Exit"
 }
 
 #### MAIN MENU ####
@@ -1208,7 +1414,8 @@ logging_start
 # Display current script version
 echo; echo "RACHEL CAP Configuration Script - Version $VERSION"
 printGood "Started:  $(date)"
-printGood "Configuration and logging directory:  $RACHELLOGDIR"
+printGood "Log directory:  $RACHELLOGDIR"
+printGood "Temporary file directory:  $INSTALLTMPDIR"
 
 # Create temp directories
 mkdir -p $INSTALLTMPDIR $RACHELTMPDIR
@@ -1219,6 +1426,9 @@ osCheck
 # Determine the operational mode - ONLINE or OFFLINE
 opmode
 
+# Build the hash list 
+build_hash_list
+
 # Change directory into $INSTALLTMPDIR
 cd $INSTALLTMPDIR
 
@@ -1227,14 +1437,19 @@ echo "  - [Initial-Install] of RACHEL on a CAP"
 echo "  - [Install-KA-Lite]"
 echo "  - [Install-Kiwix]"
 echo "  - [Install-Weaved-Service]"
-echo "  - [Install-Update-Content] for RACHEL"
+echo "  - [Add-Update-Module] lists current available modules; installs one at a time"
+echo "  - [Add-Update-Module-List] installs modules from a pre-configured list of modules"
 echo "  - Other [Utilities]"
+echo "    - Check your local file's MD5 against our database"
+echo "    - Download RACHEL content to stage for OFFLINE installs"
+echo "    - Uninstall a Weaved service"
+echo "    - Repair an install of a CAP after a firmware upgrade"
 echo "    - Sanitize CAP for imaging"
 echo "    - Symlink all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent"
 echo "    - Test script"
 echo "  - [Exit] the installation script"
 echo
-select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weaved-Service" "Install-Update-Content" "Utilities" "Exit"; do
+select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weaved-Service" "Add-Update-Module" "Add-Update-Module-List" "Utilities" "Exit"; do
         case $menu in
         Initial-Install)
         new_install
@@ -1264,13 +1479,19 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weav
         whattodo
         ;;
 
-        Install-Update-Content)
-        content_install
+        Add-Update-Module)
+        content_module_install
+        whattodo
+        ;;
+
+        Add-Update-Module-List)
+        content_list_install
         whattodo
         ;;
 
         Utilities)
         echo; printQuestion "What utility would you like to use?"
+        echo "  - [Check-MD5] will check a file you provide against our hash database"
         echo "  - **BETA** [Download-Content] for OFFLINE RACHEL installs"
         echo "  - [Uninstall-Weaved-Service]"
         echo "  - [Repair] an install of a CAP after a firmware upgrade"
@@ -1279,8 +1500,15 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weav
         echo "  - [Test] script"
         echo "  - Return to [Main Menu]"
         echo
-        select util in "Download-Content" "Uninstall-Weaved-Service" "Repair" "Sanitize" "Symlink" "Test" "Main-Menu"; do
+        select util in "Check-MD5" "Download-Content" "Uninstall-Weaved-Service" "Repair" "Sanitize" "Symlink" "Test" "Main-Menu"; do
             case $util in
+                Check-MD5)
+                echo; printStatus "This function will compare the MD5 of the file you provide against our list of known hashes."
+                printQuestion "What is the full path to the file you want to check?"; read MD5CHKFILE
+                check_md5 $MD5CHKFILE
+                break
+                ;;
+
                 Download-Content)
                 download_offline_content
                 break
@@ -1288,6 +1516,11 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weav
 
                 Uninstall-Weaved-Service)
                 uninstall_weaved_service
+                break
+                ;;
+
+                Repair)
+                repair
                 break
                 ;;
 
