@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # FILE: cap-rachel-configure.sh
 # ONELINER Download/Install: sudo wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/cap-rachel-configure.sh -O /root/cap-rachel-configure.sh; bash cap-rachel-configure.sh
 
@@ -34,6 +34,7 @@ KALITEINSTALLER="ka-lite-bundle-$KALITECURRENTVERSION.deb"
 KALITESETTINGS="$KALITEDIR/settings.py"
 INSTALLTMPDIR="/root/cap-rachel-install.tmp"
 RACHELTMPDIR="/media/RACHEL/cap-rachel-install.tmp"
+RACHELRECOVERYDIR="/media/RACHEL/recovery"
 ERRORCODE="0"
 
 # MD5 hash list
@@ -50,9 +51,25 @@ b61fdc3937aa226f34f685ba0bc29db1 kiwix-0.9-linux-i686.tar.bz2
 EOF
 }
 
+printGood () {
+    echo -e "\x1B[01;32m[+]\x1B[0m $1"
+}
+
+printError () {
+    echo -e "\x1B[01;31m[-]\x1B[0m $1"
+}
+
+printStatus () {
+    echo -e "\x1B[01;35m[*]\x1B[0m $1"
+}
+
+printQuestion () {
+    echo -e "\x1B[01;33m[?]\x1B[0m $1"
+}
+
 # Check root
 if [ "$(id -u)" != "0" ]; then
-    printError "This step must be run as root; sudo password is 123lkj"
+    echo "[!] This script must be run as root; sudo password is 123lkj"
     exit 1
 fi
 
@@ -81,22 +98,6 @@ testing-script () {
 
     set +x
     exit 1
-}
-
-printGood () {
-    echo -e "\x1B[01;32m[+]\x1B[0m $1"
-}
-
-printError () {
-    echo -e "\x1B[01;31m[-]\x1B[0m $1"
-}
-
-printStatus () {
-    echo -e "\x1B[01;35m[*]\x1B[0m $1"
-}
-
-printQuestion () {
-    echo -e "\x1B[01;33m[?]\x1B[0m $1"
 }
 
 opmode () {
@@ -528,6 +529,23 @@ uninstall_weaved_service () {
             fi
         fi
     fi
+}
+
+backup_weaved_service () {
+    echo; printStatus "Backing up configuration files to $RACHELRECOVERYDIR/weaved"
+    # Clear current configs
+    rm -rf $RACHELRECOVERYDIR/Weaved
+    mkdir -p $RACHELRECOVERYDIR/Weaved
+    # Backup Weaved configs
+    cp -f /etc/weaved/services/Weaved*.conf /usr/bin/Weaved*.sh /usr/bin/notify_Weaved*.sh $RACHELRECOVERYDIR/Weaved/
+    echo; printGood "Your current configuration is backed up and will be restored if you have to run the USB Recovery."
+    # Write restore commands to rachel-scripts.sh
+    sudo sed -i '$e echo "# Restore Weaved configs, if needed"' $RACHELSCRIPTSFILE
+    sudo sed -i '$e echo "if [[ -d '$RACHELRECOVERYDIR'/Weaved ]]; then"' $RACHELSCRIPTSFILE
+    sudo sed -i '$e echo "    mkdir -p /etc/weaved/services #Weaved"' $RACHELSCRIPTSFILE
+    sudo sed -i '$e echo "    cp '$RACHELRECOVERYDIR'/Weaved/Weaved*.conf /etc/weaved/services/"' $RACHELSCRIPTSFILE
+    sudo sed -i '$e echo "    cp '$RACHELRECOVERYDIR'/Weaved/*.sh /usr/bin/"' $RACHELSCRIPTSFILE
+    sudo sed -i '$e echo "fi #Weaved"' $RACHELSCRIPTSFILE
 }
 
 download_offline_content () {
@@ -1304,7 +1322,7 @@ download_ka_content () {
     fi
 }
 
-function repair () {
+repair () {
     print_header
     echo; printStatus "Repairing your CAP after a firmware upgrade."
     cd $INSTALLTMPDIR
@@ -1418,7 +1436,7 @@ printGood "Log directory:  $RACHELLOGDIR"
 printGood "Temporary file directory:  $INSTALLTMPDIR"
 
 # Create temp directories
-mkdir -p $INSTALLTMPDIR $RACHELTMPDIR
+mkdir -p $INSTALLTMPDIR $RACHELTMPDIR $RACHELRECOVERYDIR
 
 # Check OS version
 osCheck
@@ -1476,6 +1494,7 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weav
 
         Install-Weaved-Service)
         install_weaved_service
+        backup_weaved_service
         whattodo
         ;;
 
@@ -1492,7 +1511,7 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weav
         Utilities)
         echo; printQuestion "What utility would you like to use?"
         echo "  - [Check-MD5] will check a file you provide against our hash database"
-        echo "  - **BETA** [Download-Content] for OFFLINE RACHEL installs"
+        echo "  - **BETA** [Download-Installs-Content] for OFFLINE RACHEL installs"
         echo "  - [Uninstall-Weaved-Service]"
         echo "  - [Repair] an install of a CAP after a firmware upgrade"
         echo "  - [Sanitize] CAP for imaging"
@@ -1500,7 +1519,7 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weav
         echo "  - [Test] script"
         echo "  - Return to [Main Menu]"
         echo
-        select util in "Check-MD5" "Download-Content" "Uninstall-Weaved-Service" "Repair" "Sanitize" "Symlink" "Test" "Main-Menu"; do
+        select util in "Check-MD5" "Download-Installs-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Repair" "Sanitize" "Symlink" "Test" "Main-Menu"; do
             case $util in
                 Check-MD5)
                 echo; printStatus "This function will compare the MD5 of the file you provide against our list of known hashes."
@@ -1509,13 +1528,19 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weav
                 break
                 ;;
 
-                Download-Content)
+                Download-Installs-Content)
                 download_offline_content
+                break
+                ;;
+
+                Backup-Weaved-Services)
+                backup_weaved_service
                 break
                 ;;
 
                 Uninstall-Weaved-Service)
                 uninstall_weaved_service
+                backup_weaved_service
                 break
                 ;;
 
