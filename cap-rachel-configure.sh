@@ -67,6 +67,15 @@ printQuestion () {
     echo -e "\x1B[01;33m[?]\x1B[0m $1"
 }
 
+if [ -z $BASH_VERSION ]; then
+    clear
+    echo "[!] You didn't execute this script with bash!"
+    echo "Unfortunately, not all shells are the same. \n"
+    echo "Please execute \"bash "$0"\" \n"
+    echo "Thank you! \n"
+    exit 1
+fi
+
 # Check root
 if [ "$(id -u)" != "0" ]; then
     echo "[!] This script must be run as root; sudo password is 123lkj"
@@ -309,11 +318,18 @@ cleanup () {
 sanitize () {
     # Remove history, clean logs
     echo; printStatus "Sanitizing log files."
+    # Clean log files
     rm -rf /var/log/rachel-install* /var/log/RACHEL/*
+    # Clean previous cached logins from ssh
     rm -f /root/.ssh/known_hosts
+    # Clean off ka-lite_content.zip (if exists)
     rm -f /media/RACHEL/ka-lite_content.zip
+    # Clean previous files from running the generate_recovery.sh script 
     rm -rf /recovery/201*
+    # Clean bash history
     echo "" > /root/.bash_history
+    # Clean Weaved services
+    rm -rf /usr/bin/notify_Weaved*.sh /usr/bin/Weaved*.sh /etc/weaved/services/Weaved*.conf /root/Weaved*.log
     # Stop script from defaulting the SSID
     sed -i 's/^redis-cli del WlanSsidT0_ssid/#redis-cli del WlanSsidT0_ssid/g' /root/generate_recovery.sh
     # KA Lite
@@ -325,8 +341,10 @@ sanitize () {
 #    /var/ka-lite/bin/kalite manage runcode "from django.conf import settings; settings.DEBUG_ALLOW_DELETIONS = True; from securesync.models import Device; Device.objects.all().delete(); from fle_utils.config.models import Settings; Settings.objects.all().delete()"
     kalite manage runcode "from django.conf import settings; settings.DEBUG_ALLOW_DELETIONS = True; from securesync.models import Device; Device.objects.all().delete(); from fle_utils.config.models import Settings; Settings.objects.all().delete()"
     echo; printQuestion "Do you want to run the /root/generate_recovery.sh script?"
-    echo "NOTE:  You MUST be logged in via wifi or you will get disconnected and your script will fail during script execution."
-    echo "The script will save the *.tar.xz files to /media/RACHEL/recovery"
+    echo "    The script will save the *.tar.xz files to /media/RACHEL/recovery"
+    echo
+    echo "    **WARNING** You MUST be logged in via wifi or you will get disconnected and your script will fail during script execution."
+    echo
     read -p "    Select 'n' to exit. (y/N) " -r
     if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
         rm -rf $0 $INSTALLTMPDIR $RACHELTMPDIR
@@ -502,8 +520,7 @@ uninstall_weaved_service () {
         echo; printError "The CAP must be online to install/remove Weaved services."
     else
         weaved_uninstaller () {
-            cd /root/weaved_software
-            bash uninstaller.sh
+            bash /root/weaved_software/uninstaller.sh
             echo; printGood "Weaved service uninstall complete."
         }
         echo; printStatus "Uninstalling Weaved service."
@@ -511,7 +528,6 @@ uninstall_weaved_service () {
         # Run uninstaller
         if [[ -f /root/weaved_software/uninstaller.sh ]]; then 
             weaved_uninstaller
-            rm -rf /root/Weaved* /root/weaved_software*
         else
             printError "The Weaved uninstaller does not exist. Attempting to download..."
             if [[ $INTERNET == "1" ]]; then
@@ -532,20 +548,30 @@ uninstall_weaved_service () {
 }
 
 backup_weaved_service () {
-    echo; printStatus "Backing up configuration files to $RACHELRECOVERYDIR/weaved"
     # Clear current configs
-    rm -rf $RACHELRECOVERYDIR/Weaved
-    mkdir -p $RACHELRECOVERYDIR/Weaved
-    # Backup Weaved configs
-    cp -f /etc/weaved/services/Weaved*.conf /usr/bin/Weaved*.sh /usr/bin/notify_Weaved*.sh $RACHELRECOVERYDIR/Weaved/
-    echo; printGood "Your current configuration is backed up and will be restored if you have to run the USB Recovery."
+    if [[ `find /etc/weaved/services/ -name Weaved*.conf 2>/dev/null | wc -l` -ge 1 ]]; then
+        echo; printStatus "Backing up configuration files to $RACHELRECOVERYDIR/weaved"
+        rm -rf $RACHELRECOVERYDIR/Weaved
+        mkdir -p $RACHELRECOVERYDIR/Weaved
+        # Backup Weaved configs
+        cp -f /etc/weaved/services/Weaved*.conf /usr/bin/Weaved*.sh /usr/bin/notify_Weaved*.sh $RACHELRECOVERYDIR/Weaved/
+        printGood "Your current configuration is backed up and will be restored if you have to run the USB Recovery."
+    elif [[ ! -d /etc/weaved ]]; then
+        # Weaved is no longer installed, remove all backups
+        rm -rf $RACHELRECOVERYDIR/Weaved
+    else
+        echo; printError "You do not have any Weaved configuration files to backup."
+    fi
+    # Clean rachel-scripts.sh
+    sed -i '/Weaved/d' $RACHELSCRIPTSFILE
     # Write restore commands to rachel-scripts.sh
-    sudo sed -i '$e echo "# Restore Weaved configs, if needed"' $RACHELSCRIPTSFILE
-    sudo sed -i '$e echo "if [[ -d '$RACHELRECOVERYDIR'/Weaved ]]; then"' $RACHELSCRIPTSFILE
-    sudo sed -i '$e echo "    mkdir -p /etc/weaved/services #Weaved"' $RACHELSCRIPTSFILE
-    sudo sed -i '$e echo "    cp '$RACHELRECOVERYDIR'/Weaved/Weaved*.conf /etc/weaved/services/"' $RACHELSCRIPTSFILE
-    sudo sed -i '$e echo "    cp '$RACHELRECOVERYDIR'/Weaved/*.sh /usr/bin/"' $RACHELSCRIPTSFILE
-    sudo sed -i '$e echo "fi #Weaved"' $RACHELSCRIPTSFILE
+    sudo sed -i '4 a # Restore Weaved configs, if needed' $RACHELSCRIPTSFILE
+    sudo sed -i '5 a if [[ -d '$RACHELRECOVERYDIR'/Weaved ]] && [[ `ls /usr/bin/Weaved*.sh 2>/dev/null | wc -l` == 0 ]]; then' $RACHELSCRIPTSFILE
+    sudo sed -i '6 a mkdir -p /etc/weaved/services #Weaved' $RACHELSCRIPTSFILE
+    sudo sed -i '7 a cp '$RACHELRECOVERYDIR'/Weaved/Weaved*.conf /etc/weaved/services/' $RACHELSCRIPTSFILE
+    sudo sed -i '8 a cp '$RACHELRECOVERYDIR'/Weaved/*.sh /usr/bin/' $RACHELSCRIPTSFILE
+    sudo sed -i '9 a reboot #Weaved' $RACHELSCRIPTSFILE
+    sudo sed -i '10 a fi #Weaved' $RACHELSCRIPTSFILE
 }
 
 download_offline_content () {
@@ -1395,6 +1421,18 @@ EOF
         sudo sed -i '$e echo "sudo /usr/bin/kalite start"' $RACHELSCRIPTSFILE
         printGood "Done."
     fi
+
+    # Add Weaved restore back into rachel-scripts.sh
+    # Clean rachel-scripts.sh
+    sed -i '/Weaved/d' $RACHELSCRIPTSFILE
+    # Write restore commands to rachel-scripts.sh
+    sudo sed -i '4 a # Restore Weaved configs, if needed' $RACHELSCRIPTSFILE
+    sudo sed -i '5 a if [[ -d '$RACHELRECOVERYDIR'/Weaved ]] && [[ `ls /usr/bin/Weaved*.sh 2>/dev/null | wc -l` == 0 ]]; then' $RACHELSCRIPTSFILE
+    sudo sed -i '6 a mkdir -p /etc/weaved/services #Weaved' $RACHELSCRIPTSFILE
+    sudo sed -i '7 a cp '$RACHELRECOVERYDIR'/Weaved/Weaved*.conf /etc/weaved/services/' $RACHELSCRIPTSFILE
+    sudo sed -i '8 a cp '$RACHELRECOVERYDIR'/Weaved/*.sh /usr/bin/' $RACHELSCRIPTSFILE
+    sudo sed -i '9 a reboot #Weaved' $RACHELSCRIPTSFILE
+    sudo sed -i '10 a fi #Weaved' $RACHELSCRIPTSFILE
 
     # Clean up outdated stuff
     # Remove outdated startup script
