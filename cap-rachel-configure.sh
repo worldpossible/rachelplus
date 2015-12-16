@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # FILE: cap-rachel-configure.sh
 # ONELINER Download/Install: sudo wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/cap-rachel-configure.sh -O /root/cap-rachel-configure.sh; bash cap-rachel-configure.sh
 
@@ -15,7 +15,7 @@ GITCONTENTSHELL="https://raw.githubusercontent.com/rachelproject/contentshell/ma
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 OS="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 OSVERSION=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-VERSION=1211151448 # To get current version - date +%m%d%y%H%M
+VERSION=1216150852 # To get current version - date +%m%d%y%H%M
 TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
 INTERNET="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 RACHELLOGDIR="/var/log/RACHEL"
@@ -34,6 +34,7 @@ KALITEINSTALLER="ka-lite-bundle-$KALITECURRENTVERSION.deb"
 KALITESETTINGS="$KALITEDIR/settings.py"
 INSTALLTMPDIR="/root/cap-rachel-install.tmp"
 RACHELTMPDIR="/media/RACHEL/cap-rachel-install.tmp"
+RACHELRECOVERYDIR="/media/RACHEL/recovery"
 ERRORCODE="0"
 
 # MD5 hash list
@@ -50,9 +51,34 @@ b61fdc3937aa226f34f685ba0bc29db1 kiwix-0.9-linux-i686.tar.bz2
 EOF
 }
 
+printGood () {
+    echo -e "\x1B[01;32m[+]\x1B[0m $1"
+}
+
+printError () {
+    echo -e "\x1B[01;31m[-]\x1B[0m $1"
+}
+
+printStatus () {
+    echo -e "\x1B[01;35m[*]\x1B[0m $1"
+}
+
+printQuestion () {
+    echo -e "\x1B[01;33m[?]\x1B[0m $1"
+}
+
+if [ -z $BASH_VERSION ]; then
+    clear
+    echo "[!] You didn't execute this script with bash!"
+    echo "Unfortunately, not all shells are the same. \n"
+    echo "Please execute \"bash "$0"\" \n"
+    echo "Thank you! \n"
+    exit 1
+fi
+
 # Check root
 if [ "$(id -u)" != "0" ]; then
-    printError "This step must be run as root; sudo password is 123lkj"
+    echo "[!] This script must be run as root; sudo password is 123lkj"
     exit 1
 fi
 
@@ -79,32 +105,8 @@ testing-script () {
     set -x
     trap ctrlC INT
 
-    ASSESSMENTFILE="/root/cap-rachel-install.tmp/khan_assessment.zip"
-
-    # Checking user provided file MD5 against known good version
-    check_md5 $ASSESSMENTFILE
-    if [[ $MD5STATUS == 1 ]]; then
-        echo; printGood "Yeah."
-    fi
-
     set +x
     exit 1
-}
-
-printGood () {
-    echo -e "\x1B[01;32m[+]\x1B[0m $1"
-}
-
-printError () {
-    echo -e "\x1B[01;31m[-]\x1B[0m $1"
-}
-
-printStatus () {
-    echo -e "\x1B[01;35m[*]\x1B[0m $1"
-}
-
-printQuestion () {
-    echo -e "\x1B[01;33m[?]\x1B[0m $1"
 }
 
 opmode () {
@@ -316,11 +318,18 @@ cleanup () {
 sanitize () {
     # Remove history, clean logs
     echo; printStatus "Sanitizing log files."
+    # Clean log files
     rm -rf /var/log/rachel-install* /var/log/RACHEL/*
+    # Clean previous cached logins from ssh
     rm -f /root/.ssh/known_hosts
+    # Clean off ka-lite_content.zip (if exists)
     rm -f /media/RACHEL/ka-lite_content.zip
-    rm -rf /recovery/201*
+    # Clean previous files from running the generate_recovery.sh script 
+    rm -rf /recovery/201* $RACHELRECOVERYDIR/201*
+    # Clean bash history
     echo "" > /root/.bash_history
+    # Clean Weaved services
+    rm -rf /usr/bin/notify_Weaved*.sh /usr/bin/Weaved*.sh /etc/weaved/services/Weaved*.conf /root/Weaved*.log
     # Stop script from defaulting the SSID
     sed -i 's/^redis-cli del WlanSsidT0_ssid/#redis-cli del WlanSsidT0_ssid/g' /root/generate_recovery.sh
     # KA Lite
@@ -332,8 +341,10 @@ sanitize () {
 #    /var/ka-lite/bin/kalite manage runcode "from django.conf import settings; settings.DEBUG_ALLOW_DELETIONS = True; from securesync.models import Device; Device.objects.all().delete(); from fle_utils.config.models import Settings; Settings.objects.all().delete()"
     kalite manage runcode "from django.conf import settings; settings.DEBUG_ALLOW_DELETIONS = True; from securesync.models import Device; Device.objects.all().delete(); from fle_utils.config.models import Settings; Settings.objects.all().delete()"
     echo; printQuestion "Do you want to run the /root/generate_recovery.sh script?"
-    echo "NOTE:  You MUST be logged in via wifi or you will get disconnected and your script will fail during script execution."
-    echo "The script will save the *.tar.xz files to /media/RACHEL/recovery"
+    echo "    The script will save the *.tar.xz files to /media/RACHEL/recovery"
+    echo
+    echo "    **WARNING** You MUST be logged in via wifi or you will get disconnected and your script will fail during script execution."
+    echo
     read -p "    Select 'n' to exit. (y/N) " -r
     if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
         rm -rf $0 $INSTALLTMPDIR $RACHELTMPDIR
@@ -509,8 +520,7 @@ uninstall_weaved_service () {
         echo; printError "The CAP must be online to install/remove Weaved services."
     else
         weaved_uninstaller () {
-            cd /root/weaved_software
-            bash uninstaller.sh
+            bash /root/weaved_software/uninstaller.sh
             echo; printGood "Weaved service uninstall complete."
         }
         echo; printStatus "Uninstalling Weaved service."
@@ -518,7 +528,6 @@ uninstall_weaved_service () {
         # Run uninstaller
         if [[ -f /root/weaved_software/uninstaller.sh ]]; then 
             weaved_uninstaller
-            rm -rf /root/Weaved* /root/weaved_software*
         else
             printError "The Weaved uninstaller does not exist. Attempting to download..."
             if [[ $INTERNET == "1" ]]; then
@@ -536,6 +545,33 @@ uninstall_weaved_service () {
             fi
         fi
     fi
+}
+
+backup_weaved_service () {
+    # Clear current configs
+    if [[ `find /etc/weaved/services/ -name Weaved*.conf 2>/dev/null | wc -l` -ge 1 ]]; then
+        echo; printStatus "Backing up configuration files to $RACHELRECOVERYDIR/weaved"
+        rm -rf $RACHELRECOVERYDIR/Weaved
+        mkdir -p $RACHELRECOVERYDIR/Weaved
+        # Backup Weaved configs
+        cp -f /etc/weaved/services/Weaved*.conf /usr/bin/Weaved*.sh /usr/bin/notify_Weaved*.sh $RACHELRECOVERYDIR/Weaved/
+        printGood "Your current configuration is backed up and will be restored if you have to run the USB Recovery."
+    elif [[ ! -d /etc/weaved ]]; then
+        # Weaved is no longer installed, remove all backups
+        rm -rf $RACHELRECOVERYDIR/Weaved
+    else
+        echo; printError "You do not have any Weaved configuration files to backup."
+    fi
+    # Clean rachel-scripts.sh
+    sed -i '/Weaved/d' $RACHELSCRIPTSFILE
+    # Write restore commands to rachel-scripts.sh
+    sudo sed -i '4 a # Restore Weaved configs, if needed' $RACHELSCRIPTSFILE
+    sudo sed -i '5 a if [[ -d '$RACHELRECOVERYDIR'/Weaved ]] && [[ `ls /usr/bin/Weaved*.sh 2>/dev/null | wc -l` == 0 ]]; then' $RACHELSCRIPTSFILE
+    sudo sed -i '6 a mkdir -p /etc/weaved/services #Weaved' $RACHELSCRIPTSFILE
+    sudo sed -i '7 a cp '$RACHELRECOVERYDIR'/Weaved/Weaved*.conf /etc/weaved/services/' $RACHELSCRIPTSFILE
+    sudo sed -i '8 a cp '$RACHELRECOVERYDIR'/Weaved/*.sh /usr/bin/' $RACHELSCRIPTSFILE
+    sudo sed -i '9 a reboot #Weaved' $RACHELSCRIPTSFILE
+    sudo sed -i '10 a fi #Weaved' $RACHELSCRIPTSFILE
 }
 
 download_offline_content () {
@@ -828,7 +864,44 @@ new_install () {
     fi
 }
 
-content_install () {
+content_module_install () {
+    if [[ -f /tmp/module.lst ]]; then
+        echo; printStatus "Your selected module list:"
+        # Sort/unique the module list
+        cat /tmp/module.lst
+        echo; printQuestion "Do you want to use this module list?"
+        read -p "    Enter (Y/n) " REPLY
+        if [[ $REPLY =~ ^[Nn]$ ]]; then rm -f /tmp/module.lst; fi
+    fi
+    SELECTMODULE=1
+    MODULELIST=$(rsync --list-only rsync://dev.worldpossible.org/rachelmods | egrep '^d' | awk '{print $5}' | tail -n +2)
+    while [[ $SELECTMODULE == 1 ]]; do
+        echo; printStatus "What RACHEL module would you like to select for download or update?"
+        select module in $MODULELIST; do 
+            echo "$module" >> /tmp/module.lst
+            echo; printStatus "Added module $module to the install/update cue."
+            break
+        done
+        echo; printStatus "Your selected module list:"
+        sort -u /tmp/module.lst > /tmp/module.tmp; mv /tmp/module.tmp /tmp/module.lst
+        cat /tmp/module.lst
+        echo; printQuestion "Do you want to select another module?"
+        read -p "    Enter (y/N) " REPLY
+        if [[ $REPLY =~ ^[Yy]$ ]]; then SELECTMODULE=1; else SELECTMODULE=0; fi
+    done
+    echo; printQuestion "Are you ready to install your selected modules?"
+    read -p "    Enter (y/N) " REPLY
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        while read m; do
+            echo; printStatus "Downloading $m"
+            rsync -avz $RSYNCDIR/rachelmods/$m $RACHELWWW/modules/
+            command_status
+            printGood "Done."
+        done < /tmp/module.lst
+    fi
+}
+
+content_list_install () {
     trap ctrlC INT
     print_header
     ERRORCODE="0"
@@ -1275,7 +1348,7 @@ download_ka_content () {
     fi
 }
 
-function repair () {
+repair () {
     print_header
     echo; printStatus "Repairing your CAP after a firmware upgrade."
     cd $INSTALLTMPDIR
@@ -1349,6 +1422,18 @@ EOF
         printGood "Done."
     fi
 
+    # Add Weaved restore back into rachel-scripts.sh
+    # Clean rachel-scripts.sh
+    sed -i '/Weaved/d' $RACHELSCRIPTSFILE
+    # Write restore commands to rachel-scripts.sh
+    sudo sed -i '4 a # Restore Weaved configs, if needed' $RACHELSCRIPTSFILE
+    sudo sed -i '5 a if [[ -d '$RACHELRECOVERYDIR'/Weaved ]] && [[ `ls /usr/bin/Weaved*.sh 2>/dev/null | wc -l` == 0 ]]; then' $RACHELSCRIPTSFILE
+    sudo sed -i '6 a mkdir -p /etc/weaved/services #Weaved' $RACHELSCRIPTSFILE
+    sudo sed -i '7 a cp '$RACHELRECOVERYDIR'/Weaved/Weaved*.conf /etc/weaved/services/' $RACHELSCRIPTSFILE
+    sudo sed -i '8 a cp '$RACHELRECOVERYDIR'/Weaved/*.sh /usr/bin/' $RACHELSCRIPTSFILE
+    sudo sed -i '9 a reboot #Weaved' $RACHELSCRIPTSFILE
+    sudo sed -i '10 a fi #Weaved' $RACHELSCRIPTSFILE
+
     # Clean up outdated stuff
     # Remove outdated startup script
     rm -f /root/iptables-rachel.sh
@@ -1374,7 +1459,7 @@ EOF
 # Loop to redisplay main menu
 whattodo () {
     echo; printQuestion "What would you like to do next?"
-    echo "1)Initial Install  2)Install KA Lite  3)Install Kiwix  4)Install Weaved Service  5)Install/Update Content  6)Utilities  7)Exit"
+    echo "1)Initial Install  2)Install KA Lite  3)Install Kiwix  4)Install Weaved Service  5)Add/Update Module  6)Add/Update Module List  7)Utilities  8)Exit"
 }
 
 #### MAIN MENU ####
@@ -1389,7 +1474,7 @@ printGood "Log directory:  $RACHELLOGDIR"
 printGood "Temporary file directory:  $INSTALLTMPDIR"
 
 # Create temp directories
-mkdir -p $INSTALLTMPDIR $RACHELTMPDIR
+mkdir -p $INSTALLTMPDIR $RACHELTMPDIR $RACHELRECOVERYDIR
 
 # Check OS version
 osCheck
@@ -1408,18 +1493,19 @@ echo "  - [Initial-Install] of RACHEL on a CAP"
 echo "  - [Install-KA-Lite]"
 echo "  - [Install-Kiwix]"
 echo "  - [Install-Weaved-Service]"
-echo "  - [Install-Update-Content] for RACHEL"
+echo "  - [Add-Update-Module] lists current available modules; installs one at a time"
+echo "  - [Add-Update-Module-List] installs modules from a pre-configured list of modules"
 echo "  - Other [Utilities]"
 echo "    - Check your local file's MD5 against our database"
 echo "    - Download RACHEL content to stage for OFFLINE installs"
 echo "    - Uninstall a Weaved service"
 echo "    - Repair an install of a CAP after a firmware upgrade"
-echo "    - Sanitize CAP for imaging"
+echo "    - Sanitize CAP (used for creating the RACHEL USB Multitool)"
 echo "    - Symlink all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent"
-echo "    - Test script"
+echo "    - Testing script"
 echo "  - [Exit] the installation script"
 echo
-select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weaved-Service" "Install-Update-Content" "Utilities" "Exit"; do
+select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weaved-Service" "Add-Update-Module" "Add-Update-Module-List" "Utilities" "Exit"; do
         case $menu in
         Initial-Install)
         new_install
@@ -1446,26 +1532,32 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weav
 
         Install-Weaved-Service)
         install_weaved_service
+        backup_weaved_service
         whattodo
         ;;
 
-        Install-Update-Content)
-        content_install
+        Add-Update-Module)
+        content_module_install
+        whattodo
+        ;;
+
+        Add-Update-Module-List)
+        content_list_install
         whattodo
         ;;
 
         Utilities)
         echo; printQuestion "What utility would you like to use?"
         echo "  - [Check-MD5] will check a file you provide against our hash database"
-        echo "  - **BETA** [Download-Content] for OFFLINE RACHEL installs"
+        echo "  - **BETA** [Download-Installs-Content] to stage for OFFLINE (i.e. local) RACHEL installs"
         echo "  - [Uninstall-Weaved-Service]"
         echo "  - [Repair] an install of a CAP after a firmware upgrade"
-        echo "  - [Sanitize] CAP for imaging"
+        echo "  - [Sanitize] CAP (used for creating the RACHEL USB Multitool)"
         echo "  - [Symlink] all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent"
-        echo "  - [Test] script"
+        echo "  - [Testing] script"
         echo "  - Return to [Main Menu]"
         echo
-        select util in "Check-MD5" "Download-Content" "Uninstall-Weaved-Service" "Repair" "Sanitize" "Symlink" "Test" "Main-Menu"; do
+        select util in "Check-MD5" "Download-Installs-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Repair" "Sanitize" "Symlink" "Test" "Main-Menu"; do
             case $util in
                 Check-MD5)
                 echo; printStatus "This function will compare the MD5 of the file you provide against our list of known hashes."
@@ -1474,13 +1566,19 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weav
                 break
                 ;;
 
-                Download-Content)
+                Download-Installs-Content)
                 download_offline_content
+                break
+                ;;
+
+                Backup-Weaved-Services)
+                backup_weaved_service
                 break
                 ;;
 
                 Uninstall-Weaved-Service)
                 uninstall_weaved_service
+                backup_weaved_service
                 break
                 ;;
 
