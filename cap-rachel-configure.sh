@@ -325,7 +325,7 @@ sanitize () {
     # Clean off ka-lite_content.zip (if exists)
     rm -f /media/RACHEL/ka-lite_content.zip
     # Clean previous files from running the generate_recovery.sh script 
-    rm -rf /recovery/201*
+    rm -rf /recovery/201* $RACHELRECOVERYDIR/201*
     # Clean bash history
     echo "" > /root/.bash_history
     # Clean Weaved services
