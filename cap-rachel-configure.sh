@@ -1500,9 +1500,9 @@ echo "    - Check your local file's MD5 against our database"
 echo "    - Download RACHEL content to stage for OFFLINE installs"
 echo "    - Uninstall a Weaved service"
 echo "    - Repair an install of a CAP after a firmware upgrade"
-echo "    - Sanitize CAP for imaging"
+echo "    - Sanitize CAP (used for creating the RACHEL USB Multitool)"
 echo "    - Symlink all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent"
-echo "    - Test script"
+echo "    - Testing script"
 echo "  - [Exit] the installation script"
 echo
 select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weaved-Service" "Add-Update-Module" "Add-Update-Module-List" "Utilities" "Exit"; do
@@ -1549,12 +1549,12 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weav
         Utilities)
         echo; printQuestion "What utility would you like to use?"
         echo "  - [Check-MD5] will check a file you provide against our hash database"
-        echo "  - **BETA** [Download-Installs-Content] for OFFLINE RACHEL installs"
+        echo "  - **BETA** [Download-Installs-Content] to stage for OFFLINE (i.e. local) RACHEL installs"
         echo "  - [Uninstall-Weaved-Service]"
         echo "  - [Repair] an install of a CAP after a firmware upgrade"
-        echo "  - [Sanitize] CAP for imaging"
+        echo "  - [Sanitize] CAP (used for creating the RACHEL USB Multitool)"
         echo "  - [Symlink] all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent"
-        echo "  - [Test] script"
+        echo "  - [Testing] script"
         echo "  - Return to [Main Menu]"
         echo
         select util in "Check-MD5" "Download-Installs-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Repair" "Sanitize" "Symlink" "Test" "Main-Menu"; do
