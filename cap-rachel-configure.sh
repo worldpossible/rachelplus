@@ -105,6 +105,9 @@ testing-script () {
     set -x
     trap ctrlC INT
 
+    install_default_weaved_services
+    backup_weaved_service
+
     set +x
     exit 1
 }
@@ -180,7 +183,9 @@ online_variables () {
     KALITECONTENTINSTALL="rsync -avhz --progress $CONTENTONLINE/kacontent/ /media/RACHEL/kacontent/"
     KIWIXINSTALL="wget -c $WGETONLINE/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $RACHELTMPDIR/kiwix-0.9-linux-i686.tar.bz2"
     KIWIXSAMPLEDATA="wget -c $WGETONLINE/z-holding/Ray_Charles.tar.bz -O $RACHELTMPDIR/Ray_Charles.tar.bz"
-    WEAVEDZIP="wget -r http://rachelfriends.org/z-holding/weaved_software.zip -O /root/weaved_software.zip"
+    WEAVEDINSTALL="wget -c https://github.com/weaved/installer/raw/master/Intel_CAP/weaved_IntelCAP.tar -O /root/weaved_IntelCAP.tar"
+    WEAVEDSINGLEINSTALL="wget -c https://github.com/weaved/installer/raw/master/weaved_software/installer.sh -O /root/weaved_software/installer.sh"
+    WEAVEDUNINSTALLER="wget -c https://github.com/weaved/installer/raw/master/weaved_software/uninstaller.sh -O /root/weaved_software/uninstaller.sh"
     SPHIDERPLUSSQLINSTALL="wget -c $WGETONLINE/z-SQLdatabase/sphider_plus.sql -O $RACHELTMPDIR/sphider_plus.sql"
     DOWNLOADCONTENTSCRIPT="wget -c $GITRACHELPLUS/scripts"
     CONTENTWIKI="wget -c http://download.kiwix.org/portable/wikipedia/$FILENAME -O $RACHELTMPDIR/$FILENAME"
@@ -207,7 +212,9 @@ offline_variables () {
     KALITECONTENTINSTALL="rsync -avhz --progress $DIRCONTENTOFFLINE/kacontent/ /media/RACHEL/kacontent/"
     KIWIXINSTALL=""
     KIWIXSAMPLEDATA=""
-    WEAVEDZIP=""
+    WEAVEDINSTALL=""
+    WEAVEDSINGLEINSTALL=""
+    WEAVEDUNINSTALLER=""
     SPHIDERPLUSSQLINSTALL=""
     DOWNLOADCONTENTSCRIPT="rsync -avhz --progress $DIRCONTENTOFFLINE/rachelplus/scripts"
     CONTENTWIKIALL=""
@@ -487,24 +494,65 @@ else
 fi
 }
 
+install_default_weaved_services () {
+    echo; printStatus "Installing Weaved service."
+    cd /root
+    # Download weaved files
+    echo; printStatus "Downloading required files."
+    $WEAVEDINSTALL
+    command_status
+
+    tar xvf weaved_IntelCAP.tar
+    command_status
+    if [[ $ERRORCODE == 0 ]] && [[ -d /root/weaved_software ]]; then
+        rm -f /root/weaved_IntelCAP.tar
+        echo; printGood "Done."
+        # Run installer
+        cd /root/weaved_software
+        bash install.sh
+        echo; printGood "Weaved service install complete."
+        printGood "NOTE: An Weaved service uninstaller is available from the Utilities menu of this script."
+    else
+        echo; printError "One or more files did not download correctly; check log file ($RACHELLOG) and try again."
+        cleanup
+        echo; exit 1
+    fi
+}
+
 install_weaved_service () {
     if [[ $INTERNET == "0" ]]; then
         echo; printError "The CAP must be online to install/remove Weaved services."
     else
         echo; printStatus "Installing Weaved service."
         cd /root
+
         # Download weaved files
         echo; printStatus "Downloading required files."
-        $WEAVEDZIP
+        $WEAVEDSINGLEINSTALL
         command_status
-        unzip -u weaved_software.zip
-        command_status
-        if [[ $ERRORCODE == 0 ]] && [[ -d weaved_software ]]; then
-            rm -f /root/weaved_software.zip
+
+        if [[ $ERRORCODE == 0 ]] && [[ -f /root/weaved_software/installer.sh ]]; then
+            # Fix OS Arch check in installer.sh
+            sed -i 's/\[ "$machineType" = "x86_64" \] && \[ "$osName" = "Linux" \]/\[ "$osName" = "Linux" \]/g' /root/weaved_software/installer.sh
+            sed -i 's/\.\/bin/\./g' /root/weaved_software/installer.sh
+            # Download required files
+            mkdir -p /root/weaved_software/enablements
+            wget -c https://github.com/weaved/installer/raw/master/weaved_software/enablements/ssh.linux -O /root/weaved_software/enablements/ssh.linux
+            wget -c https://github.com/weaved/installer/raw/master/weaved_software/enablements/tcp.linux -O /root/weaved_software/enablements/tcp.linux
+            wget -c https://github.com/weaved/installer/raw/master/weaved_software/enablements/vnc.linux -O /root/weaved_software/enablements/vnc.linux
+            wget -c https://github.com/weaved/installer/raw/master/weaved_software/enablements/web.linux -O /root/weaved_software/enablements/web.linux
+            wget -c https://github.com/weaved/installer/raw/master/weaved_software/enablements/webssh.linux -O /root/weaved_software/enablements/webssh.linux
+            wget -c https://github.com/weaved/installer/raw/master/weaved_software/enablements/webport.pi -O /root/weaved_software/enablements/webport.pi
+            wget -c https://github.com/weaved/installer/raw/master/weaved_software/enablements/webiopi.pi -O /root/weaved_software/enablements/webiopi.pi
+            wget -c https://github.com/weaved/installer/raw/master/weaved_software/Yo -O /root/weaved_software/Yo
+            wget -c https://github.com/weaved/installer/raw/master/weaved_software/scripts/notify.sh -O /root/weaved_software/notify.sh
+            wget -c https://github.com/weaved/installer/raw/master/weaved_software/scripts/send_notification.sh -O /root/weaved_software/send_notification.sh
+            sed -i 's|/scripts||g' /root/weaved_software/installer.sh
             echo; printGood "Done."
             # Run installer
             cd /root/weaved_software
             bash installer.sh
+
             echo; printGood "Weaved service install complete."
             printGood "NOTE: An Weaved service uninstaller is available from the Utilities menu of this script."
         else
@@ -515,46 +563,69 @@ install_weaved_service () {
     fi
 }
 
+uninstall_ALL_weaved_services () {
+    echo; printStatus "Uninstalling Weaved service."
+
+    TMP_DIR=/tmp
+    # Stop all Weaved services
+    for i in `ls /usr/bin/Weaved*.sh`; do
+        $i stop
+    done
+
+    # Remove Weaved files
+    rm /usr/bin/weaved*
+    rm /usr/bin/Weaved*
+    rm -rf /etc/weaved
+
+    # Remove Weaved from crontab
+    crontab -l | grep -v weaved | cat > $TMP_DIR/.crontmp
+    crontab $TMP_DIR/.crontmp
+
+    # Ensure user knows to remove from online service list
+    echo; printStatus "If you uninstalled Weaved connectd without deleting Services first,"
+    echo "there may be orphaned Services in your Services List.  Use the "
+    echo "'Settings' link in the web portal Services List to delete these."
+
+    echo; printGood "Weaved service uninstall complete."
+}
+
+
 uninstall_weaved_service () {
-    if [[ $INTERNET == "0" ]]; then
-        echo; printError "The CAP must be online to install/remove Weaved services."
+    weaved_uninstaller () {
+        bash /root/weaved_software/uninstaller.sh
+        echo; printGood "Weaved service uninstall complete."
+    }
+    echo; printStatus "Uninstalling Weaved service."
+    cd /root
+    # Run uninstaller
+    if [[ -f /root/weaved_software/uninstaller.sh ]]; then 
+        weaved_uninstaller
     else
-        weaved_uninstaller () {
-            bash /root/weaved_software/uninstaller.sh
-            echo; printGood "Weaved service uninstall complete."
-        }
-        echo; printStatus "Uninstalling Weaved service."
-        cd /root
-        # Run uninstaller
-        if [[ -f /root/weaved_software/uninstaller.sh ]]; then 
-            weaved_uninstaller
-        else
-            printError "The Weaved uninstaller does not exist. Attempting to download..."
-            if [[ $INTERNET == "1" ]]; then
-                $WEAVEDZIP
-                command_status
-                unzip -u weaved_software.zip
-                if [[ $ERRORCODE == 0 ]] && [[ -d /root/weaved_software ]]; then
-                    rm -f /root/weaved_software.zip
-                    weaved_uninstaller
-                else
-                    printError "Download failed; check log file ($RACHELLOG) and try again."
-                fi
+        printError "The Weaved uninstaller does not exist. Attempting to download..."
+        if [[ $INTERNET == "1" ]]; then
+            $WEAVEDUNINSTALLER
+            command_status
+            if [[ $ERRORCODE == 0 ]] && [[ -f /root/weaved_software/uninstaller.sh ]]; then
+                weaved_uninstaller
             else
-                printError "No internet connection.  Connect the CAP to the internet and try the uninstaller again."
+                printError "Download failed; check log file ($RACHELLOG) and try again."
             fi
+        else
+            printError "No internet connection; I can not download the uninstaller."
+            echo "    Connect the CAP to the internet and try the uninstaller again."
         fi
     fi
 }
 
 backup_weaved_service () {
     # Clear current configs
-    if [[ `find /etc/weaved/services/ -name Weaved*.conf 2>/dev/null | wc -l` -ge 1 ]]; then
+    stty sane
+    if [[ `find /etc/weaved/services/ -name 'Weaved*.conf' 2>/dev/null | wc -l` -ge 1 ]]; then
         echo; printStatus "Backing up configuration files to $RACHELRECOVERYDIR/weaved"
         rm -rf $RACHELRECOVERYDIR/Weaved
         mkdir -p $RACHELRECOVERYDIR/Weaved
         # Backup Weaved configs
-        cp -f /etc/weaved/services/Weaved*.conf /usr/bin/Weaved*.sh /usr/bin/notify_Weaved*.sh $RACHELRECOVERYDIR/Weaved/
+        cp -f /etc/weaved/services/Weaved*.conf /usr/bin/Weaved*.sh /usr/bin/notify_Weaved*.sh $RACHELRECOVERYDIR/Weaved/ 2>/dev/null
         printGood "Your current configuration is backed up and will be restored if you have to run the USB Recovery."
     elif [[ ! -d /etc/weaved ]]; then
         # Weaved is no longer installed, remove all backups
@@ -1459,7 +1530,7 @@ EOF
 # Loop to redisplay main menu
 whattodo () {
     echo; printQuestion "What would you like to do next?"
-    echo "1)Initial Install  2)Install KA Lite  3)Install Kiwix  4)Install Weaved Service  5)Add/Update Module  6)Add/Update Module List  7)Utilities  8)Exit"
+    echo "1)Initial Install  2)Install KA Lite  3)Install Kiwix  4)Install Default Weaved Services  5)Install Weaved Service  6)Add/Update Module  7)Add/Update Module List  8)Utilities  9)Exit"
 }
 
 #### MAIN MENU ####
@@ -1492,7 +1563,8 @@ echo; printQuestion "What you would like to do:"
 echo "  - [Initial-Install] of RACHEL on a CAP"
 echo "  - [Install-KA-Lite]"
 echo "  - [Install-Kiwix]"
-echo "  - [Install-Weaved-Service]"
+echo "  - [Install-Default-Weaved-Services] installs the default CAP Weaved services for ports 22, 80, 8080"
+echo "  - [Install-Weaved-Service] adds a Weaved service to an online account you provide during install"
 echo "  - [Add-Update-Module] lists current available modules; installs one at a time"
 echo "  - [Add-Update-Module-List] installs modules from a pre-configured list of modules"
 echo "  - Other [Utilities]"
@@ -1505,7 +1577,7 @@ echo "    - Symlink all .mp4 videos in the module kaos-en to /media/RACHEL/kacon
 echo "    - Testing script"
 echo "  - [Exit] the installation script"
 echo
-select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weaved-Service" "Add-Update-Module" "Add-Update-Module-List" "Utilities" "Exit"; do
+select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Update-Module" "Add-Update-Module-List" "Utilities" "Exit"; do
         case $menu in
         Initial-Install)
         new_install
@@ -1530,6 +1602,13 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weav
         whattodo
         ;;
 
+        Install-Default-Weaved-Services)
+        uninstall_ALL_weaved_services
+        install_default_weaved_services
+        backup_weaved_service
+        whattodo
+        ;;
+
         Install-Weaved-Service)
         install_weaved_service
         backup_weaved_service
@@ -1550,14 +1629,15 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weav
         echo; printQuestion "What utility would you like to use?"
         echo "  - [Check-MD5] will check a file you provide against our hash database"
         echo "  - **BETA** [Download-Installs-Content] to stage for OFFLINE (i.e. local) RACHEL installs"
-        echo "  - [Uninstall-Weaved-Service]"
+        echo "  - [Uninstall-Weaved-Service] removes Weaved services, one at a time"
+        echo "  - [Uninstall-ALL-Weaved-Services] removes ALL Weaved services"
         echo "  - [Repair] an install of a CAP after a firmware upgrade"
         echo "  - [Sanitize] CAP (used for creating the RACHEL USB Multitool)"
         echo "  - [Symlink] all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent"
         echo "  - [Testing] script"
         echo "  - Return to [Main Menu]"
         echo
-        select util in "Check-MD5" "Download-Installs-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Repair" "Sanitize" "Symlink" "Test" "Main-Menu"; do
+        select util in "Check-MD5" "Download-Installs-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Repair" "Sanitize" "Symlink" "Test" "Main-Menu"; do
             case $util in
                 Check-MD5)
                 echo; printStatus "This function will compare the MD5 of the file you provide against our list of known hashes."
@@ -1578,7 +1658,19 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weav
 
                 Uninstall-Weaved-Service)
                 uninstall_weaved_service
-                backup_weaved_service
+                break
+                ;;
+
+                Uninstall-ALL-Weaved-Services)
+                echo; printError "This uninstaller will completely remove Weaved from your CAP."
+                echo; printQuestion "Do you still wish to continue?"
+                read -p "    Enter (y/N) " REPLY
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    uninstall_ALL_weaved_services
+                    backup_weaved_service
+                else
+                    printError "Uninstall cancelled."
+                fi
                 break
                 ;;
 
