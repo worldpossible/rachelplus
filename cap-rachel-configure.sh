@@ -547,6 +547,7 @@ install_weaved_service () {
             wget -c https://github.com/weaved/installer/raw/master/weaved_software/Yo -O /root/weaved_software/Yo
             wget -c https://github.com/weaved/installer/raw/master/weaved_software/scripts/notify.sh -O /root/weaved_software/notify.sh
             wget -c https://github.com/weaved/installer/raw/master/weaved_software/scripts/send_notification.sh -O /root/weaved_software/send_notification.sh
+            chmod +x /root/weaved_software/*.sh /root/weaved_software/Yo
             sed -i 's|/scripts||g' /root/weaved_software/installer.sh
             echo; printGood "Done."
             # Run installer
