@@ -5,12 +5,12 @@
 # For offline builds, run the Download-Offline-Content script in the Utilities menu.
 
 # COMMON VARIABLES - Change as needed
-DIRCONTENTOFFLINE="/media/nas/rachel-content" # Enter directory of downloaded RACHEL content for offline install (e.g. I mounted my external USB on my CAP but plugging the external USB into and running the command 'fdisk -l' to find the right drive, then 'mkdir /media/RACHEL-Content' to create a folder to mount to, then 'mount /dev/sdb1 /media/RACHEL-Content' to mount the USB drive.)
-RSYNCONLINE="rsync://dev.worldpossible.org" # The current RACHEL rsync repository
-CONTENTONLINE="rsync://rachel.golearn.us/content" # Another RACHEL rsync repository
-WGETONLINE="http://rachelfriends.org" # RACHEL large file repo (ka-lite_content, etc)
-GITRACHELPLUS="https://raw.githubusercontent.com/rachelproject/rachelplus/master" # RACHELPlus Scripts GitHub Repo
-GITCONTENTSHELL="https://raw.githubusercontent.com/rachelproject/contentshell/master" # RACHELPlus ContentShell GitHub Repo
+DIRCONTENTOFFLINE="/media/nas" # Enter directory of downloaded RACHEL content for offline install; no trailing slash (e.g. I mounted my external USB on my CAP but plugging the external USB into and running the command 'fdisk -l' to find the right drive, then 'mkdir /media/RACHEL-Content' to create a folder to mount to, then 'mount /dev/sdb1 /media/RACHEL-Content' to mount the USB drive.)
+RSYNCONLINE="rsync://dev.worldpossible.org" # The current RACHEL rsync repository; no trailing slash
+CONTENTONLINE="rsync://rachel.golearn.us/content" # Another RACHEL rsync repository; no trailing slash
+WGETONLINE="http://rachelfriends.org" # RACHEL large file repo (ka-lite_content, etc); no trailing slash
+GITRACHELPLUS="https://raw.githubusercontent.com/rachelproject/rachelplus/master" # RACHELPlus Scripts GitHub Repo; no trailing slash
+GITCONTENTSHELL="https://raw.githubusercontent.com/rachelproject/contentshell/master" # RACHELPlus ContentShell GitHub Repo; no trailing slash
 
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 OS="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
@@ -32,6 +32,9 @@ KALITERCONTENTDIR="/media/RACHEL/kacontent"
 KALITECURRENTVERSION="0.15.1"
 KALITEINSTALLER="ka-lite-bundle-$KALITECURRENTVERSION.deb"
 KALITESETTINGS="$KALITEDIR/settings.py"
+KIWIXINSTALLER="kiwix-0.9-linux-i686.tar.bz2"
+KIWIXWIKISCHOOLS="wikipedia_en_for-schools.zip"
+KIWIXWIKIALL="wikipedia_en_all.zip"
 INSTALLTMPDIR="/root/cap-rachel-install.tmp"
 RACHELTMPDIR="/media/RACHEL/cap-rachel-install.tmp"
 RACHELRECOVERYDIR="/media/RACHEL/recovery"
@@ -178,9 +181,11 @@ online_variables () {
     ASSESSMENTITEMSJSON="wget -c $GITRACHELPLUS/assessmentitems.json -O /var/ka-lite/data/khan/assessmentitems.json"
     KALITEINSTALL="rsync -avhz --progress $CONTENTONLINE/$KALITEINSTALLER $INSTALLTMPDIR/$KALITEINSTALLER"
     KALITECONTENTINSTALL="rsync -avhz --progress $CONTENTONLINE/kacontent/ /media/RACHEL/kacontent/"
-    KIWIXINSTALL="wget -c $WGETONLINE/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $RACHELTMPDIR/kiwix-0.9-linux-i686.tar.bz2"
+    KIWIXINSTALL="wget -c $WGETONLINE/z-holding/$KIWIXINSTALLER -O $RACHELTMPDIR/$KIWIXINSTALLER"
     KIWIXSAMPLEDATA="wget -c $WGETONLINE/z-holding/Ray_Charles.tar.bz -O $RACHELTMPDIR/Ray_Charles.tar.bz"
-    WEAVEDZIP="wget -r http://rachelfriends.org/z-holding/weaved_software.zip -O /root/weaved_software.zip"
+    WEAVEDINSTALL="wget -c https://github.com/weaved/installer/raw/master/Intel_CAP/weaved_IntelCAP.tar -O /root/weaved_IntelCAP.tar"
+    WEAVEDSINGLEINSTALL="wget -c https://github.com/weaved/installer/raw/master/weaved_software/installer.sh -O /root/weaved_software/installer.sh"
+    WEAVEDUNINSTALLER="wget -c https://github.com/weaved/installer/raw/master/weaved_software/uninstaller.sh -O /root/weaved_software/uninstaller.sh"
     SPHIDERPLUSSQLINSTALL="wget -c $WGETONLINE/z-SQLdatabase/sphider_plus.sql -O $RACHELTMPDIR/sphider_plus.sql"
     DOWNLOADCONTENTSCRIPT="wget -c $GITRACHELPLUS/scripts"
     CONTENTWIKI="wget -c http://download.kiwix.org/portable/wikipedia/$FILENAME -O $RACHELTMPDIR/$FILENAME"
@@ -207,7 +212,9 @@ offline_variables () {
     KALITECONTENTINSTALL="rsync -avhz --progress $DIRCONTENTOFFLINE/kacontent/ /media/RACHEL/kacontent/"
     KIWIXINSTALL=""
     KIWIXSAMPLEDATA=""
-    WEAVEDZIP=""
+    WEAVEDINSTALL=""
+    WEAVEDSINGLEINSTALL=""
+    WEAVEDUNINSTALLER=""
     SPHIDERPLUSSQLINSTALL=""
     DOWNLOADCONTENTSCRIPT="rsync -avhz --progress $DIRCONTENTOFFLINE/rachelplus/scripts"
     CONTENTWIKIALL=""
