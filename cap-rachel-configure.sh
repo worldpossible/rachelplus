@@ -515,7 +515,7 @@ install_weaved_service () {
     fi
 }
 
-uninstall_weaved_service () {
+remove_weaved_service () {
     if [[ $INTERNET == "0" ]]; then
         echo; printError "The CAP must be online to install/remove Weaved services."
     else
@@ -864,27 +864,28 @@ new_install () {
     fi
 }
 
-content_module_install () {
-    if [[ -f /tmp/module.lst ]]; then
+install_content_module () {
+    TMP="/tmp/module-install.lst"
+    if [[ -f $TMP ]]; then
         echo; printStatus "Your selected module list:"
         # Sort/unique the module list
-        cat /tmp/module.lst
+        cat $TMP
         echo; printQuestion "Do you want to use this module list?"
         read -p "    Enter (Y/n) " REPLY
-        if [[ $REPLY =~ ^[Nn]$ ]]; then rm -f /tmp/module.lst; fi
+        if [[ $REPLY =~ ^[Nn]$ ]]; then rm -f $TMP; fi
     fi
     SELECTMODULE=1
     MODULELIST=$(rsync --list-only rsync://dev.worldpossible.org/rachelmods | egrep '^d' | awk '{print $5}' | tail -n +2)
     while [[ $SELECTMODULE == 1 ]]; do
         echo; printStatus "What RACHEL module would you like to select for download or update?"
         select module in $MODULELIST; do 
-            echo "$module" >> /tmp/module.lst
+            echo "$module" >> $TMP
             echo; printStatus "Added module $module to the install/update cue."
             break
         done
         echo; printStatus "Your selected module list:"
-        sort -u /tmp/module.lst > /tmp/module.tmp; mv /tmp/module.tmp /tmp/module.lst
-        cat /tmp/module.lst
+        sort -u $TMP > $TMP.tmp; mv $TMP.tmp $TMP
+        cat $TMP
         echo; printQuestion "Do you want to select another module?"
         read -p "    Enter (y/N) " REPLY
         if [[ $REPLY =~ ^[Yy]$ ]]; then SELECTMODULE=1; else SELECTMODULE=0; fi
@@ -897,11 +898,65 @@ content_module_install () {
             rsync -avz $RSYNCDIR/rachelmods/$m $RACHELWWW/modules/
             command_status
             printGood "Done."
-        done < /tmp/module.lst
+        done < $TMP
+        rm $TMP
     fi
 }
 
-content_list_install () {
+
+remove_content_module () {
+    TMP="/tmp/module-remove.lst"
+    if [[ -f $TMP ]]; then
+        echo; printStatus "Your selected module list:"
+        # Sort/unique the module list
+        sort -u $TMP | sed '/^\s*$/d' > $TMP.tmp; mv $TMP.tmp $TMP
+        echo; printQuestion "Do you want to use this module list?"
+        read -p "    Enter (Y/n) " REPLY
+        if [[ $REPLY =~ ^[Nn]$ ]]; then rm -f $TMP; fi
+    fi
+    SELECTMODULE=1
+    MODULELIST=$(ls -l $RACHELWWW/modules/test | egrep '^d' | awk '{print $9}')
+    while [[ $SELECTMODULE == 1 ]]; do
+        echo; printStatus "What RACHEL module would you like to remove from your CAP?"
+        select module in $MODULELIST Exit; do 
+            case $module in
+                $m)
+                if [[ ! -z $module ]]; then
+                    echo "$module" >> $TMP
+                    echo; printStatus "Added module $module to the remove cue."
+                    break
+                else
+                    cat $MODULELIST
+                    echo; printError "You didn't select a module, try again."
+                fi
+                ;;
+
+                Exit)
+                break
+                ;;
+            esac
+        done
+        echo; printStatus "Your module selected for removal:"
+        sort -u $TMP | sed '/^\s*$/d' > $TMP.tmp; mv $TMP.tmp $TMP
+        cat $TMP
+        echo; printQuestion "Do you want to select another module?"
+        read -p "    Enter (y/N) " REPLY
+        if [[ $REPLY =~ ^[Yy]$ ]]; then SELECTMODULE=1; else SELECTMODULE=0; fi
+    done
+    echo; printQuestion "Are you ready to remove your selected modules?"
+    read -p "    Enter (y/N) " REPLY
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        while read m; do
+            echo; printStatus "Removing $m"
+            rm -rf $RACHELWWW/modules/test/$m
+            command_status
+            printGood "Done."
+        done < $TMP
+        rm $TMP
+    fi
+}
+
+install_content_list () {
     trap ctrlC INT
     print_header
     ERRORCODE="0"
@@ -1493,8 +1548,8 @@ echo "  - [Initial-Install] of RACHEL on a CAP"
 echo "  - [Install-KA-Lite]"
 echo "  - [Install-Kiwix]"
 echo "  - [Install-Weaved-Service]"
-echo "  - [Add-Update-Module] lists current available modules; installs one at a time"
-echo "  - [Add-Update-Module-List] installs modules from a pre-configured list of modules"
+echo "  - [Add-Update-Content-Module] lists current available modules; installs one at a time"
+echo "  - [Add-Update-Content-Module-List] installs modules from a pre-configured list of modules"
 echo "  - Other [Utilities]"
 echo "    - Check your local file's MD5 against our database"
 echo "    - Download RACHEL content to stage for OFFLINE installs"
@@ -1505,7 +1560,7 @@ echo "    - Symlink all .mp4 videos in the module kaos-en to /media/RACHEL/kacon
 echo "    - Testing script"
 echo "  - [Exit] the installation script"
 echo
-select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weaved-Service" "Add-Update-Module" "Add-Update-Module-List" "Utilities" "Exit"; do
+select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weaved-Service" "Add-Update-Content-Module" "Add-Update-Content-Module-List" "Utilities" "Exit"; do
         case $menu in
         Initial-Install)
         new_install
@@ -1536,13 +1591,13 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weav
         whattodo
         ;;
 
-        Add-Update-Module)
-        content_module_install
+        Add-Update-Content-Module)
+        install_content_module
         whattodo
         ;;
 
-        Add-Update-Module-List)
-        content_list_install
+        Add-Update-Content-Module-List)
+        install_content_list
         whattodo
         ;;
 
@@ -1550,14 +1605,15 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weav
         echo; printQuestion "What utility would you like to use?"
         echo "  - [Check-MD5] will check a file you provide against our hash database"
         echo "  - **BETA** [Download-Installs-Content] to stage for OFFLINE (i.e. local) RACHEL installs"
-        echo "  - [Uninstall-Weaved-Service]"
+        echo "  - [Remove-Content-Module] from CAP"
+        echo "  - [Remove-Weaved-Service]"
         echo "  - [Repair] an install of a CAP after a firmware upgrade"
         echo "  - [Sanitize] CAP (used for creating the RACHEL USB Multitool)"
         echo "  - [Symlink] all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent"
         echo "  - [Testing] script"
         echo "  - Return to [Main Menu]"
         echo
-        select util in "Check-MD5" "Download-Installs-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Repair" "Sanitize" "Symlink" "Test" "Main-Menu"; do
+        select util in "Check-MD5" "Download-Installs-Content" "Remove-Content-Module" "Remove-Weaved-Service" "Repair" "Sanitize" "Symlink" "Test" "Main-Menu"; do
             case $util in
                 Check-MD5)
                 echo; printStatus "This function will compare the MD5 of the file you provide against our list of known hashes."
@@ -1571,13 +1627,13 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weav
                 break
                 ;;
 
-                Backup-Weaved-Services)
-                backup_weaved_service
+                Remove-Content-Module)
+                remove_content_module
                 break
                 ;;
 
-                Uninstall-Weaved-Service)
-                uninstall_weaved_service
+                Remove-Weaved-Service)
+                remove_weaved_service
                 backup_weaved_service
                 break
                 ;;
