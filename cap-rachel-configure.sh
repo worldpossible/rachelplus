@@ -28,13 +28,13 @@ RACHELSCRIPTSFILE="/root/rachel-scripts.sh"
 RACHELSCRIPTSLOG="/var/log/RACHEL/rachel-scripts.log"
 KALITEUSER="root"
 KALITEDIR="/root/.kalite" # Installed as user 'root'
-KALITERCONTENTDIR="/media/RACHEL/kacontent"
-KALITECURRENTVERSION="0.15.1"
-#KALITEINSTALLER="ka-lite-bundle-$KALITECURRENTVERSION.deb"
-KALITEWWW="https://learningequality.org/r"
-KALITEINSTALLER="deb-bundle-installer-0-15"
+KALITERCONTENTDIR="/media/RACHEL/kacontent" # Location of KA Lite content (video/image files; VERY large list of files)
+KALITECURRENTVERSION="0.15.1" # Current version of KA Lite; used in naming of installer file
+KALITEINSTALLER="ka-lite-bundle-$KALITECURRENTVERSION.deb" # Name used by configure script (regardless of actual version)
+KALITEWWW="https://learningequality.org/r" # KA Lite website for downloading their installer
+KALITEWWWFILELINK="deb-bundle-installer-0-15" # KA Lite file name for their latest (most current) installer
 KALITESETTINGS="$KALITEDIR/settings.py"
-KIWIXINSTALLER="kiwix-0.9-linux-i686.tar.bz2"
+KIWIXINSTALLER="kiwix-0.9-linux-i686.tar.bz2" # Currently installed version of KA Lite
 KIWIXWIKISCHOOLS="wikipedia_en_for-schools.zip"
 KIWIXWIKIALL="wikipedia_en_all.zip"
 INSTALLTMPDIR="/root/cap-rachel-install.tmp"
@@ -187,8 +187,8 @@ online_variables () {
     GITCLONERACHELCONTENTSHELL="git clone https://github.com/rachelproject/contentshell contentshell"
     RSYNCDIR="$RSYNCONLINE"
     ASSESSMENTITEMSJSON="wget -c $GITRACHELPLUS/assessmentitems.json -O /var/ka-lite/data/khan/assessmentitems.json"
-#    KALITEINSTALL="rsync -avhz --progress $CONTENTONLINE/$KALITEINSTALLER $INSTALLTMPDIR/$KALITEINSTALLER"
-    KALITEINSTALL="wget -c $KALITEWWW/$KALITEINSTALLER"
+#    KALITEINSTALL="rsync -avhz --progress $CONTENTONLINE/$KALITEWWWFILELINK $INSTALLTMPDIR/$KALITEINSTALLER"
+    KALITEINSTALL="wget -c $KALITEWWW/$KALITEWWWFILELINK -O $KALITEINSTALLER"
     KALITECONTENTINSTALL="rsync -avhz --progress $CONTENTONLINE/kacontent/ /media/RACHEL/kacontent/"
     KIWIXINSTALL="wget -c $WGETONLINE/z-holding/$KIWIXINSTALLER -O $RACHELTMPDIR/$KIWIXINSTALLER"
     KIWIXSAMPLEDATA="wget -c $WGETONLINE/z-holding/Ray_Charles.tar.bz -O $RACHELTMPDIR/Ray_Charles.tar.bz"
@@ -666,15 +666,15 @@ download_offline_content () {
     apt-get update
     if [[ ! `which git` ]]; then
         apt-get -y install git git-man liberror-perl
-    elif [[ ! `which rysnc` ]]; then
-        apt-get -y install rysnc
+    elif [[ ! `which rsync` ]]; then
+        apt-get -y install rsync
     fi
 
     echo; printStatus "** BETA ** Downloading RACHEL content for OFFLINE installs."
  
     # What is the folder where OFFLINE content will be staged?
     echo; printQuestion "The OFFLINE RACHEL content folder is set to:  $DIRCONTENTOFFLINE"
-    read -p "Do you want to change the default location? (y/n) " -r
+    read -p "Do you want to change the default location? (y/N) " -r
     if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
         echo; printQuestion "What is the location of your content folder? "; read DIRCONTENTOFFLINE
         if [[ ! -d $DIRCONTENTOFFLINE ]]; then
@@ -689,7 +689,8 @@ download_offline_content () {
         echo; printStatus "Your selected module list:"
         # Sort/unique the module list
         cat /tmp/module.lst
-        echo; printQuestion "Do you want to use this previously selected module list?"
+        echo; printStatus "Previously built module list found!"
+        echo; printQuestion "Do you want to continue building this module download list (select 'N' to start over)?"
         read -p "    Enter (Y/n) " REPLY
         if [[ $REPLY =~ ^[Nn]$ ]]; then rm -f /tmp/module.lst; fi
     fi
@@ -742,13 +743,14 @@ download_offline_content () {
 
     # Download installer:  ka-lite
     echo; printStatus "Downloading/updating:  KA Lite"
+    cd $DIRCONTENTOFFLINE
     $KALITEINSTALL
     command_status
     printGood "Done."
     
     # Download ka-lite_content.zip
-    echo; printStatus "Downloading/updating KA Lite"
-    echo; printError "Need to add KA Lite content install."
+    echo; printStatus "Downloading/updating:  KA Lite content media files"
+    rsync -avhP $CONTENTONLINE/kacontent $DIRCONTENTOFFLINE/kacontent
     command_status
     printGood "Done."
 
@@ -1455,7 +1457,8 @@ download_ka_content () {
     read -p "    Enter (y/N) " REPLY
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         while :; do
-            echo; printQuestion "What is the full path to the file location for KA Lite content (i.e. /path/to/your-usb-drive-or-folder)?"; read KACONTENTFOLDER || return
+            echo; "Example:  /media/nas/kacontent (where kacontent contains all the media files; just like the CAP)"
+            printQuestion "What is the full path to the file location for KA Lite content (i.e. /path/to/your-usb-drive-or-folder)?"; read KACONTENTFOLDER || return
             if [[ ! -d $KACONTENTFOLDER ]]; then
                 echo; printError "FOLDER NOT FOUND - You must provide a full path to a location accessible from the CAP."
             else
