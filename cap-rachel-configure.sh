@@ -30,7 +30,9 @@ KALITEUSER="root"
 KALITEDIR="/root/.kalite" # Installed as user 'root'
 KALITERCONTENTDIR="/media/RACHEL/kacontent"
 KALITECURRENTVERSION="0.15.1"
-KALITEINSTALLER="ka-lite-bundle-$KALITECURRENTVERSION.deb"
+#KALITEINSTALLER="ka-lite-bundle-$KALITECURRENTVERSION.deb"
+KALITEWWW="https://learningequality.org/r"
+KALITEINSTALLER="deb-bundle-installer-0-15"
 KALITESETTINGS="$KALITEDIR/settings.py"
 KIWIXINSTALLER="kiwix-0.9-linux-i686.tar.bz2"
 KIWIXWIKISCHOOLS="wikipedia_en_for-schools.zip"
@@ -47,8 +49,11 @@ build_hash_list () {
 65fe77df27169637f20198901591dff0 ka-lite_content.zip
 bd905efe7046423c1f736717a59ef82c ka-lite-bundle-0.15.0.deb
 18998e1253ca720adb2b54159119ce80 ka-lite-bundle-0.15.1.deb
+8c5be201ee691137b7d0e6948e0cb34e Ray_Charles.tar.bz
 922b05e10e42bc3869e8b8f8bf625f07 kiwix-0.9+wikipedia_en_all_2015-05.zip
+922b05e10e42bc3869e8b8f8bf625f07 wikipedia_en_all.zip
 31963611e46e717e00b30f6f6d8833ac kiwix-0.9+wikipedia_en_for-schools_2013-01.zip
+31963611e46e717e00b30f6f6d8833ac wikipedia_en_for-schools.zip
 b61fdc3937aa226f34f685ba0bc29db1 kiwix-0.9-linux-i686.tar.bz2
 4150c320a03bdae01a805fc4c3f6eb9a sphider_plus.sql
 EOF
@@ -108,6 +113,9 @@ testing-script () {
     set -x
     trap ctrlC INT
 
+    install_default_weaved_services
+    backup_weaved_service
+
     set +x
     exit 1
 }
@@ -131,7 +139,7 @@ opmode () {
             INTERNET="0"
             offline_variables
             echo; printQuestion "The OFFLINE RACHEL content folder is set to:  $DIRCONTENTOFFLINE"
-            read -p "Do you want to change the default location? (y/n) " -r
+            read -p "Do you want to change the default location? (y/N) " -r
             if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
                 echo; printQuestion "What is the location of your content folder? "; read DIRCONTENTOFFLINE
             fi
@@ -179,7 +187,8 @@ online_variables () {
     GITCLONERACHELCONTENTSHELL="git clone https://github.com/rachelproject/contentshell contentshell"
     RSYNCDIR="$RSYNCONLINE"
     ASSESSMENTITEMSJSON="wget -c $GITRACHELPLUS/assessmentitems.json -O /var/ka-lite/data/khan/assessmentitems.json"
-    KALITEINSTALL="rsync -avhz --progress $CONTENTONLINE/$KALITEINSTALLER $INSTALLTMPDIR/$KALITEINSTALLER"
+#    KALITEINSTALL="rsync -avhz --progress $CONTENTONLINE/$KALITEINSTALLER $INSTALLTMPDIR/$KALITEINSTALLER"
+    KALITEINSTALL="wget -c $KALITEWWW/$KALITEINSTALLER"
     KALITECONTENTINSTALL="rsync -avhz --progress $CONTENTONLINE/kacontent/ /media/RACHEL/kacontent/"
     KIWIXINSTALL="wget -c $WGETONLINE/z-holding/$KIWIXINSTALLER -O $RACHELTMPDIR/$KIWIXINSTALLER"
     KIWIXSAMPLEDATA="wget -c $WGETONLINE/z-holding/Ray_Charles.tar.bz -O $RACHELTMPDIR/Ray_Charles.tar.bz"
@@ -494,24 +503,66 @@ else
 fi
 }
 
+install_default_weaved_services () {
+    echo; printStatus "Installing Weaved service."
+    cd /root
+    # Download weaved files
+    echo; printStatus "Downloading required files."
+    $WEAVEDINSTALL
+    command_status
+
+    tar xvf weaved_IntelCAP.tar
+    command_status
+    if [[ $ERRORCODE == 0 ]] && [[ -d /root/weaved_software ]]; then
+        rm -f /root/weaved_IntelCAP.tar
+        echo; printGood "Done."
+        # Run installer
+        cd /root/weaved_software
+        bash install.sh
+        echo; printGood "Weaved service install complete."
+        printGood "NOTE: An Weaved service uninstaller is available from the Utilities menu of this script."
+    else
+        echo; printError "One or more files did not download correctly; check log file ($RACHELLOG) and try again."
+        cleanup
+        echo; exit 1
+    fi
+}
+
 install_weaved_service () {
     if [[ $INTERNET == "0" ]]; then
         echo; printError "The CAP must be online to install/remove Weaved services."
     else
         echo; printStatus "Installing Weaved service."
         cd /root
+
         # Download weaved files
         echo; printStatus "Downloading required files."
-        $WEAVEDZIP
+        $WEAVEDSINGLEINSTALL
         command_status
-        unzip -u weaved_software.zip
-        command_status
-        if [[ $ERRORCODE == 0 ]] && [[ -d weaved_software ]]; then
-            rm -f /root/weaved_software.zip
+
+        if [[ $ERRORCODE == 0 ]] && [[ -f /root/weaved_software/installer.sh ]]; then
+            # Fix OS Arch check in installer.sh
+            sed -i 's/\[ "$machineType" = "x86_64" \] && \[ "$osName" = "Linux" \]/\[ "$osName" = "Linux" \]/g' /root/weaved_software/installer.sh
+            sed -i 's/\.\/bin/\./g' /root/weaved_software/installer.sh
+            # Download required files
+            mkdir -p /root/weaved_software/enablements
+            wget -c https://github.com/weaved/installer/raw/master/weaved_software/enablements/ssh.linux -O /root/weaved_software/enablements/ssh.linux
+            wget -c https://github.com/weaved/installer/raw/master/weaved_software/enablements/tcp.linux -O /root/weaved_software/enablements/tcp.linux
+            wget -c https://github.com/weaved/installer/raw/master/weaved_software/enablements/vnc.linux -O /root/weaved_software/enablements/vnc.linux
+            wget -c https://github.com/weaved/installer/raw/master/weaved_software/enablements/web.linux -O /root/weaved_software/enablements/web.linux
+            wget -c https://github.com/weaved/installer/raw/master/weaved_software/enablements/webssh.linux -O /root/weaved_software/enablements/webssh.linux
+            wget -c https://github.com/weaved/installer/raw/master/weaved_software/enablements/webport.pi -O /root/weaved_software/enablements/webport.pi
+            wget -c https://github.com/weaved/installer/raw/master/weaved_software/enablements/webiopi.pi -O /root/weaved_software/enablements/webiopi.pi
+            wget -c https://github.com/weaved/installer/raw/master/weaved_software/Yo -O /root/weaved_software/Yo
+            wget -c https://github.com/weaved/installer/raw/master/weaved_software/scripts/notify.sh -O /root/weaved_software/notify.sh
+            wget -c https://github.com/weaved/installer/raw/master/weaved_software/scripts/send_notification.sh -O /root/weaved_software/send_notification.sh
+            chmod +x /root/weaved_software/*.sh /root/weaved_software/Yo
+            sed -i 's|/scripts||g' /root/weaved_software/installer.sh
             echo; printGood "Done."
             # Run installer
             cd /root/weaved_software
             bash installer.sh
+
             echo; printGood "Weaved service install complete."
             printGood "NOTE: An Weaved service uninstaller is available from the Utilities menu of this script."
         else
@@ -522,46 +573,69 @@ install_weaved_service () {
     fi
 }
 
-remove_weaved_service () {
-    if [[ $INTERNET == "0" ]]; then
-        echo; printError "The CAP must be online to install/remove Weaved services."
+uninstall_ALL_weaved_services () {
+    echo; printStatus "Uninstalling Weaved service."
+
+    TMP_DIR=/tmp
+    # Stop all Weaved services
+    for i in `ls /usr/bin/Weaved*.sh`; do
+        $i stop
+    done
+
+    # Remove Weaved files
+    rm /usr/bin/weaved*
+    rm /usr/bin/Weaved*
+    rm -rf /etc/weaved
+
+    # Remove Weaved from crontab
+    crontab -l | grep -v weaved | cat > $TMP_DIR/.crontmp
+    crontab $TMP_DIR/.crontmp
+
+    # Ensure user knows to remove from online service list
+    echo; printStatus "If you uninstalled Weaved connectd without deleting Services first,"
+    echo "there may be orphaned Services in your Services List.  Use the "
+    echo "'Settings' link in the web portal Services List to delete these."
+
+    echo; printGood "Weaved service uninstall complete."
+}
+
+
+uninstall_weaved_service () {
+    weaved_uninstaller () {
+        bash /root/weaved_software/uninstaller.sh
+        echo; printGood "Weaved service uninstall complete."
+    }
+    echo; printStatus "Uninstalling Weaved service."
+    cd /root
+    # Run uninstaller
+    if [[ -f /root/weaved_software/uninstaller.sh ]]; then 
+        weaved_uninstaller
     else
-        weaved_uninstaller () {
-            bash /root/weaved_software/uninstaller.sh
-            echo; printGood "Weaved service uninstall complete."
-        }
-        echo; printStatus "Uninstalling Weaved service."
-        cd /root
-        # Run uninstaller
-        if [[ -f /root/weaved_software/uninstaller.sh ]]; then 
-            weaved_uninstaller
-        else
-            printError "The Weaved uninstaller does not exist. Attempting to download..."
-            if [[ $INTERNET == "1" ]]; then
-                $WEAVEDZIP
-                command_status
-                unzip -u weaved_software.zip
-                if [[ $ERRORCODE == 0 ]] && [[ -d /root/weaved_software ]]; then
-                    rm -f /root/weaved_software.zip
-                    weaved_uninstaller
-                else
-                    printError "Download failed; check log file ($RACHELLOG) and try again."
-                fi
+        printError "The Weaved uninstaller does not exist. Attempting to download..."
+        if [[ $INTERNET == "1" ]]; then
+            $WEAVEDUNINSTALLER
+            command_status
+            if [[ $ERRORCODE == 0 ]] && [[ -f /root/weaved_software/uninstaller.sh ]]; then
+                weaved_uninstaller
             else
-                printError "No internet connection.  Connect the CAP to the internet and try the uninstaller again."
+                printError "Download failed; check log file ($RACHELLOG) and try again."
             fi
+        else
+            printError "No internet connection; I can not download the uninstaller."
+            echo "    Connect the CAP to the internet and try the uninstaller again."
         fi
     fi
 }
 
 backup_weaved_service () {
     # Clear current configs
-    if [[ `find /etc/weaved/services/ -name Weaved*.conf 2>/dev/null | wc -l` -ge 1 ]]; then
+    stty sane
+    if [[ `find /etc/weaved/services/ -name 'Weaved*.conf' 2>/dev/null | wc -l` -ge 1 ]]; then
         echo; printStatus "Backing up configuration files to $RACHELRECOVERYDIR/weaved"
         rm -rf $RACHELRECOVERYDIR/Weaved
         mkdir -p $RACHELRECOVERYDIR/Weaved
         # Backup Weaved configs
-        cp -f /etc/weaved/services/Weaved*.conf /usr/bin/Weaved*.sh /usr/bin/notify_Weaved*.sh $RACHELRECOVERYDIR/Weaved/
+        cp -f /etc/weaved/services/Weaved*.conf /usr/bin/Weaved*.sh /usr/bin/notify_Weaved*.sh $RACHELRECOVERYDIR/Weaved/ 2>/dev/null
         printGood "Your current configuration is backed up and will be restored if you have to run the USB Recovery."
     elif [[ ! -d /etc/weaved ]]; then
         # Weaved is no longer installed, remove all backups
@@ -582,10 +656,23 @@ backup_weaved_service () {
 }
 
 download_offline_content () {
-    trap ctrlC INT
-    print_header
-    echo; printStatus "** BETA ** Downloading RACHEL content for OFFLINE installs."
+    # Exit if OFFLINE...you have to be online to stage OFFLINE files
+    if [[ $INTERNET == "0" ]]; then
+        echo; printError "You must be ONLINE to download the staging files for OFFLINE installs; connect to the internet and try again."
+        echo; exit 1
+    fi
 
+    # Install dependencies, if not available
+    apt-get update
+    if [[ ! `which git` ]]; then
+        apt-get -y install git git-man liberror-perl
+    elif [[ ! `which rysnc` ]]; then
+        apt-get -y install rysnc
+    fi
+
+    echo; printStatus "** BETA ** Downloading RACHEL content for OFFLINE installs."
+ 
+    # What is the folder where OFFLINE content will be staged?
     echo; printQuestion "The OFFLINE RACHEL content folder is set to:  $DIRCONTENTOFFLINE"
     read -p "Do you want to change the default location? (y/n) " -r
     if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
@@ -596,65 +683,94 @@ download_offline_content () {
             exit 1
         fi
     fi
-    wget -c $WGETONLINE/z-holding/dirlist.txt -O $DIRCONTENTOFFLINE/dirlist.txt        
-    # List the current directories on rachelfriends with this command:
-    #   for i in $(ls -d */); do echo ${i%%/}; done
-    if [[ ! -f $DIRCONTENTOFFLINE/dirlist.txt ]]; then
-        echo; printError "The file $DIRCONTENTOFFLINE/dirlist.txt is missing!"
-        echo "    This file is a list of rsync folders; without it, I don't know what to rsync."
-        echo "    Create a newline separated list of directories to rsync in a file called 'dirlist.txt'."
-        echo "    Put the file in the same directory $DIRCONTENTOFFLINE"
-    else
-        echo; printStatus "Rsyncing core RACHEL content from $RSYNCONLINE"
-        while read p; do
-            echo; rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/$p $DIRCONTENTOFFLINE/rachelmods
-            command_status
-        done<$DIRCONTENTOFFLINE/dirlist.txt
-        printGood "Done."
+
+    # Download selected modules for OFFLINE staging
+    if [[ -f /tmp/module.lst ]]; then
+        echo; printStatus "Your selected module list:"
+        # Sort/unique the module list
+        cat /tmp/module.lst
+        echo; printQuestion "Do you want to use this previously selected module list?"
+        read -p "    Enter (Y/n) " REPLY
+        if [[ $REPLY =~ ^[Nn]$ ]]; then rm -f /tmp/module.lst; fi
     fi
-    printStatus "Downloading/updating the GitHub repo:  rachelplus"
+    SELECTMODULE=1
+    MODULELIST=$(rsync --list-only $RSYNCDIR/rachelmods | egrep '^d' | awk '{print $5}' | tail -n +2)
+    while [[ $SELECTMODULE == 1 ]]; do
+        echo; printStatus "What RACHEL module would you like to select for download or update?"
+        select module in $MODULELIST; do 
+            echo "$module" >> /tmp/module.lst
+            echo; printStatus "Added module $module to the install/update cue."
+            break
+        done
+        echo; printStatus "Your selected module list:"
+        sort -u /tmp/module.lst > /tmp/module.tmp; sed '/^$/d' /tmp/module.tmp > /tmp/module.lst; rm /tmp/module.tmp
+        cat /tmp/module.lst
+        echo; printQuestion "Do you want to select another module?"
+        read -p "    Enter (y/N) " REPLY
+        if [[ $REPLY =~ ^[Yy]$ ]]; then SELECTMODULE=1; else SELECTMODULE=0; fi
+    done
+    echo; printQuestion "Are you ready to download your selected modules?"
+    read -p "    Enter (y/N) " REPLY
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        while read m; do
+            echo; printStatus "Downloading $m"
+            rsync -avz $RSYNCDIR/rachelmods/$m $DIRCONTENTOFFLINE/rachelmods/
+            command_status
+            printGood "Done."
+        done < /tmp/module.lst
+    fi
+
+    # Download GitHub repo:  rachelplus
+    echo; printStatus "Downloading/updating the GitHub repo:  rachelplus"
     if [[ -d $DIRCONTENTOFFLINE/rachelplus ]]; then 
-        cd $DIRCONTENTOFFLINE/rachelplus; git pull
+        cd $DIRCONTENTOFFLINE/rachelplus; git fetch --all; git reset --hard origin/master
     else
         echo; git clone https://github.com/rachelproject/rachelplus $DIRCONTENTOFFLINE/rachelplus
     fi
     command_status
     printGood "Done."
 
+    # Download GitHub repo:  contentshell
     echo; printStatus "Downloading/updating the GitHub repo:  contentshell"
     if [[ -d $DIRCONTENTOFFLINE/contentshell ]]; then 
-        cd $DIRCONTENTOFFLINE/contentshell; git pull
+        cd $DIRCONTENTOFFLINE/contentshell; git fetch --all; git reset --hard origin/master
     else
         echo; git clone https://github.com/rachelproject/contentshell $DIRCONTENTOFFLINE/contentshell
     fi
     command_status
     printGood "Done."
 
-    echo; printStatus "Downloading/updating the GitHub repo:  ka-lite"
-    if [[ -d $DIRCONTENTOFFLINE/ka-lite ]]; then 
-        cd $DIRCONTENTOFFLINE/ka-lite; git pull
-    else
-        echo; git clone https://github.com/learningequality/ka-lite $DIRCONTENTOFFLINE/ka-lite
-    fi
+    # Download installer:  ka-lite
+    echo; printStatus "Downloading/updating:  KA Lite"
+    $KALITEINSTALL
     command_status
     printGood "Done."
     
-    echo; printStatus "Downloading/updating ka-lite_content.zip"
-    wget -c $WGETONLINE/z-holding/ka-lite_content.zip -O $DIRCONTENTOFFLINE/ka-lite_content.zip
+    # Download ka-lite_content.zip
+    echo; printStatus "Downloading/updating KA Lite"
+    echo; printError "Need to add KA Lite content install."
     command_status
     printGood "Done."
 
+    # Download kiwix and data
     echo; printStatus "Downloading/updating kiwix and data."
-    wget -c $WGETONLINE/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $DIRCONTENTOFFLINE/kiwix-0.9-linux-i686.tar.bz2
-    wget -c $WGETONLINE/z-holding/Ray_Charles.tar.bz -O $DIRCONTENTOFFLINE/Ray_Charles.tar.bz
-    wget -c http://download.kiwix.org/portable/wikipedia/kiwix-0.9+wikipedia_en_for-schools_2013-01.zip -O $DIRCONTENTOFFLINE/kiwix-0.9+wikipedia_en_for-schools_2013-01.zip
-    wget -c http://download.kiwix.org/portable/wikipedia/kiwix-0.9+wikipedia_en_all_2015-05.zip -O $DIRCONTENTOFFLINE/kiwix-0.9+wikipedia_en_all_2015-05.zip
-
+    echo; wget -c $WGETONLINE/z-holding/$KIWIXINSTALLER $DIRCONTENTOFFLINE/$KIWIXINSTALLER
+    echo; wget -c $WGETONLINE/z-holding/Ray_Charles.tar.bz -O $DIRCONTENTOFFLINE/Ray_Charles.tar.bz
+    echo; wget -c http://download.kiwix.org/portable/$KIWIXWIKISCHOOLS -O $DIRCONTENTOFFLINE/$KIWIXWIKISCHOOLS
+    echo; wget -c http://download.kiwix.org/portable/$KIWIXWIKIALL -O $DIRCONTENTOFFLINE/$KIWIXWIKIALL
     printGood "Done."
 
+    # Download sphider_plus database
     echo; printStatus "Downloading/updating sphider_plus.sql"
     wget -c $WGETONLINE/z-SQLdatabase/sphider_plus.sql -O $DIRCONTENTOFFLINE/sphider_plus.sql
     command_status
+    printGood "Done."
+
+    # Downloading deb packages
+    echo; printStatus "Downloading/updating Git and PHP."
+    mkdir $DIRCONTENTOFFLINE/offlinepkgs
+    cd $DIRCONTENTOFFLINE/offlinepkgs
+    apt-get download php5-cgi php5-common php5-mysql git git-man liberror-perl python-m2crypto mysql-server mysql-client libapache2-mod-auth-mysql
     printGood "Done."
 }
 
@@ -680,17 +796,17 @@ new_install () {
     cp /etc/apt/sources.list /etc/apt/sources.list.bak
 
     # Change the source repositories
-    echo; printStatus "Locations for downloading packages:"
+    echo; printStatus "Set your closest geographic region:"
     echo "    US) United States"
     echo "    UK) United Kingdom"
     echo "    SG) Singapore"
     echo "    CN) China (CAP Manufacturer's Site)"
-    echo; printQuestion "For the package downloads, select the location nearest you? "
+    echo; printQuestion "What region is nearest you? "
     select CLASS in "US" "UK" "SG" "CN"; do
         case $CLASS in
         # US
         US)
-            echo; printStatus "Downloading packages from the United States."
+            echo; printStatus "Setting region:  United States."
             $SOURCEUS
             command_status
             break
@@ -698,7 +814,7 @@ new_install () {
 
         # UK
         UK)
-            echo; printStatus "Downloading packages from the United Kingdom."
+            echo; printStatus "Setting region:  United Kingdom."
             $SOURCEUK
             command_status
             break
@@ -706,7 +822,7 @@ new_install () {
 
         # Singapore
         SG)
-            echo; printStatus "Downloading packages from Singapore."
+            echo; printStatus "Setting region:  Singapore."
             $SOURCESG
             command_status
             break
@@ -714,7 +830,7 @@ new_install () {
 
         # China (Original)
         CN)
-            echo; printStatus "Downloading packages from the China - CAP manufacturer's website."
+            echo; printStatus "Setting region:  China - CAP manufacturer's website."
             $SOURCECN
             command_status
             break
@@ -775,45 +891,60 @@ new_install () {
     echo; printQuestion "NOTE: If /media/RACHEL/rachel folder exists, it will NOT destroy any content."
     echo "It will update the contentshell files with the latest ones from GitHub."
 
-    echo; read -p "Are you ready to start the install? (y/n) " -r
+    echo; read -p "Are you ready to start the install? (y/N) " -r
     if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
         echo; printStatus "Starting first install script...please wait patiently (about 30 secs) for first reboot."
         printStatus "The entire script (with reboots) takes 2-5 minutes."
 
         # Update CAP package repositories
-        echo; printStatus "Updating CAP package repositories"
         $GPGKEY1
         $GPGKEY2
-        apt-get clean; apt-get purge; apt-get update
-        printGood "Done."
+        if [[ $INTERNET == "1" ]]; then
+            echo; printStatus "Updating CAP package repositories"
+            apt-get clean; apt-get purge; apt-get update
+            printGood "Done."
+        fi
+
+        # Clean/remove older packages
+        apt-get -y remove --purge mysql-server mysql-client mysql-common
 
         # Install packages
         echo; printStatus "Installing Git and PHP."
-        apt-get -y install php5-cgi git-core python-m2crypto
+        if [[ $INTERNET == "1" ]]; then
+            apt-get -y install php5-cgi php5-common php5-mysql git git-man liberror-perl python-m2crypto
+        else
+            dpkg -i $DIRCONTENTOFFLINE/offlinepkgs/php5-* $DIRCONTENTOFFLINE/offlinepkgs/git* $DIRCONTENTOFFLINE/offlinepkgs/liberror-perl* $DIRCONTENTOFFLINE/offlinepkgs/python-m2crypto*
+        fi
         # Add the following line at the end of file
         echo "cgi.fix_pathinfo = 1" >> /etc/php5/cgi/php.ini
         printGood "Done."
 
         # Clone or update the RACHEL content shell from GitHub
-        if [[ $INTERNET == "0" ]]; then cd $DIRCONTENTOFFLINE; else cd $INSTALLTMPDIR; fi
         echo; printStatus "Checking for pre-existing RACHEL content shell."
-        if [[ ! -d $RACHELWWW ]]; then
-            echo; printStatus "RACHEL content shell does not exist at $RACHELWWW."
-            echo; printStatus "Cloning the RACHEL content shell from GitHub."
-            $GITCLONERACHELCONTENTSHELL
+
+        if [[ $INTERNET == "0" ]]; then
+            echo; printStatus "$RACHELWWW exists; updating RACHEL content shell from $DIRCONTENTOFFLINE"
+            rsync -avhP $DIRCONTENTOFFLINE/contentshell/ $RACHELWWW/
         else
-            if [[ ! -d $RACHELWWW/.git ]]; then
-                echo; printStatus "$RACHELWWW exists but it wasn't installed from git; installing RACHEL content shell from GitHub."
-                rm -rf contentshell # in case of previous failed install
+            cd $RACHELTMPDIR
+            if [[ ! -d $RACHELWWW ]]; then
+                echo; printStatus "RACHEL content shell does not exist at $RACHELWWW."
+                echo; printStatus "Cloning the RACHEL content shell from GitHub."
                 $GITCLONERACHELCONTENTSHELL
-                cp -rf contentshell/* $RACHELWWW/ # overwrite current content with contentshell
-                cp -rf contentshell/.git $RACHELWWW/ # copy over GitHub files
             else
-                echo; printStatus "$RACHELWWW exists; updating RACHEL content shell from GitHub."
-                cd $RACHELWWW; git pull
+                if [[ ! -d $RACHELWWW/.git ]]; then
+                    echo; printStatus "$RACHELWWW exists but it wasn't installed from git; installing RACHEL content shell from GitHub."
+                    rm -rf contentshell # in case of previous failed install
+                    $GITCLONERACHELCONTENTSHELL
+                    cp -rf contentshell/* $RACHELWWW/ # overwrite current content with contentshell
+                    cp -rf contentshell/.git $RACHELWWW/ # copy over GitHub files
+                else
+                    echo; printStatus "$RACHELWWW exists; updating RACHEL content shell from GitHub."
+                    cd $RACHELWWW; git pull
+                fi
             fi
-        fi
         rm -rf $RACHELTMPDIR/contentshell # if online install, remove contentshell temp folder
+        fi
         printGood "Done."
 
         # Install MySQL client and server
@@ -823,8 +954,11 @@ new_install () {
         cd /
         chown root:root /tmp
         chmod 1777 /tmp
-        apt-get -y remove --purge mysql-server mysql-client mysql-common
-        apt-get -y install mysql-server mysql-client libapache2-mod-auth-mysql php5-mysql
+        if [[ $INTERNET == "1" ]]; then
+            apt-get -y install mysql-server mysql-client libapache2-mod-auth-mysql php5-mysql
+        else
+            dpkg -i $DIRCONTENTOFFLINE/offlinepkgs/mysql-* $DIRCONTENTOFFLINE/offlinepkgs/libapache2-mod-auth-mysql* $DIRCONTENTOFFLINE/offlinepkgs/php5-mysql* 
+        fi
         printGood "Done."
 
         # Overwrite the lighttpd.conf file with our customized RACHEL version
@@ -871,28 +1005,27 @@ new_install () {
     fi
 }
 
-install_content_module () {
-    TMP="/tmp/module-install.lst"
-    if [[ -f $TMP ]]; then
+content_module_install () {
+    if [[ -f /tmp/module.lst ]]; then
         echo; printStatus "Your selected module list:"
         # Sort/unique the module list
-        cat $TMP
+        cat /tmp/module.lst
         echo; printQuestion "Do you want to use this module list?"
         read -p "    Enter (Y/n) " REPLY
-        if [[ $REPLY =~ ^[Nn]$ ]]; then rm -f $TMP; fi
+        if [[ $REPLY =~ ^[Nn]$ ]]; then rm -f /tmp/module.lst; fi
     fi
     SELECTMODULE=1
-    MODULELIST=$(rsync --list-only rsync://dev.worldpossible.org/rachelmods | egrep '^d' | awk '{print $5}' | tail -n +2)
+    MODULELIST=$(rsync --list-only $RSYNCDIR/rachelmods | egrep '^d' | awk '{print $5}' | tail -n +2)
     while [[ $SELECTMODULE == 1 ]]; do
         echo; printStatus "What RACHEL module would you like to select for download or update?"
         select module in $MODULELIST; do 
-            echo "$module" >> $TMP
+            echo "$module" >> /tmp/module.lst
             echo; printStatus "Added module $module to the install/update cue."
             break
         done
         echo; printStatus "Your selected module list:"
-        sort -u $TMP > $TMP.tmp; mv $TMP.tmp $TMP
-        cat $TMP
+        sort -u /tmp/module.lst > /tmp/module.tmp; sed '/^$/d' /tmp/module.tmp > /tmp/module.lst; rm /tmp/module.tmp
+        cat /tmp/module.lst
         echo; printQuestion "Do you want to select another module?"
         read -p "    Enter (y/N) " REPLY
         if [[ $REPLY =~ ^[Yy]$ ]]; then SELECTMODULE=1; else SELECTMODULE=0; fi
@@ -905,65 +1038,11 @@ install_content_module () {
             rsync -avz $RSYNCDIR/rachelmods/$m $RACHELWWW/modules/
             command_status
             printGood "Done."
-        done < $TMP
-        rm $TMP
+        done < /tmp/module.lst
     fi
 }
 
-
-remove_content_module () {
-    TMP="/tmp/module-remove.lst"
-    if [[ -f $TMP ]]; then
-        echo; printStatus "Your selected module list:"
-        # Sort/unique the module list
-        sort -u $TMP | sed '/^\s*$/d' > $TMP.tmp; mv $TMP.tmp $TMP
-        echo; printQuestion "Do you want to use this module list?"
-        read -p "    Enter (Y/n) " REPLY
-        if [[ $REPLY =~ ^[Nn]$ ]]; then rm -f $TMP; fi
-    fi
-    SELECTMODULE=1
-    MODULELIST=$(ls -l $RACHELWWW/modules/test | egrep '^d' | awk '{print $9}')
-    while [[ $SELECTMODULE == 1 ]]; do
-        echo; printStatus "What RACHEL module would you like to remove from your CAP?"
-        select module in $MODULELIST Exit; do 
-            case $module in
-                $m)
-                if [[ ! -z $module ]]; then
-                    echo "$module" >> $TMP
-                    echo; printStatus "Added module $module to the remove cue."
-                    break
-                else
-                    cat $MODULELIST
-                    echo; printError "You didn't select a module, try again."
-                fi
-                ;;
-
-                Exit)
-                break
-                ;;
-            esac
-        done
-        echo; printStatus "Your module selected for removal:"
-        sort -u $TMP | sed '/^\s*$/d' > $TMP.tmp; mv $TMP.tmp $TMP
-        cat $TMP
-        echo; printQuestion "Do you want to select another module?"
-        read -p "    Enter (y/N) " REPLY
-        if [[ $REPLY =~ ^[Yy]$ ]]; then SELECTMODULE=1; else SELECTMODULE=0; fi
-    done
-    echo; printQuestion "Are you ready to remove your selected modules?"
-    read -p "    Enter (y/N) " REPLY
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        while read m; do
-            echo; printStatus "Removing $m"
-            rm -rf $RACHELWWW/modules/test/$m
-            command_status
-            printGood "Done."
-        done < $TMP
-        rm $TMP
-    fi
-}
-
-install_content_list () {
+content_list_install () {
     trap ctrlC INT
     print_header
     ERRORCODE="0"
@@ -1040,7 +1119,8 @@ install_content_list () {
             ;;
 
             Kiwix-Wikipedia-ALL)
-            FILENAME="kiwix-0.9+wikipedia_en_all_2015-05.zip"
+            SHORTNAME=`echo $KIWIXWIKIALL | cut -d"+" -f2 | cut -d"." -f1`
+            FILENAME=$KIWIXWIKIALL
             FILES=$(ls $RACHELPARTITION/kiwix/data/content/wikipedia_en_all_2015-05.zim* 2> /dev/null | wc -l)
             if [[ $FILES != "0" ]]; then
                 echo; printError "The full Wikipedia is already installed."
@@ -1074,7 +1154,8 @@ install_content_list () {
             ;;
 
             Kiwix-Wikipedia-Schools)
-            FILENAME="kiwix-0.9+wikipedia_en_for-schools_2013-01.zip"
+            SHORTNAME=`echo $KIWIXWIKISCHOOLS | cut -d"+" -f2 | cut -d"." -f1`
+            FILENAME=$KIWIXWIKISCHOOLS
             FILES=$(ls $RACHELPARTITION/kiwix/data/content/wikipedia_en_for_schools_opt_2013.zim* 2> /dev/null | wc -l)
             if [[ $FILES != "0" ]]; then
                 echo; printError "Wikipedia for Schools is already installed."                
@@ -1216,6 +1297,7 @@ ka-lite_remove () {
 ka-lite_install () {
     # Downloading KA Lite 0.15
     echo; printStatus "Downloading KA Lite Version $KALITECURRENTVERSION"
+    cd $INSTALLTMPDIR
     $KALITEINSTALL
     # Checking user provided file MD5 against known good version
     check_md5 $INSTALLTMPDIR/$KALITEINSTALLER
@@ -1521,7 +1603,7 @@ EOF
 # Loop to redisplay main menu
 whattodo () {
     echo; printQuestion "What would you like to do next?"
-    echo "1)Initial Install  2)Install KA Lite  3)Install Kiwix  4)Install Weaved Service  5)Add/Update Module  6)Add/Update Module List  7)Utilities  8)Exit"
+    echo "1)Initial Install  2)Install KA Lite  3)Install Kiwix  4)Install Default Weaved Services  5)Install Weaved Service  6)Add/Update Module  7)Add/Update Module List  8)Utilities  9)Exit"
 }
 
 #### MAIN MENU ####
@@ -1554,9 +1636,10 @@ echo; printQuestion "What you would like to do:"
 echo "  - [Initial-Install] of RACHEL on a CAP"
 echo "  - [Install-KA-Lite]"
 echo "  - [Install-Kiwix]"
-echo "  - [Install-Weaved-Service]"
-echo "  - [Add-Update-Content-Module] lists current available modules; installs one at a time"
-echo "  - [Add-Update-Content-Module-List] installs modules from a pre-configured list of modules"
+echo "  - [Install-Default-Weaved-Services] installs the default CAP Weaved services for ports 22, 80, 8080"
+echo "  - [Install-Weaved-Service] adds a Weaved service to an online account you provide during install"
+echo "  - [Add-Update-Module] lists current available modules; installs one at a time"
+echo "  - [Add-Update-Module-List] installs modules from a pre-configured list of modules"
 echo "  - Other [Utilities]"
 echo "    - Check your local file's MD5 against our database"
 echo "    - Download RACHEL content to stage for OFFLINE installs"
@@ -1567,7 +1650,7 @@ echo "    - Symlink all .mp4 videos in the module kaos-en to /media/RACHEL/kacon
 echo "    - Testing script"
 echo "  - [Exit] the installation script"
 echo
-select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weaved-Service" "Add-Update-Content-Module" "Add-Update-Content-Module-List" "Utilities" "Exit"; do
+select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Update-Module" "Add-Update-Module-List" "Utilities" "Exit"; do
         case $menu in
         Initial-Install)
         new_install
@@ -1592,35 +1675,42 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weav
         whattodo
         ;;
 
+        Install-Default-Weaved-Services)
+        uninstall_ALL_weaved_services
+        install_default_weaved_services
+        backup_weaved_service
+        whattodo
+        ;;
+
         Install-Weaved-Service)
         install_weaved_service
         backup_weaved_service
         whattodo
         ;;
 
-        Add-Update-Content-Module)
-        install_content_module
+        Add-Update-Module)
+        content_module_install
         whattodo
         ;;
 
-        Add-Update-Content-Module-List)
-        install_content_list
+        Add-Update-Module-List)
+        content_list_install
         whattodo
         ;;
 
         Utilities)
         echo; printQuestion "What utility would you like to use?"
         echo "  - [Check-MD5] will check a file you provide against our hash database"
-        echo "  - **BETA** [Download-Installs-Content] to stage for OFFLINE (i.e. local) RACHEL installs"
-        echo "  - [Remove-Content-Module] from CAP"
-        echo "  - [Remove-Weaved-Service]"
+        echo "  - **BETA** [Stage-RACHEL-Content] downloads RACHEL source files for OFFLINE (i.e. local) RACHEL installs"
+        echo "  - [Uninstall-Weaved-Service] removes Weaved services, one at a time"
+        echo "  - [Uninstall-ALL-Weaved-Services] removes ALL Weaved services"
         echo "  - [Repair] an install of a CAP after a firmware upgrade"
         echo "  - [Sanitize] CAP (used for creating the RACHEL USB Multitool)"
         echo "  - [Symlink] all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent"
         echo "  - [Testing] script"
         echo "  - Return to [Main Menu]"
         echo
-        select util in "Check-MD5" "Download-Installs-Content" "Remove-Content-Module" "Remove-Weaved-Service" "Repair" "Sanitize" "Symlink" "Test" "Main-Menu"; do
+        select util in "Check-MD5" "Stage-RACHEL-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Repair" "Sanitize" "Symlink" "Test" "Main-Menu"; do
             case $util in
                 Check-MD5)
                 echo; printStatus "This function will compare the MD5 of the file you provide against our list of known hashes."
@@ -1629,19 +1719,31 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Weav
                 break
                 ;;
 
-                Download-Installs-Content)
+                Stage-RACHEL-Content)
                 download_offline_content
                 break
                 ;;
 
-                Remove-Content-Module)
-                remove_content_module
+                Backup-Weaved-Services)
+                backup_weaved_service
                 break
                 ;;
 
-                Remove-Weaved-Service)
-                remove_weaved_service
-                backup_weaved_service
+                Uninstall-Weaved-Service)
+                uninstall_weaved_service
+                break
+                ;;
+
+                Uninstall-ALL-Weaved-Services)
+                echo; printError "This uninstaller will completely remove Weaved from your CAP."
+                echo; printQuestion "Do you still wish to continue?"
+                read -p "    Enter (y/N) " REPLY
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    uninstall_ALL_weaved_services
+                    backup_weaved_service
+                else
+                    printError "Uninstall cancelled."
+                fi
                 break
                 ;;
 
