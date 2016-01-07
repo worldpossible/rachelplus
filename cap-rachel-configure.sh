@@ -655,6 +655,20 @@ backup_weaved_service () {
     sudo sed -i '10 a fi #Weaved' $RACHELSCRIPTSFILE
 }
 
+id_offline_content_folder (){
+    # What is the folder where OFFLINE content will be staged?
+    echo; printQuestion "The OFFLINE RACHEL content folder is set to:  $DIRCONTENTOFFLINE"
+    read -p "Do you want to change the default location? (y/N) " -r
+    if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
+        echo; printQuestion "What is the location of your content folder? "; read DIRCONTENTOFFLINE
+        if [[ ! -d $DIRCONTENTOFFLINE ]]; then
+            printError "The folder location does not exist!  Please identify the full path to your OFFLINE content folder and try again."
+            rm -rf $INSTALLTMPDIR $RACHELTMPDIR
+            exit 1
+        fi
+    fi
+}
+
 download_offline_content () {
     # Exit if OFFLINE...you have to be online to stage OFFLINE files
     if [[ $INTERNET == "0" ]]; then
@@ -672,17 +686,7 @@ download_offline_content () {
 
     echo; printStatus "** BETA ** Downloading RACHEL content for OFFLINE installs."
  
-    # What is the folder where OFFLINE content will be staged?
-    echo; printQuestion "The OFFLINE RACHEL content folder is set to:  $DIRCONTENTOFFLINE"
-    read -p "Do you want to change the default location? (y/N) " -r
-    if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
-        echo; printQuestion "What is the location of your content folder? "; read DIRCONTENTOFFLINE
-        if [[ ! -d $DIRCONTENTOFFLINE ]]; then
-            printError "The folder location does not exist!  Please identify the full path to your OFFLINE content folder and try again."
-            rm -rf $INSTALLTMPDIR $RACHELTMPDIR
-            exit 1
-        fi
-    fi
+    id_offline_content_folder
 
     # Download selected modules for OFFLINE staging
     if [[ -f /tmp/module.lst ]]; then
@@ -774,12 +778,35 @@ download_offline_content () {
     cd $DIRCONTENTOFFLINE/offlinepkgs
     apt-get download php5-cgi php5-common php5-mysql git git-man liberror-perl python-m2crypto mysql-server mysql-client libapache2-mod-auth-mysql
     printGood "Done."
+
+    # Show list of expected downloaded content
+    echo; printGood "Download of offline content complete."
+    echo; echo "You should have the following in your offline repository:  $DIRCONTENTOFFLINE"    
+    echo "- - - - - - - - - - - -" 
+    echo "contentshell [folder]"
+    echo "kacontent [folder]"
+    echo "$KALITEINSTALLER [file]"
+    echo "$KIWIXINSTALLER [file]"
+    echo "$KIWIXWIKIALL [file]"
+    echo "$KIWIXWIKISCHOOLS [file]"
+    echo "offlinekgs [folder]"
+    echo "rachelplus [folder]"
+    echo "Ray_Charles.tar.bz [file]"
+    echo "sphider_plus.sql [file]"
+    echo "rachelmods [folder with the following folders]:"
+    cat /tmp/module.lst
+
+    echo; printStatus "This is your current offline directory listing:"
+    echo "- - - - - - - - - - - -" 
+    ls -la
 }
 
 new_install () {
     trap ctrlC INT
     print_header
     echo; printStatus "Conducting a new install of RACHEL on a CAP."
+
+    id_offline_content_folder
 
     cd $INSTALLTMPDIR
 
