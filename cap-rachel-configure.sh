@@ -318,7 +318,7 @@ cleanup () {
     fi
     # Deleting the install script commands
     echo; printStatus "Cleaning up install scripts."
-    rm -rf $0 $INSTALLTMPDIR $RACHELTMPDIR&
+    rm -rf $INSTALLTMPDIR $RACHELTMPDIR&
     printGood "Done."
 }
 
