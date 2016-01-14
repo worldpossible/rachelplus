@@ -704,8 +704,14 @@ download_offline_content () {
     command_status
     printGood "Done."
     
+<<<<<<< Updated upstream
     echo; printStatus "Downloading/updating ka-lite_content.zip"
     wget -c $WGETONLINE/z-holding/ka-lite_content.zip -O $DIRCONTENTOFFLINE/ka-lite_content.zip
+=======
+    # Download ka-lite_content.zip
+    echo; printStatus "Downloading/updating:  KA Lite content media files"
+    rsync -avhP $CONTENTONLINE/kacontent $DIRCONTENTOFFLINE
+>>>>>>> Stashed changes
     command_status
     printGood "Done."
 
@@ -721,6 +727,39 @@ download_offline_content () {
     wget -c $WGETONLINE/z-SQLdatabase/sphider_plus.sql -O $DIRCONTENTOFFLINE/sphider_plus.sql
     command_status
     printGood "Done."
+<<<<<<< Updated upstream
+=======
+
+    # Downloading deb packages
+    echo; printStatus "Downloading/updating Git and PHP."
+    mkdir $DIRCONTENTOFFLINE/offlinepkgs
+    cd $DIRCONTENTOFFLINE/offlinepkgs
+    apt-get download php5-cgi php5-common php5-mysql git git-man liberror-perl python-m2crypto mysql-server mysql-client libapache2-mod-auth-mysql
+    printGood "Done."
+
+    # Show list of expected downloaded content
+    echo; printGood "Download of offline content complete."
+    echo; echo "You should have the following in your offline repository:  $DIRCONTENTOFFLINE"    
+    echo "- - - - - - - - - - - -" 
+    echo "contentshell [folder]"
+    echo "kacontent [folder]"
+    echo "$KALITEINSTALLER [file]"
+    echo "$KIWIXINSTALLER [file]"
+    echo "$KIWIXWIKIALL [file]"
+    echo "$KIWIXWIKISCHOOLS [file]"
+    echo "offlinekgs [folder]"
+    echo "rachelplus [folder]"
+    echo "Ray_Charles.tar.bz [file]"
+    echo "sphider_plus.sql [file]"
+    echo "rachelmods [folder with the following folders]:"
+    cat /tmp/module.lst
+
+    echo; printStatus "This is your current offline directory listing:"
+    echo "- - - - - - - - - - - -" 
+    ls -l $DIRCONTENTOFFLINE/
+    echo; echo "Modules downloaded:"
+    ls -l $DIRCONTENTOFFLINE/rachelmods/
+>>>>>>> Stashed changes
 }
 
 new_install () {
