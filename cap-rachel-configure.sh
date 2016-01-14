@@ -1664,7 +1664,7 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Defa
         Utilities)
         echo; printQuestion "What utility would you like to use?"
         echo "  - [Check-MD5] will check a file you provide against our hash database"
-        echo "  - **BETA** [Download-Installs-Content] to stage for OFFLINE (i.e. local) RACHEL installs"
+        echo "  - **BETA** [Download-OFFLINE-Content] to stage for OFFLINE (i.e. local) RACHEL installs"
         echo "  - [Uninstall-Weaved-Service] removes Weaved services, one at a time"
         echo "  - [Uninstall-ALL-Weaved-Services] removes ALL Weaved services"
         echo "  - [Repair] an install of a CAP after a firmware upgrade"
@@ -1673,7 +1673,7 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Defa
         echo "  - [Testing] script"
         echo "  - Return to [Main Menu]"
         echo
-        select util in "Check-MD5" "Download-Installs-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Repair" "Sanitize" "Symlink" "Test" "Main-Menu"; do
+        select util in "Check-MD5" "Download-OFFLINE-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Repair" "Sanitize" "Symlink" "Test" "Main-Menu"; do
             case $util in
                 Check-MD5)
                 echo; printStatus "This function will compare the MD5 of the file you provide against our list of known hashes."
@@ -1682,7 +1682,7 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Defa
                 break
                 ;;
 
-                Download-Installs-Content)
+                Download-OFFLINE-Content)
                 download_offline_content
                 break
                 ;;
