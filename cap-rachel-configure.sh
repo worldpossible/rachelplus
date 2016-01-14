@@ -703,15 +703,10 @@ download_offline_content () {
     fi
     command_status
     printGood "Done."
-    
-<<<<<<< Updated upstream
-    echo; printStatus "Downloading/updating ka-lite_content.zip"
-    wget -c $WGETONLINE/z-holding/ka-lite_content.zip -O $DIRCONTENTOFFLINE/ka-lite_content.zip
-=======
+
     # Download ka-lite_content.zip
     echo; printStatus "Downloading/updating:  KA Lite content media files"
     rsync -avhP $CONTENTONLINE/kacontent $DIRCONTENTOFFLINE
->>>>>>> Stashed changes
     command_status
     printGood "Done."
 
@@ -727,8 +722,6 @@ download_offline_content () {
     wget -c $WGETONLINE/z-SQLdatabase/sphider_plus.sql -O $DIRCONTENTOFFLINE/sphider_plus.sql
     command_status
     printGood "Done."
-<<<<<<< Updated upstream
-=======
 
     # Downloading deb packages
     echo; printStatus "Downloading/updating Git and PHP."
@@ -759,7 +752,6 @@ download_offline_content () {
     ls -l $DIRCONTENTOFFLINE/
     echo; echo "Modules downloaded:"
     ls -l $DIRCONTENTOFFLINE/rachelmods/
->>>>>>> Stashed changes
 }
 
 new_install () {
