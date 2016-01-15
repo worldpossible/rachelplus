@@ -1571,6 +1571,7 @@ repair-kalite () {
     # Turn loggin off for compatibility
     exec &>/dev/tty
     # Restart kalite to use the new assessmentitems.sqlite location
+    echo; kalite stop
     echo; kalite manage setup
     # Show diagnostic info
     echo; kalite diagnose
@@ -1635,6 +1636,8 @@ echo "    - Check your local file's MD5 against our database"
 echo "    - Download RACHEL content to stage for OFFLINE installs"
 echo "    - Uninstall a Weaved service"
 echo "    - Repair an install of a CAP after a firmware upgrade"
+echo "    - Repair a KA Lite assessment file location"
+echo "    - Repairs of general bug fixes"
 echo "    - Sanitize CAP (used for creating the RACHEL USB Multitool)"
 echo "    - Symlink all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent"
 echo "    - Testing script"
