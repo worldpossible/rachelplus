@@ -1336,7 +1336,7 @@ ka-lite_setup () {
     sed -i '/^CONTENT_ROOT/d' $KALITESETTINGS
     sed -i '/^DATABASES/d' $KALITESETTINGS
     echo 'CONTENT_ROOT = "/media/RACHEL/kacontent"' >> $KALITESETTINGS
-    echo "DATABASES['assessment_items']['NAME'] = os.path.join(CONTENT_ROOT, 'assessmentitems.sqlite')" >> $KALITESETTINGS
+#    echo "DATABASES['assessment_items']['NAME'] = os.path.join(CONTENT_ROOT, 'assessmentitems.sqlite')" >> $KALITESETTINGS
 
     # The current khan_assessment.zip installer provided by KA Lite throws on error on our system 
     echo; printStatus "Fixing the KA Lite provider khan_assessment.zip installer."
@@ -1455,7 +1455,7 @@ download_ka_content () {
     fi
 }
 
-repair () {
+repair-firmware () {
     print_header
     echo; printStatus "Repairing your CAP after a firmware upgrade."
     cd $INSTALLTMPDIR
@@ -1561,6 +1561,21 @@ EOF
     echo; printGood "Log file saved to: $RACHELLOGDIR/rachel-repair-$TIMESTAMP.log"
     cleanup
     reboot-CAP
+}
+
+repair-kalite () {
+    echo; printStatus "Fixing KA-Lite"
+    # Fixing KA-Lite 
+    sed -i '/assessmentitems.sqlite/d' /root/.kalite/settings.py
+    # Turn loggin off for compatibility
+    exec &>/dev/tty
+    # Restart kalite to use the new assessmentitems.sqlite location
+    echo; kalite manage setup
+    # Show diagnostic info
+    echo; kalite diagnose
+    # Turn logging back on
+    exec &> >(tee -a "$RACHELLOG")
+    echo; printGood "Done."
 }
 
 # Loop to redisplay main menu
@@ -1673,7 +1688,7 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Defa
         echo "  - [Testing] script"
         echo "  - Return to [Main Menu]"
         echo
-        select util in "Check-MD5" "Download-OFFLINE-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Repair" "Sanitize" "Symlink" "Test" "Main-Menu"; do
+        select util in "Check-MD5" "Download-OFFLINE-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Repair-Firmware" "Repair-KA-Lite" "Sanitize" "Symlink" "Test" "Main-Menu"; do
             case $util in
                 Check-MD5)
                 echo; printStatus "This function will compare the MD5 of the file you provide against our list of known hashes."
@@ -1710,8 +1725,13 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Defa
                 break
                 ;;
 
-                Repair)
-                repair
+                Repair-Firmware)
+                repair-firmware
+                break
+                ;;
+
+                Repair-KA-Lite)
+                repair-kalite
                 break
                 ;;
 
