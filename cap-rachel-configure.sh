@@ -1567,6 +1567,7 @@ EOF
 repair-kalite () {
     echo; printStatus "Fixing KA-Lite"
     # Fixing KA-Lite 
+    cp -f /media/RACHEL/kacontent/assessmentitems.sqlite /usr/share/kalite/assessment/khan/.
     sed -i '/assessmentitems.sqlite/d' /root/.kalite/settings.py
     # Turn loggin off for compatibility
     exec &>/dev/tty
