@@ -727,7 +727,7 @@ download_offline_content () {
     echo; printStatus "Downloading/updating Git and PHP."
     mkdir $DIRCONTENTOFFLINE/offlinepkgs
     cd $DIRCONTENTOFFLINE/offlinepkgs
-    apt-get download php5-cgi php5-common php5-mysql git git-man liberror-perl python-m2crypto mysql-server mysql-client libapache2-mod-auth-mysql
+    apt-get download php5-cgi php5-common php5-mysql php5-sqlite git git-man liberror-perl python-m2crypto mysql-server mysql-client libapache2-mod-auth-mysql
     printGood "Done."
 
     # Show list of expected downloaded content
@@ -884,8 +884,8 @@ new_install () {
         printGood "Done."
 
         # Install packages
-        echo; printStatus "Installing Git and PHP."
-        apt-get -y install php5-cgi git-core python-m2crypto
+        echo; printStatus "Installing packages."
+        apt-get -y install php5-cgi git-core python-m2crypto php5-sqlite
         # Add the following line at the end of file
         echo "cgi.fix_pathinfo = 1" >> /etc/php5/cgi/php.ini
         printGood "Done."
@@ -1338,6 +1338,7 @@ ka-lite_setup () {
     echo 'CONTENT_ROOT = "/media/RACHEL/kacontent"' >> $KALITESETTINGS
 #    echo "DATABASES['assessment_items']['NAME'] = os.path.join(CONTENT_ROOT, 'assessmentitems.sqlite')" >> $KALITESETTINGS
 
+    
     # The current khan_assessment.zip installer provided by KA Lite throws on error on our system 
     echo; printStatus "Fixing the KA Lite provider khan_assessment.zip installer."
     sed -i "s/os.rename/shutil.move/g" /usr/lib/python2.7/dist-packages/kalite/contentload/management/commands/unpack_assessment_zip.py
@@ -1578,6 +1579,17 @@ repair-kalite () {
     echo; printGood "Done."
 }
 
+repair-bugs () {
+    echo; printStatus "Prepping for new dynamic contentshell"
+    apt-get update
+    apt-get -y install php5-sqlite
+    printGood "Done."
+    echo; printStatus "Fixing GCF index.htmlf links"
+    sed -i 's/digital_lifestyle.html/digitalskills.html/g' /media/RACHEL/rachel/modules/GCF2015/index.htmlf
+    sed -i 's/job.html/jobsearch.html/g' /media/RACHEL/rachel/modules/GCF2015/index.htmlf
+    printGood "Done."
+}
+
 # Loop to redisplay main menu
 whattodo () {
     echo; printQuestion "What would you like to do next?"
@@ -1688,7 +1700,7 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Defa
         echo "  - [Testing] script"
         echo "  - Return to [Main Menu]"
         echo
-        select util in "Check-MD5" "Download-OFFLINE-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Repair-Firmware" "Repair-KA-Lite" "Sanitize" "Symlink" "Test" "Main-Menu"; do
+        select util in "Check-MD5" "Download-OFFLINE-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Repair-Firmware" "Repair-KA-Lite" "Repair-Bugs" "Sanitize" "Symlink" "Test" "Main-Menu"; do
             case $util in
                 Check-MD5)
                 echo; printStatus "This function will compare the MD5 of the file you provide against our list of known hashes."
@@ -1732,6 +1744,11 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Defa
 
                 Repair-KA-Lite)
                 repair-kalite
+                break
+                ;;
+
+                Repair-Bugs)
+                repair-bugs
                 break
                 ;;
 
