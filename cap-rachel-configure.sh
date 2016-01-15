@@ -15,7 +15,7 @@ GITCONTENTSHELL="https://raw.githubusercontent.com/rachelproject/contentshell/ma
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 OS="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 OSVERSION=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-VERSION=1224151150 # To get current version - date +%m%d%y%H%M
+VERSION=0114161952 # To get current version - date +%m%d%y%H%M
 TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
 INTERNET="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 RACHELLOGDIR="/var/log/RACHEL"
@@ -703,9 +703,10 @@ download_offline_content () {
     fi
     command_status
     printGood "Done."
-    
-    echo; printStatus "Downloading/updating ka-lite_content.zip"
-    wget -c $WGETONLINE/z-holding/ka-lite_content.zip -O $DIRCONTENTOFFLINE/ka-lite_content.zip
+
+    # Download ka-lite_content.zip
+    echo; printStatus "Downloading/updating:  KA Lite content media files"
+    rsync -avhP $CONTENTONLINE/kacontent $DIRCONTENTOFFLINE
     command_status
     printGood "Done."
 
@@ -721,6 +722,36 @@ download_offline_content () {
     wget -c $WGETONLINE/z-SQLdatabase/sphider_plus.sql -O $DIRCONTENTOFFLINE/sphider_plus.sql
     command_status
     printGood "Done."
+
+    # Downloading deb packages
+    echo; printStatus "Downloading/updating Git and PHP."
+    mkdir $DIRCONTENTOFFLINE/offlinepkgs
+    cd $DIRCONTENTOFFLINE/offlinepkgs
+    apt-get download php5-cgi php5-common php5-mysql git git-man liberror-perl python-m2crypto mysql-server mysql-client libapache2-mod-auth-mysql
+    printGood "Done."
+
+    # Show list of expected downloaded content
+    echo; printGood "Download of offline content complete."
+    echo; echo "You should have the following in your offline repository:  $DIRCONTENTOFFLINE"    
+    echo "- - - - - - - - - - - -" 
+    echo "contentshell [folder]"
+    echo "kacontent [folder]"
+    echo "$KALITEINSTALLER [file]"
+    echo "$KIWIXINSTALLER [file]"
+    echo "$KIWIXWIKIALL [file]"
+    echo "$KIWIXWIKISCHOOLS [file]"
+    echo "offlinekgs [folder]"
+    echo "rachelplus [folder]"
+    echo "Ray_Charles.tar.bz [file]"
+    echo "sphider_plus.sql [file]"
+    echo "rachelmods [folder with the following folders]:"
+    cat /tmp/module.lst
+
+    echo; printStatus "This is your current offline directory listing:"
+    echo "- - - - - - - - - - - -" 
+    ls -l $DIRCONTENTOFFLINE/
+    echo; echo "Modules downloaded:"
+    ls -l $DIRCONTENTOFFLINE/rachelmods/
 }
 
 new_install () {
@@ -906,6 +937,10 @@ new_install () {
             bash $INSTALLTMPDIR/cap-rachel-first-install-3.sh
         else
             # Repartition external 500GB hard drive into 3 partitions
+            echo; printStatus "Backup current partition table to /root/gpt.backup"
+            sgdisk -b /root/gpt.backup /dev/sda
+            echo; printStatus "Unmounting any mounted partitions."
+            umount /dev/sda1 /dev/sda2
             echo; printStatus "Repartitioning hard drive"
             sgdisk -p /dev/sda
             sgdisk -o /dev/sda
@@ -1301,7 +1336,7 @@ ka-lite_setup () {
     sed -i '/^CONTENT_ROOT/d' $KALITESETTINGS
     sed -i '/^DATABASES/d' $KALITESETTINGS
     echo 'CONTENT_ROOT = "/media/RACHEL/kacontent"' >> $KALITESETTINGS
-    echo "DATABASES['assessment_items']['NAME'] = os.path.join(CONTENT_ROOT, 'assessmentitems.sqlite')" >> $KALITESETTINGS
+#    echo "DATABASES['assessment_items']['NAME'] = os.path.join(CONTENT_ROOT, 'assessmentitems.sqlite')" >> $KALITESETTINGS
 
     # The current khan_assessment.zip installer provided by KA Lite throws on error on our system 
     echo; printStatus "Fixing the KA Lite provider khan_assessment.zip installer."
@@ -1420,7 +1455,7 @@ download_ka_content () {
     fi
 }
 
-repair () {
+repair-firmware () {
     print_header
     echo; printStatus "Repairing your CAP after a firmware upgrade."
     cd $INSTALLTMPDIR
@@ -1528,6 +1563,21 @@ EOF
     reboot-CAP
 }
 
+repair-kalite () {
+    echo; printStatus "Fixing KA-Lite"
+    # Fixing KA-Lite 
+    sed -i '/assessmentitems.sqlite/d' /root/.kalite/settings.py
+    # Turn loggin off for compatibility
+    exec &>/dev/tty
+    # Restart kalite to use the new assessmentitems.sqlite location
+    echo; kalite manage setup
+    # Show diagnostic info
+    echo; kalite diagnose
+    # Turn logging back on
+    exec &> >(tee -a "$RACHELLOG")
+    echo; printGood "Done."
+}
+
 # Loop to redisplay main menu
 whattodo () {
     echo; printQuestion "What would you like to do next?"
@@ -1629,7 +1679,7 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Defa
         Utilities)
         echo; printQuestion "What utility would you like to use?"
         echo "  - [Check-MD5] will check a file you provide against our hash database"
-        echo "  - **BETA** [Download-Installs-Content] to stage for OFFLINE (i.e. local) RACHEL installs"
+        echo "  - **BETA** [Download-OFFLINE-Content] to stage for OFFLINE (i.e. local) RACHEL installs"
         echo "  - [Uninstall-Weaved-Service] removes Weaved services, one at a time"
         echo "  - [Uninstall-ALL-Weaved-Services] removes ALL Weaved services"
         echo "  - [Repair] an install of a CAP after a firmware upgrade"
@@ -1638,7 +1688,7 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Defa
         echo "  - [Testing] script"
         echo "  - Return to [Main Menu]"
         echo
-        select util in "Check-MD5" "Download-Installs-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Repair" "Sanitize" "Symlink" "Test" "Main-Menu"; do
+        select util in "Check-MD5" "Download-OFFLINE-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Repair-Firmware" "Repair-KA-Lite" "Sanitize" "Symlink" "Test" "Main-Menu"; do
             case $util in
                 Check-MD5)
                 echo; printStatus "This function will compare the MD5 of the file you provide against our list of known hashes."
@@ -1647,7 +1697,7 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Defa
                 break
                 ;;
 
-                Download-Installs-Content)
+                Download-OFFLINE-Content)
                 download_offline_content
                 break
                 ;;
@@ -1675,8 +1725,13 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Defa
                 break
                 ;;
 
-                Repair)
-                repair
+                Repair-Firmware)
+                repair-firmware
+                break
+                ;;
+
+                Repair-KA-Lite)
+                repair-kalite
                 break
                 ;;
 
