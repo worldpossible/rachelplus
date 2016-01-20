@@ -2,8 +2,7 @@ su
 123lkj
 
 apt-get update
-apt-get install php-sqlite
-Y
+apt-get -y install php5-sqlite
 
 reboot
 su
