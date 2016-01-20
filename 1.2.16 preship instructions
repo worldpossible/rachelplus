@@ -18,3 +18,17 @@ admin
 Rachel+1
 download subtitles
 
+wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/cap-rachel-configure.sh \
+-O /root/cap-rachel-configure.sh; bash /root/cap-rachel-configure.sh
+1
+4
+y
+
+go to weaved.com
+register device
+confirm e-mail receipt of registration
+print weaved sticker
+
+confirm language substitles downloaded
+
+sudo sed -i 's/ed//g' /media/RACHEL/rachel/modules/local_content/index.htmlf
