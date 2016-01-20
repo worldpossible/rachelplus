@@ -1,0 +1,20 @@
+su
+123lkj
+
+apt-get update
+apt-get install php-sqlite
+Y
+
+reboot
+su
+123lkj
+kalite manage setup
+yes
+yes
+yes
+
+login to ka-lite
+admin
+Rachel+1
+download subtitles
+
