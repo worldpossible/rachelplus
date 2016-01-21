@@ -136,12 +136,16 @@ opmode () {
                 echo; printQuestion "What is the location of your content folder? "; read DIRCONTENTOFFLINE
             fi
             if [[ ! -d $DIRCONTENTOFFLINE ]]; then
-                printError "The folder location does not exist!  Please identify the full path to your OFFLINE content folder and try again."
-                rm -rf $INSTALLTMPDIR $RACHELTMPDIR
-                exit 1
-            else
-                export DIRCONTENTOFFLINE
-                offline_variables
+                printError "The folder location does not exist!  Do you want to continue?"
+                read -p "    Enter (y/N) " REPLY
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    DIRCONTENTOFFLINE=""
+                    offline_variables
+                else
+                    printError "Exiting on user request."
+                    rm -rf $INSTALLTMPDIR $RACHELTMPDIR
+                    exit 1
+                fi
             fi
             break
         ;;
@@ -332,11 +336,17 @@ sanitize () {
     # Clean off ka-lite_content.zip (if exists)
     rm -f /media/RACHEL/ka-lite_content.zip
     # Clean previous files from running the generate_recovery.sh script 
-    rm -rf /recovery/201* $RACHELRECOVERYDIR/201*
+    rm -rf /recovery/20* $RACHELRECOVERYDIR/20*
     # Clean bash history
     echo "" > /root/.bash_history
-    # Clean Weaved services
+    # Weaved services
     rm -rf /usr/bin/notify_Weaved*.sh /usr/bin/Weaved*.sh /etc/weaved/services/Weaved*.conf /root/Weaved*.log
+    # Install default weaved services
+    install_default_weaved_services
+    echo; printGood "All ready for a customer; register Weaved services, if needed."
+}
+
+build_usb_image () {
     # Stop script from defaulting the SSID
     sed -i 's/^redis-cli del WlanSsidT0_ssid/#redis-cli del WlanSsidT0_ssid/g' /root/generate_recovery.sh
     # KA Lite
@@ -1707,13 +1717,15 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Defa
         echo "  - **BETA** [Download-OFFLINE-Content] to stage for OFFLINE (i.e. local) RACHEL installs"
         echo "  - [Uninstall-Weaved-Service] removes Weaved services, one at a time"
         echo "  - [Uninstall-ALL-Weaved-Services] removes ALL Weaved services"
-        echo "  - [Repair] an install of a CAP after a firmware upgrade"
-        echo "  - [Sanitize] CAP (used for creating the RACHEL USB Multitool)"
+        echo "  - [Repair-Firmware] repairs an install of a CAP after a firmware upgrade"
+        echo "  - [Repair-KA-Lite] repairs KA Lite's mislocation of the assessment file; runs 'kalite manage setup' as well"
+        echo "  - [Sanitize] and prepare CAP for delivery to customer"
+        echo "  - [Build-USB-Image] is used for creating eMMC images used on the RACHEL USB Multitool"
         echo "  - [Symlink] all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent"
         echo "  - [Testing] script"
         echo "  - Return to [Main Menu]"
         echo
-        select util in "Check-MD5" "Download-OFFLINE-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Repair-Firmware" "Repair-KA-Lite" "Repair-Bugs" "Sanitize" "Symlink" "Test" "Main-Menu"; do
+        select util in "Check-MD5" "Download-OFFLINE-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Repair-Firmware" "Repair-KA-Lite" "Repair-Bugs" "Sanitize" "Build-USB-Image" "Symlink" "Test" "Main-Menu"; do
             case $util in
                 Check-MD5)
                 echo; printStatus "This function will compare the MD5 of the file you provide against our list of known hashes."
@@ -1767,6 +1779,12 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Defa
 
                 Sanitize)
                 sanitize
+                break
+                ;;
+
+                Build-USB-Image)
+                sanitize
+                build_usb_image
                 break
                 ;;
 
