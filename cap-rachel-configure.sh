@@ -1473,6 +1473,8 @@ downloadKAContent(){
 }
 
 checkCaptivePortal(){
+    ERRORCODE=0
+
     # Download RACHEL Captive Portal files
     echo; printStatus "Checking Captive Portal files."
 
@@ -1518,7 +1520,11 @@ checkCaptivePortal(){
         commandStatus
     fi
 
-    if [[ $ERRORCODE == 1 ]]; then printError "Something may have gone wrong; check $RACHELLOG for errors."; fi
+    if [[ $ERRORCODE == 1 ]]; then 
+        printError "Something may have gone wrong; check $RACHELLOG for errors."
+    else 
+        printGood "Done."
+    fi
 }
 
 repairFirmware(){
@@ -1656,25 +1662,25 @@ repairBugs(){
         echo; printStatus "Prepping for new dynamic contentshell"
         apt-get update
         apt-get -y install php5-sqlite
-        printGood "Done."
     fi
+    printGood "Done."
 
     # Clone or update the RACHEL content shell from GitHub
     if [[ $INTERNET == "0" ]]; then cd $DIRCONTENTOFFLINE; else cd $INSTALLTMPDIR; fi
     echo; printStatus "Checking for pre-existing RACHEL content shell."
     if [[ ! -d $RACHELWWW ]]; then
-        echo; printStatus "RACHEL content shell does not exist at $RACHELWWW."
-        echo; printStatus "Cloning the RACHEL content shell from GitHub."
+        printStatus "RACHEL content shell does not exist at $RACHELWWW."
+        printStatus "Cloning the RACHEL content shell from GitHub."
         $GITCLONERACHELCONTENTSHELL
     else
         if [[ ! -d $RACHELWWW/.git ]]; then
-            echo; printStatus "$RACHELWWW exists but it wasn't installed from git; installing RACHEL content shell from GitHub."
+            printStatus "$RACHELWWW exists but it wasn't installed from git; installing RACHEL content shell from GitHub."
             rm -rf contentshell # in case of previous failed install
             $GITCLONERACHELCONTENTSHELL
             cp -rf contentshell/* $RACHELWWW/ # overwrite current content with contentshell
             cp -rf contentshell/.git $RACHELWWW/ # copy over GitHub files
         else
-            echo; printStatus "$RACHELWWW exists; updating RACHEL content shell from GitHub."
+            printStatus "$RACHELWWW exists; updating RACHEL content shell from GitHub."
             cd $RACHELWWW; git fetch; git reset --hard origin
         fi
     fi
