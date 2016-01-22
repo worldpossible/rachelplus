@@ -15,7 +15,7 @@ GITCONTENTSHELL="https://raw.githubusercontent.com/rachelproject/contentshell/ma
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 OS="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 OSVERSION=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-VERSION=0115160309 # To get current version - date +%m%d%y%H%M
+VERSION=0122160454 # To get current version - date +%m%d%y%H%M
 TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
 INTERNET="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 RACHELLOGDIR="/var/log/RACHEL"
@@ -38,7 +38,7 @@ RACHELRECOVERYDIR="/media/RACHEL/recovery"
 ERRORCODE="0"
 
 # MD5 hash list
-build_hash_list () {
+buildHashList(){
     cat > $INSTALLTMPDIR/hashes.md5 << 'EOF'
 15b6aa51d8292b7b0cbfe36927b8e714 khan_assessment.zip
 65fe77df27169637f20198901591dff0 ka-lite_content.zip
@@ -51,19 +51,19 @@ b61fdc3937aa226f34f685ba0bc29db1 kiwix-0.9-linux-i686.tar.bz2
 EOF
 }
 
-printGood () {
+printGood(){
     echo -e "\x1B[01;32m[+]\x1B[0m $1"
 }
 
-printError () {
+printError(){
     echo -e "\x1B[01;31m[-]\x1B[0m $1"
 }
 
-printStatus () {
+printStatus(){
     echo -e "\x1B[01;35m[*]\x1B[0m $1"
 }
 
-printQuestion () {
+printQuestion(){
     echo -e "\x1B[01;33m[?]\x1B[0m $1"
 }
 
@@ -90,29 +90,30 @@ stty sane
 trap 'exit 3' 1 2 3 15
 
 # Logging
-logging_start () {
+loggingStart(){
     exec &> >(tee "$RACHELLOG")
 }
 
-# Capture a users Ctrl-C
 ctrlC(){
-    stty sane
+    kill $!; trap 'kill $1' SIGTERM
     echo; printError "Cancelled by user."
+    cleanup
+    stty sane
     echo; exit $?
 }
 
-testing-script () {
+testingScript(){
     set -x
     trap ctrlC INT
 
-    install_default_weaved_services
-    backup_weaved_service
+    installDefaultWeavedServices
+    backupWeavedService
 
     set +x
     exit 1
 }
 
-opmode () {
+opMode(){
     trap ctrlC INT
     echo; printQuestion "Do you want to run in ONLINE or OFFLINE mode?"
     select MODE in "ONLINE" "OFFLINE"; do
@@ -121,27 +122,31 @@ opmode () {
         ONLINE)
             echo; printGood "Script set for 'ONLINE' mode."
             INTERNET="1"
-            online_variables
-            check_internet
+            onlineVariables
+            checkInternet
             break
         ;;
         # OFFLINE
         OFFLINE)
             echo; printGood "Script set for 'OFFLINE' mode."
             INTERNET="0"
-            offline_variables
+            offlineVariables
             echo; printQuestion "The OFFLINE RACHEL content folder is set to:  $DIRCONTENTOFFLINE"
             read -p "Do you want to change the default location? (y/n) " -r
             if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
                 echo; printQuestion "What is the location of your content folder? "; read DIRCONTENTOFFLINE
             fi
             if [[ ! -d $DIRCONTENTOFFLINE ]]; then
-                printError "The folder location does not exist!  Please identify the full path to your OFFLINE content folder and try again."
-                rm -rf $INSTALLTMPDIR $RACHELTMPDIR
-                exit 1
-            else
-                export DIRCONTENTOFFLINE
-                offline_variables
+                printError "The folder location does not exist!  Do you want to continue?"
+                read -p "    Enter (y/N) " REPLY
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    DIRCONTENTOFFLINE=""
+                    offlineVariables
+                else
+                    printError "Exiting on user request."
+                    rm -rf $INSTALLTMPDIR $RACHELTMPDIR
+                    exit 1
+                fi
             fi
             break
         ;;
@@ -162,7 +167,7 @@ osCheck(){
     fi
 }
 
-online_variables () {
+onlineVariables(){
     GPGKEY1="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 40976EAF437D05B5"
     GPGKEY2="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 16126D3A3E5C1192"
     SOURCEUS="wget -r $GITRACHELPLUS/sources.list/sources-us.list -O /etc/apt/sources.list"
@@ -173,6 +178,8 @@ online_variables () {
     CAPRACHELFIRSTINSTALL3="wget -r $GITRACHELPLUS/install/cap-rachel-first-install-3.sh -O cap-rachel-first-install-3.sh"
     LIGHTTPDFILE="wget -r $GITRACHELPLUS/lighttpd.conf -O lighttpd.conf"
     CAPTIVEPORTALREDIRECT="wget -r $GITRACHELPLUS/captive-portal/captiveportal-redirect.php -O captiveportal-redirect.php"
+    PASSTICKETSHTML="wget -r $GITRACHELPLUS/captive-portal/pass_ticket.shtml -O pass_ticket.shtml"
+    REDIRECTSHTML="wget -r $GITRACHELPLUS/captive-portal/redirect.shtml -O redirect.shtml"
     RACHELBRANDLOGOCAPTIVE="wget -r $GITRACHELPLUS/captive-portal/RACHELbrandLogo-captive.png -O RACHELbrandLogo-captive.png"
     HFCBRANDLOGOCAPTIVE="wget -r $GITRACHELPLUS/captive-portal/HFCbrandLogo-captive.jpg -O HFCbrandLogo-captive.jpg"
     WORLDPOSSIBLEBRANDLOGOCAPTIVE="wget -r $GITRACHELPLUS/captive-portal/WorldPossiblebrandLogo-captive.png -O WorldPossiblebrandLogo-captive.png"
@@ -181,8 +188,8 @@ online_variables () {
     ASSESSMENTITEMSJSON="wget -c $GITRACHELPLUS/assessmentitems.json -O /var/ka-lite/data/khan/assessmentitems.json"
     KALITEINSTALL="rsync -avhz --progress $CONTENTONLINE/$KALITEINSTALLER $INSTALLTMPDIR/$KALITEINSTALLER"
     KALITECONTENTINSTALL="rsync -avhz --progress $CONTENTONLINE/kacontent/ /media/RACHEL/kacontent/"
-    KIWIXINSTALL="wget -c $WGETONLINE/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $RACHELTMPDIR/kiwix-0.9-linux-i686.tar.bz2"
-    KIWIXSAMPLEDATA="wget -c $WGETONLINE/z-holding/Ray_Charles.tar.bz -O $RACHELTMPDIR/Ray_Charles.tar.bz"
+    KIWIXINSTALL="wget -c $WGETONLINE/downloads/public_ftp/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $RACHELTMPDIR/kiwix-0.9-linux-i686.tar.bz2"
+    KIWIXSAMPLEDATA="wget -c $WGETONLINE/downloads/public_ftp/z-holding/Ray_Charles.tar.bz -O $RACHELTMPDIR/Ray_Charles.tar.bz"
     WEAVEDINSTALL="wget -c https://github.com/weaved/installer/raw/master/Intel_CAP/weaved_IntelCAP.tar -O /root/weaved_IntelCAP.tar"
     WEAVEDSINGLEINSTALL="wget -c https://github.com/weaved/installer/raw/master/weaved_software/installer.sh -O /root/weaved_software/installer.sh"
     WEAVEDUNINSTALLER="wget -c https://github.com/weaved/installer/raw/master/weaved_software/uninstaller.sh -O /root/weaved_software/uninstaller.sh"
@@ -191,7 +198,7 @@ online_variables () {
     CONTENTWIKI="wget -c http://download.kiwix.org/portable/wikipedia/$FILENAME -O $RACHELTMPDIR/$FILENAME"
 }
 
-offline_variables () {
+offlineVariables(){
     GPGKEY1="apt-key add $DIRCONTENTOFFLINE/rachelplus/gpg-keys/437D05B5"
     GPGKEY2="apt-key add $DIRCONTENTOFFLINE/rachelplus/gpg-keys/3E5C1192"
     SOURCEUS="rsync -avhz --progress $DIRCONTENTOFFLINE/rachelplus/sources.list/sources-us.list /etc/apt/sources.list"
@@ -202,6 +209,8 @@ offline_variables () {
     CAPRACHELFIRSTINSTALL3="rsync -avhz --progress $DIRCONTENTOFFLINE/rachelplus/install/cap-rachel-first-install-3.sh ."
     LIGHTTPDFILE="rsync -avhz --progress $DIRCONTENTOFFLINE/rachelplus/lighttpd.conf ."
     CAPTIVEPORTALREDIRECT="rsync -avhz --progress $DIRCONTENTOFFLINE/rachelplus/captive-portal/captiveportal-redirect.php ."
+    PASSTICKETSHTML="rsync -avhz --progress $DIRCONTENTOFFLINE/rachelplus/captive-portal/pass_ticket.shtml ."
+    REDIRECTSHTML="rsync -avhz --progress $DIRCONTENTOFFLINE/rachelplus/captive-portal/redirect.shtml ."
     RACHELBRANDLOGOCAPTIVE="rsync -avhz --progress $DIRCONTENTOFFLINE/rachelplus/captive-portal/RACHELbrandLogo-captive.png ."
     HFCBRANDLOGOCAPTIVE="rsync -avhz --progress $DIRCONTENTOFFLINE/rachelplus/captive-portal/HFCbrandLogo-captive.jpg ."
     WORLDPOSSIBLEBRANDLOGOCAPTIVE="rsync -avhz --progress $DIRCONTENTOFFLINE/rachelplus/captive-portal/WorldPossiblebrandLogo-captive.png ."
@@ -220,13 +229,13 @@ offline_variables () {
     CONTENTWIKIALL=""
 }
 
-print_header () {
+printHeader(){
     # Add header/date/time to install log file
     echo; printGood "RACHEL CAP Configuration Script - Version $VERSION"
     printGood "Script started: $(date)"
 }
 
-check_internet () {
+checkInternet(){
     trap ctrlC INT
     if [[ $INTERNET == "1" || -z $INTERNET ]]; then
         # Check internet connecivity
@@ -247,22 +256,14 @@ check_internet () {
                 INTERNET=1
             else
                 echo; printError "No internet connectivity; entering 'OFFLINE' mode."
-                offline_variables
+                offlineVariables
                 INTERNET=0
             fi
         fi
     fi
 }
 
-ctrlC () {
-#    kill $!; trap 'kill $1' SIGTERM
-    echo; printError "Cancelled by user."
-    cleanup
-    stty sane
-    echo; exit $?
-}
-
-command_status () {
+commandStatus(){
     export EXITCODE="$?"
     if [[ $EXITCODE != 0 ]]; then
         printError "Command failed.  Exit code: $EXITCODE"
@@ -272,13 +273,13 @@ command_status () {
     fi
 }
 
-check_sha1 () {
+checkSHA1(){
     CALCULATEDHASH=$(openssl sha1 $1)
     KNOWNHASH=$(cat $INSTALLTMPDIR/rachelplus/hashes.txt | grep $1 | cut -f1 -d" ")
     if [[ "SHA1(${1})= $2" == "${CALCULATEDHASH}" ]]; then printGood "Good hash!" && export GOODHASH=1; else printError "Bad hash!"  && export GOODHASH=0; fi
 }
 
-check_md5 () {
+checkMD5(){
     echo; printStatus "Checking MD5 of: $MD5CHKFILE"
     MD5_1=$(cat $INSTALLTMPDIR/hashes.md5 | grep $(basename $1) | awk '{print $1}')
     if [[ -z $MD5_1 ]]; then printError "Sorry, we do not have a hash for that file in our database."; break; fi
@@ -293,7 +294,7 @@ check_md5 () {
     fi
 }
 
-reboot-CAP () {
+rebootCAP(){
     trap ctrlC INT
     # No log as it won't clean up the tmp file
     echo; printStatus "I need to reboot; new installs will reboot twice more automatically."
@@ -309,7 +310,7 @@ reboot-CAP () {
     reboot
 }
 
-cleanup () {
+cleanup(){
     # No log as it won't clean up the tmp file
     echo; printQuestion "Were there errors?"
     read -p "Enter 'y' to exit without cleaning up temporary folders/files. (y/N) " REPLY
@@ -322,7 +323,7 @@ cleanup () {
     printGood "Done."
 }
 
-sanitize () {
+sanitize(){
     # Remove history, clean logs
     echo; printStatus "Sanitizing log files."
     # Clean log files
@@ -332,11 +333,17 @@ sanitize () {
     # Clean off ka-lite_content.zip (if exists)
     rm -f /media/RACHEL/ka-lite_content.zip
     # Clean previous files from running the generate_recovery.sh script 
-    rm -rf /recovery/201* $RACHELRECOVERYDIR/201*
+    rm -rf /recovery/20* $RACHELRECOVERYDIR/20*
     # Clean bash history
     echo "" > /root/.bash_history
-    # Clean Weaved services
+    # Weaved services
     rm -rf /usr/bin/notify_Weaved*.sh /usr/bin/Weaved*.sh /etc/weaved/services/Weaved*.conf /root/Weaved*.log
+    # Install default weaved services
+    installDefaultWeavedServices
+    echo; printGood "All ready for a customer; register Weaved services, if needed."
+}
+
+buildUSBImage(){
     # Stop script from defaulting the SSID
     sed -i 's/^redis-cli del WlanSsidT0_ssid/#redis-cli del WlanSsidT0_ssid/g' /root/generate_recovery.sh
     # KA Lite
@@ -360,7 +367,7 @@ sanitize () {
     echo; printGood "Done."
 }
 
-symlink () {
+symlink(){
     trap ctrlC INT
     echo; printStatus "Symlinking all .mp4 videos in the module 'kaos-en' to $KALITERCONTENTDIR"
 
@@ -451,7 +458,7 @@ EOF
     printGood "Done."
 }
 
-kiwix () {
+kiwix(){
     echo; printStatus "Installing kiwix."
     $KIWIXINSTALL
     if [[ $INTERNET == "0" ]]; then cd $DIRCONTENTOFFLINE; else cd $RACHELTMPDIR; fi
@@ -481,7 +488,7 @@ kiwix () {
     sed -i '$e echo "\/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' $RACHELSCRIPTSFILE
 }
 
-sphider_plus.sql () {
+sphider_plus.sql(){
 RESULT=`mysqlshow --user=root --password=root sphider_plus| grep -v Wildcard | grep -o sphider_plus`
 if [ "$RESULT" == "sphider_plus" ]; then
     echo; printError "The sphider_plus database is already installed."
@@ -494,16 +501,16 @@ else
 fi
 }
 
-install_default_weaved_services () {
+installDefaultWeavedServices(){
     echo; printStatus "Installing Weaved service."
     cd /root
     # Download weaved files
     echo; printStatus "Downloading required files."
     $WEAVEDINSTALL
-    command_status
+    commandStatus
 
     tar xvf weaved_IntelCAP.tar
-    command_status
+    commandStatus
     if [[ $ERRORCODE == 0 ]] && [[ -d /root/weaved_software ]]; then
         rm -f /root/weaved_IntelCAP.tar
         echo; printGood "Done."
@@ -519,7 +526,7 @@ install_default_weaved_services () {
     fi
 }
 
-install_weaved_service () {
+installWeavedService(){
     if [[ $INTERNET == "0" ]]; then
         echo; printError "The CAP must be online to install/remove Weaved services."
     else
@@ -529,7 +536,7 @@ install_weaved_service () {
         # Download weaved files
         echo; printStatus "Downloading required files."
         $WEAVEDSINGLEINSTALL
-        command_status
+        commandStatus
 
         if [[ $ERRORCODE == 0 ]] && [[ -f /root/weaved_software/installer.sh ]]; then
             # Fix OS Arch check in installer.sh
@@ -564,7 +571,7 @@ install_weaved_service () {
     fi
 }
 
-uninstall_ALL_weaved_services () {
+uninstallAllWeavedServices(){
     echo; printStatus "Uninstalling Weaved service."
 
     TMP_DIR=/tmp
@@ -591,8 +598,8 @@ uninstall_ALL_weaved_services () {
 }
 
 
-uninstall_weaved_service () {
-    weaved_uninstaller () {
+uninstallWeavedService(){
+    weavedUninstaller(){
         bash /root/weaved_software/uninstaller.sh
         echo; printGood "Weaved service uninstall complete."
     }
@@ -600,14 +607,14 @@ uninstall_weaved_service () {
     cd /root
     # Run uninstaller
     if [[ -f /root/weaved_software/uninstaller.sh ]]; then 
-        weaved_uninstaller
+        weavedUninstaller
     else
         printError "The Weaved uninstaller does not exist. Attempting to download..."
         if [[ $INTERNET == "1" ]]; then
             $WEAVEDUNINSTALLER
-            command_status
+            commandStatus
             if [[ $ERRORCODE == 0 ]] && [[ -f /root/weaved_software/uninstaller.sh ]]; then
-                weaved_uninstaller
+                weavedUninstaller
             else
                 printError "Download failed; check log file ($RACHELLOG) and try again."
             fi
@@ -618,7 +625,7 @@ uninstall_weaved_service () {
     fi
 }
 
-backup_weaved_service () {
+backupWeavedService(){
     # Clear current configs
     stty sane
     if [[ `find /etc/weaved/services/ -name 'Weaved*.conf' 2>/dev/null | wc -l` -ge 1 ]]; then
@@ -646,9 +653,9 @@ backup_weaved_service () {
     sudo sed -i '10 a fi #Weaved' $RACHELSCRIPTSFILE
 }
 
-download_offline_content () {
+downloadOfflineContent(){
     trap ctrlC INT
-    print_header
+    printHeader
     echo; printStatus "** BETA ** Downloading RACHEL content for OFFLINE installs."
 
     echo; printQuestion "The OFFLINE RACHEL content folder is set to:  $DIRCONTENTOFFLINE"
@@ -661,7 +668,7 @@ download_offline_content () {
             exit 1
         fi
     fi
-    wget -c $WGETONLINE/z-holding/dirlist.txt -O $DIRCONTENTOFFLINE/dirlist.txt        
+    wget -c $WGETONLINE/downloads/public_ftp/z-holding/dirlist.txt -O $DIRCONTENTOFFLINE/dirlist.txt        
     # List the current directories on rachelfriends with this command:
     #   for i in $(ls -d */); do echo ${i%%/}; done
     if [[ ! -f $DIRCONTENTOFFLINE/dirlist.txt ]]; then
@@ -673,7 +680,7 @@ download_offline_content () {
         echo; printStatus "Rsyncing core RACHEL content from $RSYNCONLINE"
         while read p; do
             echo; rsync -avz --ignore-existing $RSYNCONLINE/rachelmods/$p $DIRCONTENTOFFLINE/rachelmods
-            command_status
+            commandStatus
         done<$DIRCONTENTOFFLINE/dirlist.txt
         printGood "Done."
     fi
@@ -683,7 +690,7 @@ download_offline_content () {
     else
         echo; git clone https://github.com/rachelproject/rachelplus $DIRCONTENTOFFLINE/rachelplus
     fi
-    command_status
+    commandStatus
     printGood "Done."
 
     echo; printStatus "Downloading/updating the GitHub repo:  contentshell"
@@ -692,7 +699,7 @@ download_offline_content () {
     else
         echo; git clone https://github.com/rachelproject/contentshell $DIRCONTENTOFFLINE/contentshell
     fi
-    command_status
+    commandStatus
     printGood "Done."
 
     echo; printStatus "Downloading/updating the GitHub repo:  ka-lite"
@@ -701,18 +708,18 @@ download_offline_content () {
     else
         echo; git clone https://github.com/learningequality/ka-lite $DIRCONTENTOFFLINE/ka-lite
     fi
-    command_status
+    commandStatus
     printGood "Done."
 
     # Download ka-lite_content.zip
     echo; printStatus "Downloading/updating:  KA Lite content media files"
     rsync -avhP $CONTENTONLINE/kacontent $DIRCONTENTOFFLINE
-    command_status
+    commandStatus
     printGood "Done."
 
     echo; printStatus "Downloading/updating kiwix and data."
-    wget -c $WGETONLINE/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $DIRCONTENTOFFLINE/kiwix-0.9-linux-i686.tar.bz2
-    wget -c $WGETONLINE/z-holding/Ray_Charles.tar.bz -O $DIRCONTENTOFFLINE/Ray_Charles.tar.bz
+    wget -c $WGETONLINE/downloads/public_ftp/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $DIRCONTENTOFFLINE/kiwix-0.9-linux-i686.tar.bz2
+    wget -c $WGETONLINE/downloads/public_ftp/z-holding/Ray_Charles.tar.bz -O $DIRCONTENTOFFLINE/Ray_Charles.tar.bz
     wget -c http://download.kiwix.org/portable/wikipedia/kiwix-0.9+wikipedia_en_for-schools_2013-01.zip -O $DIRCONTENTOFFLINE/kiwix-0.9+wikipedia_en_for-schools_2013-01.zip
     wget -c http://download.kiwix.org/portable/wikipedia/kiwix-0.9+wikipedia_en_all_2015-05.zip -O $DIRCONTENTOFFLINE/kiwix-0.9+wikipedia_en_all_2015-05.zip
 
@@ -720,7 +727,7 @@ download_offline_content () {
 
     echo; printStatus "Downloading/updating sphider_plus.sql"
     wget -c $WGETONLINE/z-SQLdatabase/sphider_plus.sql -O $DIRCONTENTOFFLINE/sphider_plus.sql
-    command_status
+    commandStatus
     printGood "Done."
 
     # Downloading deb packages
@@ -754,9 +761,9 @@ download_offline_content () {
     ls -l $DIRCONTENTOFFLINE/rachelmods/
 }
 
-new_install () {
+newInstall(){
     trap ctrlC INT
-    print_header
+    printHeader
     echo; printStatus "Conducting a new install of RACHEL on a CAP."
 
     cd $INSTALLTMPDIR
@@ -765,6 +772,15 @@ new_install () {
     echo; printStatus "Fixing hostname in /etc/hosts"
     sed -i 's/ec-server/WRTD-303N-Server/g' /etc/hosts
     printGood "Done."
+
+    # Add rachel-scripts.sh script - because it doesn't exist
+    sed "s,%RACHELSCRIPTSLOG%,$RACHELSCRIPTSLOG,g" > $RACHELSCRIPTSFILE << 'EOF'
+#!/bin/bash
+# Send output to log file
+rm -f %RACHELSCRIPTSLOG%
+exec 1>> %RACHELSCRIPTSLOG% 2>&1
+exit 0
+EOF
 
     # Delete previous setup commands from the $RACHELSCRIPTSFILE
     echo; printStatus "Delete previous RACHEL setup commands from $RACHELSCRIPTSFILE"
@@ -788,7 +804,7 @@ new_install () {
         US)
             echo; printStatus "Downloading packages from the United States."
             $SOURCEUS
-            command_status
+            commandStatus
             break
         ;;
 
@@ -796,7 +812,7 @@ new_install () {
         UK)
             echo; printStatus "Downloading packages from the United Kingdom."
             $SOURCEUK
-            command_status
+            commandStatus
             break
         ;;
 
@@ -804,7 +820,7 @@ new_install () {
         SG)
             echo; printStatus "Downloading packages from Singapore."
             $SOURCESG
-            command_status
+            commandStatus
             break
         ;;
 
@@ -812,7 +828,7 @@ new_install () {
         CN)
             echo; printStatus "Downloading packages from the China - CAP manufacturer's website."
             $SOURCECN
-            command_status
+            commandStatus
             break
         ;;
         esac
@@ -825,34 +841,34 @@ new_install () {
     ## cap-rachel-first-install-2.sh
     echo; printStatus "Downloading cap-rachel-first-install-2.sh"
     $CAPRACHELFIRSTINSTALL2
-    command_status
+    commandStatus
     ## cap-rachel-first-install-3.sh
     echo; printStatus "Downloading cap-rachel-first-install-3.sh"
     $CAPRACHELFIRSTINSTALL3
-    command_status
+    commandStatus
     ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies)
     echo; printStatus "Downloading lighttpd.conf"
     $LIGHTTPDFILE
-    command_status
+    commandStatus
 
     # Download RACHEL Captive Portal files
     echo; printStatus "Downloading Captive Portal content to $INSTALLTMPDIR."
 
     echo; printStatus "Downloading captiveportal-redirect.php."
     $CAPTIVEPORTALREDIRECT
-    command_status
+    commandStatus
 
     echo; printStatus "Downloading RACHELbrandLogo-captive.png."
     $RACHELBRANDLOGOCAPTIVE
-    command_status
+    commandStatus
     
     echo; printStatus "Downloading HFCbrandLogo-captive.jpg."
     $HFCBRANDLOGOCAPTIVE
-    command_status
+    commandStatus
     
     echo; printStatus "Downloading WorldPossiblebrandLogo-captive.png."
     $WORLDPOSSIBLEBRANDLOGOCAPTIVE
-    command_status
+    commandStatus
 
     # Check if files downloaded correctly
     if [[ $ERRORCODE == 0 ]]; then
@@ -961,7 +977,7 @@ new_install () {
             sudo sed -i '$e echo "bash '$INSTALLTMPDIR'\/cap-rachel-first-install-2.sh&"' $RACHELSCRIPTSFILE
 
             echo; printGood "RACHEL CAP Install - Script ended at $(date)"
-            reboot-CAP
+            rebootCAP
         fi
     else
         echo; printError "User requests not to continue...exiting at $(date)"
@@ -971,7 +987,7 @@ new_install () {
     fi
 }
 
-content_module_install () {
+contentModuleInstall(){
     if [[ -f /tmp/module.lst ]]; then
         echo; printStatus "Your selected module list:"
         # Sort/unique the module list
@@ -1002,15 +1018,15 @@ content_module_install () {
         while read m; do
             echo; printStatus "Downloading $m"
             rsync -avz $RSYNCDIR/rachelmods/$m $RACHELWWW/modules/
-            command_status
+            commandStatus
             printGood "Done."
         done < /tmp/module.lst
     fi
 }
 
-content_list_install () {
+contentListInstall(){
     trap ctrlC INT
-    print_header
+    printHeader
     ERRORCODE="0"
     echo; printStatus "Installing RACHEL content."
     if [[ $INTERNET == "0" ]]; then cd $DIRCONTENTOFFLINE; else cd $RACHELTMPDIR; fi
@@ -1054,7 +1070,7 @@ content_list_install () {
             while read p; do
                 echo; printStatus "Downloading $p"
                 rsync -avz $RSYNCDIR/rachelmods/$p $RACHELWWW/modules/
-                command_status
+                commandStatus
                 printGood "Done."
             done <en_all_kalite.lst
             break
@@ -1066,7 +1082,7 @@ content_list_install () {
             while read p; do
                 echo; printStatus "Downloading $p"
                 rsync -avz $RSYNCDIR/rachelmods/$p $RACHELWWW/modules/
-                command_status
+                commandStatus
                 printGood "Done."
             done <en_all_kaos.lst
             break
@@ -1078,7 +1094,7 @@ content_list_install () {
             while read p; do
                 echo; printStatus "Downloading $p"
                 rsync -avz $RSYNCDIR/rachelmods/$p $RACHELWWW/modules/
-                command_status
+                commandStatus
                 printGood "Done."
             done <en_justice.lst
             break
@@ -1101,7 +1117,7 @@ content_list_install () {
             else
                 echo; printStatus "Installing Kiwix content - Wikipedia ALL."
                 $CONTENTWIKI
-                command_status
+                commandStatus
                 unzip -o $FILENAME "data/*" -d "$RACHELPARTITION/kiwix/"
                 if [[ $ERRORCODE == 1 ]]; then
                     echo; printError "The zip file did not download correctly; if you want to try again, click 'yes' when it asks"
@@ -1135,7 +1151,7 @@ content_list_install () {
             else
                 echo; printStatus "Installing Kiwix content - Wikipedia for Schools."
                 $CONTENTWIKI
-                command_status
+                commandStatus
                 unzip -o $FILENAME "data/*" -d "$RACHELPARTITION/kiwix/"
                 if [[ $ERRORCODE == 1 ]]; then
                     echo; printError "The zip file did not download correctly; if you want to try again, click 'yes' when it asks"
@@ -1166,7 +1182,7 @@ content_list_install () {
         while read p; do
             echo; printStatus "Downloading $p"
             rsync -avz $RSYNCDIR/rachelmods/$p $RACHELWWW/modules/
-            command_status
+            commandStatus
             printGood "Done."
         done <es_all_kaos.lst
         break
@@ -1178,7 +1194,7 @@ content_list_install () {
         while read p; do
             echo; printStatus "Downloading $p"
             rsync -avz $RSYNCDIR/rachelmods/$p $RACHELWWW/modules/
-            command_status
+            commandStatus
             printGood "Done."
         done <fr_all_kaos.lst
         break
@@ -1190,7 +1206,7 @@ content_list_install () {
         while read p; do
             echo; printStatus "Downloading $p"
             rsync -avz $RSYNCDIR/rachelmods/$p $RACHELWWW/modules/
-            command_status
+            commandStatus
             printGood "Done."
         done <pt_all_kaos.lst
         break
@@ -1202,7 +1218,7 @@ content_list_install () {
         while read p; do
             echo; printStatus "Downloading $p"
             rsync -avz $RSYNCDIR/rachelmods/$p $RACHELWWW/modules/
-            command_status
+            commandStatus
             printGood "Done."
         done <hi_all.lst
         break
@@ -1230,7 +1246,7 @@ content_list_install () {
     echo; printGood "Refresh the RACHEL homepage to view your new content."
 }
 
-ka-lite_remove () {
+kaliteRemove(){
     # Removing old version
     echo; printStatus "Cleaning any previous KA Lite installation files."
     if [[ $KALITEVERSIONDATE == 1 ]]; then
@@ -1258,12 +1274,12 @@ ka-lite_remove () {
     fi
 }
 
-ka-lite_install () {
+kaliteInstall(){
     # Downloading KA Lite 0.15
     echo; printStatus "Downloading KA Lite Version $KALITECURRENTVERSION"
     $KALITEINSTALL
     # Checking user provided file MD5 against known good version
-    check_md5 $INSTALLTMPDIR/$KALITEINSTALLER
+    checkMD5 $INSTALLTMPDIR/$KALITEINSTALLER
     if [[ $MD5STATUS == 1 ]]; then
         echo; printStatus "Installing KA Lite Version $KALITECURRENTVERSION"
         echo; printError "CAUTION:  When prompted, enter 'yes' for start on boot and change the user to 'root'."
@@ -1272,7 +1288,7 @@ ka-lite_install () {
         # Turn off logging b/c KA Lite using a couple graphical screens; if on, causes issues
         exec &>/dev/tty
         dpkg -i $INSTALLTMPDIR/$KALITEINSTALLER
-        command_status
+        commandStatus
         # Turn logging back on
         exec &> >(tee -a "$RACHELLOG")
         if [[ $ERRORCODE == 0 ]]; then
@@ -1285,7 +1301,7 @@ ka-lite_install () {
     fi
 }
 
-ka-lite_setup () {
+kaliteSetup(){
     echo; printStatus "Setting up KA Lite."
 
     # Determine version of KA Lite --> KALITEVERSIONDATE (0=No KA LITE, 1=Version prior to 0.15, 2=Version greater than 0.15)
@@ -1297,9 +1313,9 @@ ka-lite_setup () {
         read -p "    Enter (y/N) " REPLY
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             # Remove previous KA Lite
-            ka-lite_remove
+            kaliteRemove
             # Install KA Lite
-            ka-lite_install
+            kaliteInstall
         else
             printStatus "Skipping install."
         fi
@@ -1315,16 +1331,16 @@ ka-lite_setup () {
         read -p "Enter (y/N) " REPLY
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             # Install KA Lite
-            ka-lite_install
+            kaliteInstall
         fi
     else
         echo; printStatus "It doesn't look like KA Lite is installed; installing now."
         KALITEUSER="ka-lite"
         KALITEVERSIONDATE=0
         # Remove previous KA Lite
-        ka-lite_remove
+        kaliteRemove
         # Install KA Lite
-        ka-lite_install
+        kaliteInstall
     fi
 
     # For debug purposes, print ka-lite user
@@ -1360,7 +1376,7 @@ ka-lite_setup () {
                 fi
             done
             # Checking user provided file MD5 against known good version
-            check_md5 $ASSESSMENTFILE
+            checkMD5 $ASSESSMENTFILE
             if [[ $MD5STATUS == 1 ]]; then
                 echo; printGood "Installing the assessment items."
                 kalite manage unpack_assessment_zip $ASSESSMENTFILE -f
@@ -1372,13 +1388,13 @@ ka-lite_setup () {
             if [[ $REPLY =~ ^[Yy]$ ]]; then
                 # Primary download server
                 wget -c https://learningequality.org/downloads/ka-lite/0.15/content/khan_assessment.zip -O $INSTALLTMPDIR/khan_assessment.zip
-                command_status
+                commandStatus
                     if [[ $ERRORCODE == 1 ]]; then
                     # Secondary download server
                     rsync -avhP $CONTENTONLINE/khan_assessment.zip $INSTALLTMPDIR/khan_assessment.zip
                 fi
                 # Checking user provided file MD5 against known good version
-                check_md5 $INSTALLTMPDIR/khan_assessment.zip
+                checkMD5 $INSTALLTMPDIR/khan_assessment.zip
                 if [[ $MD5STATUS == 1 ]]; then
                     echo; printGood "Installing the assessment items."
                     kalite manage unpack_assessment_zip $ASSESSMENTFILE -f
@@ -1412,7 +1428,7 @@ ka-lite_setup () {
     printGood "Done."
 }
 
-download_ka_content () {
+downloadKAContent(){
     # Setup KA Lite content
     echo; printStatus "KA Lite Content Installer"
     echo; printQuestion "Do you want to install KA Lite video content located on a local USB or folder?"
@@ -1436,18 +1452,18 @@ download_ka_content () {
             echo; printStatus "Downloading from primary repository."
             echo "WEBSITE:  $CONTENTONLINE/kacontent"
             $KALITECONTENTINSTALL
-            command_status
+            commandStatus
             if [[ $ERRORCODE == 1 ]]; then
                 echo; printError "Primary repository for KA Content is not responding; attempting to download from the backup repository."
-                echo "WEBSITE:  $WGETONLINE/z-holding/ka-lite_content.zip"
-                wget -c $WGETONLINE/z-holding/ka-lite_content.zip -O $RACHELTMPDIR/ka-lite_content.zip
+                echo "WEBSITE:  $WGETONLINE/downloads/public_ftp/z-holding/ka-lite_content.zip"
+                wget -c $WGETONLINE/downloads/public_ftp/z-holding/ka-lite_content.zip -O $RACHELTMPDIR/ka-lite_content.zip
                 # Checking user provided file MD5 against known good version
-                check_md5 $RACHELTMPDIR/ka-lite_content.zip
+                checkMD5 $RACHELTMPDIR/ka-lite_content.zip
                 if [[ $MD5STATUS == 1 ]]; then
                     echo; printGood "Installing the KA Lite Content."
                 fi
                 unzip -o $RACHELTMPDIR/ka-lite_content.zip "kacontent/*" -d "$KALITERCONTENTDIR/"
-                command_status
+                commandStatus
                 if [[ $ERRORCODE == 1 ]]; then printError "Something went wrong; check $RACHELLOG for errors."; fi
             fi
         else
@@ -1456,8 +1472,65 @@ download_ka_content () {
     fi
 }
 
-repair-firmware () {
-    print_header
+checkCaptivePortal(){
+    ERRORCODE=0
+
+    # Download RACHEL Captive Portal files
+    echo; printStatus "Checking Captive Portal files."
+
+    if [[ ! -f $RACHELWWW/captiveportal-redirect.php ]]; then
+        echo; printStatus "Downloading captiveportal-redirect.php."
+        cd $RACHELWWW
+        $CAPTIVEPORTALREDIRECT
+        commandStatus
+    fi
+
+    if [[ ! -f $RACHELWWW/pass_ticket.shtml ]]; then
+        echo; printStatus "Downloading pass_ticket.shtml."
+        cd $RACHELWWW
+        $PASSTICKETSHTML
+        chmod +x $RACHELWWW/pass_ticket.shtml
+        commandStatus
+    fi
+
+    if [[ ! -f $RACHELWWW/redirect.shtml ]]; then
+        echo; printStatus "Downloading redirect.shtml."
+        cd $RACHELWWW
+        $REDIRECTSHTML
+        chmod +x $RACHELWWW/redirect.shtml
+        commandStatus
+    fi
+
+    if [[ ! -f $RACHELWWW/art/RACHELbrandLogo-captive.png ]]; then
+        cd $RACHELWWW/art
+        echo; printStatus "Downloading RACHELbrandLogo-captive.png."
+        $RACHELBRANDLOGOCAPTIVE
+        commandStatus
+    fi
+
+    if [[ ! -f $RACHELWWW/art/HFCbrandLogo-captive.jpg ]]; then
+        cd $RACHELWWW/art
+        echo; printStatus "Downloading HFCbrandLogo-captive.jpg."
+        $HFCBRANDLOGOCAPTIVE
+        commandStatus
+    fi
+
+    if [[ ! -f $RACHELWWW/art/WorldPossiblebrandLogo-captive.png ]]; then
+        cd $RACHELWWW/art
+        echo; printStatus "Downloading WorldPossiblebrandLogo-captive.png."
+        $WORLDPOSSIBLEBRANDLOGOCAPTIVE
+        commandStatus
+    fi
+
+    if [[ $ERRORCODE == 1 ]]; then 
+        printError "Something may have gone wrong; check $RACHELLOG for errors."
+    else 
+        printGood "Done."
+    fi
+}
+
+repairFirmware(){
+    printHeader
     echo; printStatus "Repairing your CAP after a firmware upgrade."
     cd $INSTALLTMPDIR
 
@@ -1465,7 +1538,7 @@ repair-firmware () {
     echo; printStatus "Downloading latest lighttpd.conf"
     ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies and ensuring the file downloads correctly)
     $LIGHTTPDFILE
-    command_status
+    commandStatus
     if [[ $ERRORCODE == 1 ]]; then
         print_error "The lighttpd.conf file did not download correctly; check log file (/var/log/RACHEL/rachel-install.tmp) and try again."
         echo; break
@@ -1542,6 +1615,9 @@ EOF
     sudo sed -i '9 a reboot #Weaved' $RACHELSCRIPTSFILE
     sudo sed -i '10 a fi #Weaved' $RACHELSCRIPTSFILE
 
+    # Check captive portal files
+    checkCaptivePortal
+
     # Clean up outdated stuff
     # Remove outdated startup script
     rm -f /root/iptables-rachel.sh
@@ -1561,10 +1637,10 @@ EOF
     sudo mv $RACHELLOG $RACHELLOGDIR/rachel-repair-$TIMESTAMP.log
     echo; printGood "Log file saved to: $RACHELLOGDIR/rachel-repair-$TIMESTAMP.log"
     cleanup
-    reboot-CAP
+    rebootCAP
 }
 
-repair-kalite () {
+repairKalite(){
     echo; printStatus "Fixing KA-Lite"
     # Fixing KA-Lite 
     cp -f /media/RACHEL/kacontent/assessmentitems.sqlite /usr/share/kalite/assessment/khan/.
@@ -1581,11 +1657,42 @@ repair-kalite () {
     echo; printGood "Done."
 }
 
-repair-bugs () {
-    echo; printStatus "Prepping for new dynamic contentshell"
-    apt-get update
-    apt-get -y install php5-sqlite
+repairBugs(){
+    # Installing php5-sqlite; required by the dynamic contentshell
+    echo; printStatus "Checking for php5-sqlite."
+    if [[ ! $(dpkg -s php5-sqlite) ]]; then
+        echo; printStatus "Prepping for new dynamic contentshell"
+        apt-get update
+        apt-get -y install php5-sqlite
+    fi
     printGood "Done."
+
+    # Clone or update the RACHEL content shell from GitHub
+    if [[ $INTERNET == "0" ]]; then cd $DIRCONTENTOFFLINE; else cd $INSTALLTMPDIR; fi
+    echo; printStatus "Checking for pre-existing RACHEL content shell."
+    if [[ ! -d $RACHELWWW ]]; then
+        printStatus "RACHEL content shell does not exist at $RACHELWWW."
+        printStatus "Cloning the RACHEL content shell from GitHub."
+        $GITCLONERACHELCONTENTSHELL
+    else
+        if [[ ! -d $RACHELWWW/.git ]]; then
+            printStatus "$RACHELWWW exists but it wasn't installed from git; installing RACHEL content shell from GitHub."
+            rm -rf contentshell # in case of previous failed install
+            $GITCLONERACHELCONTENTSHELL
+            cp -rf contentshell/* $RACHELWWW/ # overwrite current content with contentshell
+            cp -rf contentshell/.git $RACHELWWW/ # copy over GitHub files
+        else
+            printStatus "$RACHELWWW exists; updating RACHEL content shell from GitHub."
+            cd $RACHELWWW; git fetch; git reset --hard origin
+        fi
+    fi
+    rm -rf $RACHELTMPDIR/contentshell # if online install, remove contentshell temp folder
+    printGood "Done."
+
+    # Check captive portal files
+    checkCaptivePortal
+    
+    # Fix GCF links
     echo; printStatus "Fixing GCF index.htmlf links"
     sed -i 's/digital_lifestyle.html/digitalskills.html/g' /media/RACHEL/rachel/modules/GCF2015/index.htmlf
     sed -i 's/job.html/jobsearch.html/g' /media/RACHEL/rachel/modules/GCF2015/index.htmlf
@@ -1593,7 +1700,7 @@ repair-bugs () {
 }
 
 # Loop to redisplay main menu
-whattodo () {
+whatToDo(){
     echo; printQuestion "What would you like to do next?"
     echo "1)Initial Install  2)Install KA Lite  3)Install Kiwix  4)Install Default Weaved Services  5)Install Weaved Service  6)Add/Update Module  7)Add/Update Module List  8)Utilities  9)Exit"
 }
@@ -1601,7 +1708,7 @@ whattodo () {
 #### MAIN MENU ####
 
 # Logging
-logging_start
+loggingStart
 
 # Display current script version
 echo; echo "RACHEL CAP Configuration Script - Version $VERSION"
@@ -1616,10 +1723,10 @@ mkdir -p $INSTALLTMPDIR $RACHELTMPDIR $RACHELRECOVERYDIR
 osCheck
 
 # Determine the operational mode - ONLINE or OFFLINE
-opmode
+opMode
 
 # Build the hash list 
-build_hash_list
+buildHashList
 
 # Change directory into $INSTALLTMPDIR
 cd $INSTALLTMPDIR
@@ -1647,12 +1754,12 @@ echo
 select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Update-Module" "Add-Update-Module-List" "Utilities" "Exit"; do
         case $menu in
         Initial-Install)
-        new_install
+        newInstall
         ;;
 
         Install-KA-Lite)
-        ka-lite_setup
-        download_ka_content
+        kaliteSetup
+        downloadKAContent
         # Re-scanning content folder and exercise data 
         echo; printStatus "Restarting KA Lite in order to re-scan the content folder."
         kalite restart
@@ -1661,35 +1768,35 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Defa
         echo; printGood "Log file saved to: $RACHELLOGDIR/rachel-kalite-$TIMESTAMP.log"
         printGood "KA Lite Install Complete."
         mv $RACHELLOG $RACHELLOGDIR/rachel-kalite-$TIMESTAMP.log
-        whattodo
+        whatToDo
         ;;
 
         Install-Kiwix)
         kiwix
-        whattodo
+        whatToDo
         ;;
 
         Install-Default-Weaved-Services)
-        uninstall_ALL_weaved_services
-        install_default_weaved_services
-        backup_weaved_service
-        whattodo
+        uninstallAllWeavedServices
+        installDefaultWeavedServices
+        backupWeavedService
+        whatToDo
         ;;
 
         Install-Weaved-Service)
-        install_weaved_service
-        backup_weaved_service
-        whattodo
+        installWeavedService
+        backupWeavedService
+        whatToDo
         ;;
 
         Add-Update-Module)
-        content_module_install
-        whattodo
+        contentModuleInstall
+        whatToDo
         ;;
 
         Add-Update-Module-List)
-        content_list_install
-        whattodo
+        contentListInstall
+        whatToDo
         ;;
 
         Utilities)
@@ -1698,33 +1805,36 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Defa
         echo "  - **BETA** [Download-OFFLINE-Content] to stage for OFFLINE (i.e. local) RACHEL installs"
         echo "  - [Uninstall-Weaved-Service] removes Weaved services, one at a time"
         echo "  - [Uninstall-ALL-Weaved-Services] removes ALL Weaved services"
-        echo "  - [Repair] an install of a CAP after a firmware upgrade"
-        echo "  - [Sanitize] CAP (used for creating the RACHEL USB Multitool)"
+        echo "  - [Repair-Firmware] repairs an install of a CAP after a firmware upgrade"
+        echo "  - [Repair-KA-Lite] repairs KA Lite's mislocation of the assessment file; runs 'kalite manage setup' as well"
+        echo "  - [Repair-Bugs] provides general bug fixes (run when requested)"
+        echo "  - [Sanitize] and prepare CAP for delivery to customer"
+        echo "  - [Build-USB-Image] is used for creating eMMC images used on the RACHEL USB Multitool"
         echo "  - [Symlink] all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent"
         echo "  - [Testing] script"
         echo "  - Return to [Main Menu]"
         echo
-        select util in "Check-MD5" "Download-OFFLINE-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Repair-Firmware" "Repair-KA-Lite" "Repair-Bugs" "Sanitize" "Symlink" "Test" "Main-Menu"; do
+        select util in "Check-MD5" "Download-OFFLINE-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Repair-Firmware" "Repair-KA-Lite" "Repair-Bugs" "Sanitize" "Build-USB-Image" "Symlink" "Test" "Main-Menu"; do
             case $util in
                 Check-MD5)
                 echo; printStatus "This function will compare the MD5 of the file you provide against our list of known hashes."
                 printQuestion "What is the full path to the file you want to check?"; read MD5CHKFILE
-                check_md5 $MD5CHKFILE
+                checkMD5 $MD5CHKFILE
                 break
                 ;;
 
                 Download-OFFLINE-Content)
-                download_offline_content
+                downloadOfflineContent
                 break
                 ;;
 
                 Backup-Weaved-Services)
-                backup_weaved_service
+                backupWeavedService
                 break
                 ;;
 
                 Uninstall-Weaved-Service)
-                uninstall_weaved_service
+                uninstallWeavedService
                 break
                 ;;
 
@@ -1733,8 +1843,8 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Defa
                 echo; printQuestion "Do you still wish to continue?"
                 read -p "    Enter (y/N) " REPLY
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
-                    uninstall_ALL_weaved_services
-                    backup_weaved_service
+                    uninstallAllWeavedServices
+                    backupWeavedService
                 else
                     printError "Uninstall cancelled."
                 fi
@@ -1742,22 +1852,28 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Defa
                 ;;
 
                 Repair-Firmware)
-                repair-firmware
+                repairFirmware
                 break
                 ;;
 
                 Repair-KA-Lite)
-                repair-kalite
+                repairKalite
                 break
                 ;;
 
                 Repair-Bugs)
-                repair-bugs
+                repairBugs
                 break
                 ;;
 
                 Sanitize)
                 sanitize
+                break
+                ;;
+
+                Build-USB-Image)
+                sanitize
+                buildUSBImage
                 break
                 ;;
 
@@ -1767,7 +1883,7 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Defa
                 ;;
 
                 Test)
-                testing-script
+                testingScript
                 break
                 ;;
 
@@ -1776,7 +1892,7 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Defa
                 ;;
             esac
         done
-        whattodo
+        whatToDo
         ;;
 
         Exit)
