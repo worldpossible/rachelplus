@@ -1651,11 +1651,13 @@ repairKalite(){
 
 repairBugs(){
     # Installing php5-sqlite; required by the dynamic contentshell
-    echo; printStatus "Prepping for new dynamic contentshell"
-    apt-get update
-    apt-get -y install php5-sqlite
-    printGood "Done."
-
+    if [[ ! $(dpkg -s php5-sqlite) ]]; then
+        echo; printStatus "Prepping for new dynamic contentshell"
+        apt-get update
+        apt-get -y install php5-sqlite
+        printGood "Done."
+    fi
+    
     # Clone or update the RACHEL content shell from GitHub
     if [[ $INTERNET == "0" ]]; then cd $DIRCONTENTOFFLINE; else cd $INSTALLTMPDIR; fi
     echo; printStatus "Checking for pre-existing RACHEL content shell."
