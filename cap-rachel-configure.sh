@@ -1489,6 +1489,7 @@ checkCaptivePortal(){
         echo; printStatus "Downloading pass_ticket.shtml."
         cd $RACHELWWW
         $PASSTICKETSHTML
+        chmod +x $RACHELWWW/pass_ticket.shtml
         commandStatus
     fi
 
@@ -1496,6 +1497,7 @@ checkCaptivePortal(){
         echo; printStatus "Downloading redirect.shtml."
         cd $RACHELWWW
         $REDIRECTSHTML
+        chmod +x $RACHELWWW/redirect.shtml
         commandStatus
     fi
 
