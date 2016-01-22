@@ -188,8 +188,8 @@ onlineVariables(){
     ASSESSMENTITEMSJSON="wget -c $GITRACHELPLUS/assessmentitems.json -O /var/ka-lite/data/khan/assessmentitems.json"
     KALITEINSTALL="rsync -avhz --progress $CONTENTONLINE/$KALITEINSTALLER $INSTALLTMPDIR/$KALITEINSTALLER"
     KALITECONTENTINSTALL="rsync -avhz --progress $CONTENTONLINE/kacontent/ /media/RACHEL/kacontent/"
-    KIWIXINSTALL="wget -c $WGETONLINE/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $RACHELTMPDIR/kiwix-0.9-linux-i686.tar.bz2"
-    KIWIXSAMPLEDATA="wget -c $WGETONLINE/z-holding/Ray_Charles.tar.bz -O $RACHELTMPDIR/Ray_Charles.tar.bz"
+    KIWIXINSTALL="wget -c $WGETONLINE/downloads/public_ftp/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $RACHELTMPDIR/kiwix-0.9-linux-i686.tar.bz2"
+    KIWIXSAMPLEDATA="wget -c $WGETONLINE/downloads/public_ftp/z-holding/Ray_Charles.tar.bz -O $RACHELTMPDIR/Ray_Charles.tar.bz"
     WEAVEDINSTALL="wget -c https://github.com/weaved/installer/raw/master/Intel_CAP/weaved_IntelCAP.tar -O /root/weaved_IntelCAP.tar"
     WEAVEDSINGLEINSTALL="wget -c https://github.com/weaved/installer/raw/master/weaved_software/installer.sh -O /root/weaved_software/installer.sh"
     WEAVEDUNINSTALLER="wget -c https://github.com/weaved/installer/raw/master/weaved_software/uninstaller.sh -O /root/weaved_software/uninstaller.sh"
@@ -668,7 +668,7 @@ downloadOfflineContent(){
             exit 1
         fi
     fi
-    wget -c $WGETONLINE/z-holding/dirlist.txt -O $DIRCONTENTOFFLINE/dirlist.txt        
+    wget -c $WGETONLINE/downloads/public_ftp/z-holding/dirlist.txt -O $DIRCONTENTOFFLINE/dirlist.txt        
     # List the current directories on rachelfriends with this command:
     #   for i in $(ls -d */); do echo ${i%%/}; done
     if [[ ! -f $DIRCONTENTOFFLINE/dirlist.txt ]]; then
@@ -718,8 +718,8 @@ downloadOfflineContent(){
     printGood "Done."
 
     echo; printStatus "Downloading/updating kiwix and data."
-    wget -c $WGETONLINE/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $DIRCONTENTOFFLINE/kiwix-0.9-linux-i686.tar.bz2
-    wget -c $WGETONLINE/z-holding/Ray_Charles.tar.bz -O $DIRCONTENTOFFLINE/Ray_Charles.tar.bz
+    wget -c $WGETONLINE/downloads/public_ftp/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $DIRCONTENTOFFLINE/kiwix-0.9-linux-i686.tar.bz2
+    wget -c $WGETONLINE/downloads/public_ftp/z-holding/Ray_Charles.tar.bz -O $DIRCONTENTOFFLINE/Ray_Charles.tar.bz
     wget -c http://download.kiwix.org/portable/wikipedia/kiwix-0.9+wikipedia_en_for-schools_2013-01.zip -O $DIRCONTENTOFFLINE/kiwix-0.9+wikipedia_en_for-schools_2013-01.zip
     wget -c http://download.kiwix.org/portable/wikipedia/kiwix-0.9+wikipedia_en_all_2015-05.zip -O $DIRCONTENTOFFLINE/kiwix-0.9+wikipedia_en_all_2015-05.zip
 
@@ -1455,8 +1455,8 @@ downloadKAContent(){
             commandStatus
             if [[ $ERRORCODE == 1 ]]; then
                 echo; printError "Primary repository for KA Content is not responding; attempting to download from the backup repository."
-                echo "WEBSITE:  $WGETONLINE/z-holding/ka-lite_content.zip"
-                wget -c $WGETONLINE/z-holding/ka-lite_content.zip -O $RACHELTMPDIR/ka-lite_content.zip
+                echo "WEBSITE:  $WGETONLINE/downloads/public_ftp/z-holding/ka-lite_content.zip"
+                wget -c $WGETONLINE/downloads/public_ftp/z-holding/ka-lite_content.zip -O $RACHELTMPDIR/ka-lite_content.zip
                 # Checking user provided file MD5 against known good version
                 checkMD5 $RACHELTMPDIR/ka-lite_content.zip
                 if [[ $MD5STATUS == 1 ]]; then
