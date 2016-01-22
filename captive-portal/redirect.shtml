@@ -1,0 +1,39 @@
+#!/bin/sh
+
+TARGETURL="http://my.content"
+
+cat <<EOL
+Content-type: text/html
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<!-- meta http-equiv="refresh" content="30;url=${TARGETURL}" /-->
+	<title>Captive Portal Redirect</title>
+	<script language="JavaScript">
+	<!--
+		var xmlhttp;
+		if (window.XMLHttpRequest)
+		{// code for IE7+, Firefox, Chrome, Opera, Safari
+			xmlhttp=new XMLHttpRequest();
+		}
+		else
+		{// code for IE6, IE5
+			xmlhttp=new ActiveXObject("Microsoft.XMLHTTP");
+		}
+		xmlhttp.onreadystatechange = function() {
+			if (xmlhttp.readyState==4 && xmlhttp.status==200) {
+				window.location=xmlhttp.responseText;
+			}
+		}
+		xmlhttp.open("GET","/pass_ticket.shtml",true);
+		xmlhttp.send();
+	//-->
+	</script>
+</head>
+<body>
+	Redirect to ${TARGETURL}
+</body>
+</html>
+EOL
