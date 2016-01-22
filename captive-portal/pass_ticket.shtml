@@ -1,0 +1,33 @@
+#!/bin/sh
+GetLockOrBye()
+{
+	progName=`/usr/bin/basename $0`
+	lockname="/var/run/$progName.lock"
+
+	if /bin/mkdir "$lockname" > /dev/null 2>&1
+	then
+		# Remove lock directory when script terminates
+		trap '/bin/rmdir "$lockname"' 0 1 2 3 15
+		trap "exit 2" 1 2 3 15
+	else
+		exit 0
+	fi
+}
+
+TARGETURL="http://my.content"
+REMOTEADDR=$REMOTE_ADDR
+NATNETWORKMODE=$(($(redis-cli get NatP_networkMode) + 0))
+
+cat <<EOL
+Content-type: text/html
+
+${TARGETURL}
+EOL
+
+GetLockOrBye
+
+if [ x$REMOTEADDR != x ] && [ x$NATNETWORKMODE = x2 ]; then
+	iptables -t nat -D CAPTIVE_PASSLIST -p tcp --dport 80 -s $REMOTEADDR -j ACCEPT >/dev/null 2>&1
+	iptables -t nat -I CAPTIVE_PASSLIST -p tcp --dport 80 -s $REMOTEADDR -j ACCEPT >/dev/null 2>&1
+	echo $(arp | grep $REMOTEADDR' ' | awk '{print $3}') > /var/run/CaptivePortal/$REMOTEADDR
+fi
