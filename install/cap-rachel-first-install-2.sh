@@ -38,6 +38,9 @@ echo; print_good "RACHEL CAP Install - Script 2 started at $(date)"
 # Delete previous setup commands from the /etc/rc.local
 sudo sed -i '/cap-rachel/d' /etc/rc.local
 
+# If this script is running, we don't want any previous data, so force creation of new filesystems
+umount /dev/sda1 /dev/sda2 /dev/sda3
+
 # Create the new filesystems so we can write files to them
 echo; print_status "Creating filesystems"
 mkfs.ext4 -L "preloaded" -U 77777777-7777-7777-7777-777777777777 /dev/sda1
