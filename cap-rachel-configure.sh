@@ -374,8 +374,10 @@ buildUSBImage(){
         killall screen 2>/dev/null
         rm -rf $0 $INSTALLTMPDIR $RACHELTMPDIR
         chmod 777 /var/run/screen
-        screen -dmS generateUSB /root/generate_recovery.sh /media/RACHEL/recovery/
+        screen -dmS generateUSB /root/generate_recovery.sh $RACHELRECOVERYDIR/
         echo; printStatus "Build USB image process started in the background.  You can safely exit out of this shell without affecting it."
+        echo "It takes about 45 minutes to create the 3 images; to check the status, type 'screen -r'"
+        echo "If you get a reply of 'No screen...', then your image create is complete.  Check $RACHELRECOVERYDIR" 
         echo
     fi
 }
