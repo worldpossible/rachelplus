@@ -326,8 +326,8 @@ cleanup(){
 sanitize(){
     # Remove history, clean logs
     echo; printStatus "Sanitizing log files."
-    # Clean log files
-    rm -rf /var/log/rachel-install* /var/log/RACHEL/*
+    # Clean log files and possible test scripts
+    rm -rf /var/log/rachel-install* /var/log/RACHEL/* /root/test.sh
     # Clean previous cached logins from ssh
     rm -f /root/.ssh/known_hosts
     # Clean off ka-lite_content.zip (if exists)
@@ -340,6 +340,8 @@ sanitize(){
     echo "If you enter 'y', we will install the staged default Weaved services for ports 22, 80, and 8080."
     read -p "    Enter (y/N) " REPLY
     if [[ $REPLY =~ ^[Yy]$ ]]; then
+        # Remove previous Weaved installs
+        rm -rf /usr/bin/notify_Weaved*.sh /usr/bin/Weaved*.sh /etc/weaved/services/Weaved*.conf /root/Weaved*.log
         # Install default weaved services
         installDefaultWeavedServices
     fi
@@ -347,10 +349,10 @@ sanitize(){
 }
 
 buildUSBImage(){
-    echo; printQuestion "Do you want to sanitze this device prior to building the USB image?"
+    echo; printQuestion "Do you want to sanitize this device prior to building the USB image?"
     read -p "    Enter (y/N) " REPLY
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        sanitze
+        sanitize
     fi
     # Stop script from defaulting the SSID
     sed -i 's/^redis-cli del WlanSsidT0_ssid/#redis-cli del WlanSsidT0_ssid/g' /root/generate_recovery.sh
@@ -369,10 +371,12 @@ buildUSBImage(){
     echo
     read -p "    Select 'n' to exit. (y/N) " -r
     if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
+        killall screen
         rm -rf $0 $INSTALLTMPDIR $RACHELTMPDIR
-        /root/generate_recovery.sh /media/RACHEL/recovery/
+        screen -dmS generateUSB /root/generate_recovery.sh /media/RACHEL/recovery/
+        echo; printStatus "Build USB image process started in the background.  You can safely exit out of this shell without affecting it."
+        echo
     fi
-    echo; printGood "Done."
 }
 
 symlink(){
@@ -1884,7 +1888,6 @@ select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Defa
                 ;;
 
                 Build-USB-Image)
-                sanitize
                 buildUSBImage
                 break
                 ;;
