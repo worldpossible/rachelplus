@@ -15,7 +15,7 @@ GITCONTENTSHELL="https://raw.githubusercontent.com/rachelproject/contentshell/ma
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 OS="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 OSVERSION=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-VERSION=0122160454 # To get current version - date +%m%d%y%H%M
+VERSION=0123161933 # To get current version - date +%m%d%y%H%M
 TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
 INTERNET="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 RACHELLOGDIR="/var/log/RACHEL"
@@ -336,14 +336,22 @@ sanitize(){
     rm -rf /recovery/20* $RACHELRECOVERYDIR/20*
     # Clean bash history
     echo "" > /root/.bash_history
-    # Weaved services
-    rm -rf /usr/bin/notify_Weaved*.sh /usr/bin/Weaved*.sh /etc/weaved/services/Weaved*.conf /root/Weaved*.log
-    # Install default weaved services
-    installDefaultWeavedServices
+    echo; printQuestion "Do you want to remove any currently activated Weaved services and run the default Weaved setup?"
+    echo "If you enter 'y', we will install the staged default Weaved services for ports 22, 80, and 8080."
+    read -p "    Enter (y/N) " REPLY
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        # Install default weaved services
+        installDefaultWeavedServices
+    fi
     echo; printGood "All ready for a customer; register Weaved services, if needed."
 }
 
 buildUSBImage(){
+    echo; printQuestion "Do you want to sanitze this device prior to building the USB image?"
+    read -p "    Enter (y/N) " REPLY
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        sanitze
+    fi
     # Stop script from defaulting the SSID
     sed -i 's/^redis-cli del WlanSsidT0_ssid/#redis-cli del WlanSsidT0_ssid/g' /root/generate_recovery.sh
     # KA Lite
@@ -988,6 +996,7 @@ EOF
 }
 
 contentModuleInstall(){
+    trap ctrlC INT
     if [[ -f /tmp/module.lst ]]; then
         echo; printStatus "Your selected module list:"
         # Sort/unique the module list
@@ -1000,6 +1009,8 @@ contentModuleInstall(){
     MODULELIST=$(rsync --list-only rsync://dev.worldpossible.org/rachelmods | egrep '^d' | awk '{print $5}' | tail -n +2)
     while [[ $SELECTMODULE == 1 ]]; do
         echo; printStatus "What RACHEL module would you like to select for download or update?"
+        echo "(Ctrl-C to cancel module install)"
+        echo
         select module in $MODULELIST; do 
             echo "$module" >> /tmp/module.lst
             echo; printStatus "Added module $module to the install/update cue."
@@ -1022,6 +1033,7 @@ contentModuleInstall(){
             printGood "Done."
         done < /tmp/module.lst
     fi
+    rm -f /tmp/module.lst
 }
 
 contentListInstall(){
@@ -1661,7 +1673,7 @@ repairBugs(){
     # Installing php5-sqlite; required by the dynamic contentshell
     echo; printStatus "Checking for php5-sqlite."
     if [[ ! $(dpkg -s php5-sqlite) ]]; then
-        echo; printStatus "Prepping for new dynamic contentshell"
+        echo; printStatus "php5-sqlite is not installed; downloading php5-sqlite for install."
         apt-get update
         apt-get -y install php5-sqlite
     fi
