@@ -373,6 +373,7 @@ buildUSBImage(){
     if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
         killall screen
         rm -rf $0 $INSTALLTMPDIR $RACHELTMPDIR
+        chmod +x /var/run/screen
         screen -dmS generateUSB /root/generate_recovery.sh /media/RACHEL/recovery/
         echo; printStatus "Build USB image process started in the background.  You can safely exit out of this shell without affecting it."
         echo
