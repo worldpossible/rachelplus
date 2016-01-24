@@ -371,9 +371,9 @@ buildUSBImage(){
     echo
     read -p "    Select 'n' to exit. (y/N) " -r
     if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
-        killall screen
+        killall screen 2>/dev/null
         rm -rf $0 $INSTALLTMPDIR $RACHELTMPDIR
-        chmod +x /var/run/screen
+        chmod 777 /var/run/screen
         screen -dmS generateUSB /root/generate_recovery.sh /media/RACHEL/recovery/
         echo; printStatus "Build USB image process started in the background.  You can safely exit out of this shell without affecting it."
         echo
