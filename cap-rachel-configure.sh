@@ -15,7 +15,7 @@ GITCONTENTSHELL="https://raw.githubusercontent.com/rachelproject/contentshell/ma
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 OS="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 OSVERSION=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-VERSION=0123161933 # To get current version - date +%m%d%y%H%M
+VERSION=0123162326 # To get current version - date +%m%d%y%H%M
 TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
 INTERNET="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 RACHELLOGDIR="/var/log/RACHEL"
@@ -698,7 +698,7 @@ downloadOfflineContent(){
     fi
     printStatus "Downloading/updating the GitHub repo:  rachelplus"
     if [[ -d $DIRCONTENTOFFLINE/rachelplus ]]; then 
-        cd $DIRCONTENTOFFLINE/rachelplus; git pull
+        cd $DIRCONTENTOFFLINE/rachelplus; git fetch; git reset --hard origin
     else
         echo; git clone https://github.com/rachelproject/rachelplus $DIRCONTENTOFFLINE/rachelplus
     fi
@@ -707,18 +707,24 @@ downloadOfflineContent(){
 
     echo; printStatus "Downloading/updating the GitHub repo:  contentshell"
     if [[ -d $DIRCONTENTOFFLINE/contentshell ]]; then 
-        cd $DIRCONTENTOFFLINE/contentshell; git pull
+        cd $DIRCONTENTOFFLINE/contentshell; git fetch; git reset --hard origin
     else
         echo; git clone https://github.com/rachelproject/contentshell $DIRCONTENTOFFLINE/contentshell
     fi
     commandStatus
     printGood "Done."
 
-    echo; printStatus "Downloading/updating the GitHub repo:  ka-lite"
-    if [[ -d $DIRCONTENTOFFLINE/ka-lite ]]; then 
-        cd $DIRCONTENTOFFLINE/ka-lite; git pull
-    else
-        echo; git clone https://github.com/learningequality/ka-lite $DIRCONTENTOFFLINE/ka-lite
+    echo; printStatus "Checking/downloading:  KA Lite"
+    if [[ -f $DIRCONTENTOFFLINE/$KALITEINSTALLER ]]; then
+        # Checking user provided file MD5 against known good version
+        checkMD5 $DIRCONTENTOFFLINE/$KALITEINSTALLER
+        if [[ $MD5STATUS == 0 ]]; then
+            # Downloading current version of KA Lite
+            echo; printStatus "Downloading KA Lite Version $KALITECURRENTVERSION"
+            $KALITEINSTALL
+            commandStatus
+            mv $INSTALLTMPDIR/$KALITEINSTALLER $DIRCONTENTOFFLINE/$KALITEINSTALLER
+        fi
     fi
     commandStatus
     printGood "Done."
