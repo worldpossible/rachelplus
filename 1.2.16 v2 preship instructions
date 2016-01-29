@@ -9,3 +9,7 @@ su
 sudo sed -i 's/ed//g' /media/RACHEL/rachel/modules/local_content/index.htmlf
 sudo sed -i 's/60/2/g' /root/rachel-scripts.sh
 sudo sed -i 's/iptables/\#iptables/g' /root/rachel-scripts.sh
+
+
+#get write access to folder on dev.worldpossible.org, updated firefox portable to v44 and edited index.htmlf
+sudo rsync -avzy jeremy@192.168.1.74://home/jeremy/RACHEL_EN/rachel/modules/windows_apps /media/RACHEL/rachel/modules/
