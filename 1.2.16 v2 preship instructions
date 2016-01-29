@@ -1,0 +1,11 @@
+
+go to weaved.com
+register device
+confirm e-mail receipt of registration
+print weaved sticker
+
+su
+123lkj
+sudo sed -i 's/ed//g' /media/RACHEL/rachel/modules/local_content/index.htmlf
+sudo sed -i 's/60/2/g' /root/rachel-scripts.sh
+sudo sed -i 's/iptables/\#iptables/g' /root/rachel-scripts.sh
