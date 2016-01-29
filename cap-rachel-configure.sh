@@ -1554,30 +1554,7 @@ checkCaptivePortal(){
     fi
 }
 
-repairFirmware(){
-    printHeader
-    echo; printStatus "Repairing your CAP after a firmware upgrade."
-    cd $INSTALLTMPDIR
-
-    # Download/update to latest RACHEL lighttpd.conf
-    echo; printStatus "Downloading latest lighttpd.conf"
-    ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies and ensuring the file downloads correctly)
-    $LIGHTTPDFILE
-    commandStatus
-    if [[ $ERRORCODE == 1 ]]; then
-        print_error "The lighttpd.conf file did not download correctly; check log file (/var/log/RACHEL/rachel-install.tmp) and try again."
-        echo; break
-    else
-        mv $INSTALLTMPDIR/lighttpd.conf /usr/local/etc/lighttpd.conf
-    fi
-    printGood "Done."
-
-    # Reapply /etc/fstab entry for /media/RACHEL
-    echo; printStatus "Adding /dev/sda3 into /etc/fstab"
-    sed -i '/\/dev\/sda3/d' /etc/fstab
-    echo -e "/dev/sda3\t/media/RACHEL\t\text4\tauto,nobootwait 0\t0" >> /etc/fstab
-    printGood "Done."
-
+repairRachelScripts(){
     # Fixing /root/rachel-scripts.sh
     echo; printStatus "Fixing $RACHELSCRIPTSFILE"
 
@@ -1587,11 +1564,6 @@ repairFirmware(){
 # Send output to log file
 rm -f %RACHELSCRIPTSLOG%
 exec 1>> %RACHELSCRIPTSLOG% 2>&1
-# Add the RACHEL iptables rule to redirect 10.10.10.10 to CAP default of 192.168.88.1
-# Added sleep to wait for CAP rcConf and rcConfd to finish initializing
-#
-sleep 60
-iptables -t nat -I PREROUTING -d 10.10.10.10 -j DNAT --to-destination 192.168.88.1
 exit 0
 EOF
 
@@ -1639,6 +1611,34 @@ EOF
     sudo sed -i '8 a cp '$RACHELRECOVERYDIR'/Weaved/*.sh /usr/bin/' $RACHELSCRIPTSFILE
     sudo sed -i '9 a reboot #Weaved' $RACHELSCRIPTSFILE
     sudo sed -i '10 a fi #Weaved' $RACHELSCRIPTSFILE
+}
+
+repairFirmware(){
+    printHeader
+    echo; printStatus "Repairing your CAP after a firmware upgrade."
+    cd $INSTALLTMPDIR
+
+    # Download/update to latest RACHEL lighttpd.conf
+    echo; printStatus "Downloading latest lighttpd.conf"
+    ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies and ensuring the file downloads correctly)
+    $LIGHTTPDFILE
+    commandStatus
+    if [[ $ERRORCODE == 1 ]]; then
+        print_error "The lighttpd.conf file did not download correctly; check log file (/var/log/RACHEL/rachel-install.tmp) and try again."
+        echo; break
+    else
+        mv $INSTALLTMPDIR/lighttpd.conf /usr/local/etc/lighttpd.conf
+    fi
+    printGood "Done."
+
+    # Reapply /etc/fstab entry for /media/RACHEL
+    echo; printStatus "Adding /dev/sda3 into /etc/fstab"
+    sed -i '/\/dev\/sda3/d' /etc/fstab
+    echo -e "/dev/sda3\t/media/RACHEL\t\text4\tauto,nobootwait 0\t0" >> /etc/fstab
+    printGood "Done."
+
+    # Fixing /root/rachel-scripts.sh
+    repairRachelScripts
 
     # Check captive portal files
     checkCaptivePortal
@@ -1683,45 +1683,16 @@ repairKalite(){
 }
 
 repairBugs(){
-    # Installing php5-sqlite; required by the dynamic contentshell
-    echo; printStatus "Checking for php5-sqlite."
-    if [[ ! $(dpkg -s php5-sqlite) ]]; then
-        echo; printStatus "php5-sqlite is not installed; downloading php5-sqlite for install."
-        apt-get update
-        apt-get -y install php5-sqlite
-    fi
-    printGood "Done."
+    # Fixing issue with 10.10.10.10 redirect and sleep times
+    repairRachelScripts
 
-    # Clone or update the RACHEL content shell from GitHub
-    if [[ $INTERNET == "0" ]]; then cd $DIRCONTENTOFFLINE; else cd $INSTALLTMPDIR; fi
-    echo; printStatus "Checking for pre-existing RACHEL content shell."
-    if [[ ! -d $RACHELWWW ]]; then
-        printStatus "RACHEL content shell does not exist at $RACHELWWW."
-        printStatus "Cloning the RACHEL content shell from GitHub."
-        $GITCLONERACHELCONTENTSHELL
-    else
-        if [[ ! -d $RACHELWWW/.git ]]; then
-            printStatus "$RACHELWWW exists but it wasn't installed from git; installing RACHEL content shell from GitHub."
-            rm -rf contentshell # in case of previous failed install
-            $GITCLONERACHELCONTENTSHELL
-            cp -rf contentshell/* $RACHELWWW/ # overwrite current content with contentshell
-            cp -rf contentshell/.git $RACHELWWW/ # copy over GitHub files
-        else
-            printStatus "$RACHELWWW exists; updating RACHEL content shell from GitHub."
-            cd $RACHELWWW; git fetch; git reset --hard origin
-        fi
-    fi
-    rm -rf $RACHELTMPDIR/contentshell # if online install, remove contentshell temp folder
-    printGood "Done."
-
-    # Check captive portal files
-    checkCaptivePortal
-    
     # Fix GCF links
-    echo; printStatus "Fixing GCF index.htmlf links"
-    sed -i 's/digital_lifestyle.html/digitalskills.html/g' /media/RACHEL/rachel/modules/GCF2015/index.htmlf
-    sed -i 's/job.html/jobsearch.html/g' /media/RACHEL/rachel/modules/GCF2015/index.htmlf
-    printGood "Done."
+    if [[ -d $RACHELWWW/modules/GCF2015 ]]; then
+        echo; printStatus "Fixing GCF index.htmlf links"
+        sed -i 's/digital_lifestyle.html/digitalskills.html/g' /media/RACHEL/rachel/modules/GCF2015/index.htmlf
+        sed -i 's/job.html/jobsearch.html/g' /media/RACHEL/rachel/modules/GCF2015/index.htmlf
+        printGood "Done."
+    fi
 }
 
 # Loop to redisplay main menu

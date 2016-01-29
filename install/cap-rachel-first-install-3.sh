@@ -66,11 +66,6 @@ sed "s,%RACHELSCRIPTSLOG%,$RACHELSCRIPTSLOG,g" > $RACHELSCRIPTSFILE << 'EOF'
 # Send output to log file
 rm -f %RACHELSCRIPTSLOG%
 exec 1>> %RACHELSCRIPTSLOG% 2>&1
-# Add the RACHEL iptables rule to redirect 10.10.10.10 to CAP default of 192.168.88.1
-# Added sleep to wait for CAP rcConf and rcConfd to finish initializing
-#
-sleep 60
-iptables -t nat -I PREROUTING -d 10.10.10.10 -j DNAT --to-destination 192.168.88.1
 exit 0
 EOF
 
