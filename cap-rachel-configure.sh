@@ -319,8 +319,9 @@ cleanup(){
     fi
     # Deleting the install script commands
     echo; printStatus "Cleaning up install scripts."
-    rm -rf $INSTALLTMPDIR $RACHELTMPDIR&
+    rm -rf $INSTALLTMPDIR $RACHELTMPDIR
     printGood "Done."
+    echo; stty sane
 }
 
 sanitize(){
@@ -656,16 +657,19 @@ backupWeavedService(){
     else
         echo; printError "You do not have any Weaved configuration files to backup."
     fi
+    # Add Weaved restore back into rachel-scripts.sh
     # Clean rachel-scripts.sh
     sed -i '/Weaved/d' $RACHELSCRIPTSFILE
     # Write restore commands to rachel-scripts.sh
-    sudo sed -i '4 a # Restore Weaved configs, if needed' $RACHELSCRIPTSFILE
-    sudo sed -i '5 a if [[ -d '$RACHELRECOVERYDIR'/Weaved ]] && [[ `ls /usr/bin/Weaved*.sh 2>/dev/null | wc -l` == 0 ]]; then' $RACHELSCRIPTSFILE
-    sudo sed -i '6 a mkdir -p /etc/weaved/services #Weaved' $RACHELSCRIPTSFILE
-    sudo sed -i '7 a cp '$RACHELRECOVERYDIR'/Weaved/Weaved*.conf /etc/weaved/services/' $RACHELSCRIPTSFILE
-    sudo sed -i '8 a cp '$RACHELRECOVERYDIR'/Weaved/*.sh /usr/bin/' $RACHELSCRIPTSFILE
-    sudo sed -i '9 a reboot #Weaved' $RACHELSCRIPTSFILE
-    sudo sed -i '10 a fi #Weaved' $RACHELSCRIPTSFILE
+    sudo sed -i '6 a # Restore Weaved configs, if needed' $RACHELSCRIPTSFILE
+    sudo sed -i '7 a echo `date +"%Y%b%d-%H%M.%S%Z"` - Checking Weaved install' $RACHELSCRIPTSFILE
+    sudo sed -i '8 a if [[ -d '$RACHELRECOVERYDIR'/Weaved ]] && [[ `ls /usr/bin/Weaved*.sh 2>/dev/null | wc -l` == 0 ]]; then' $RACHELSCRIPTSFILE
+    sudo sed -i '9 a echo `date +"%Y%b%d-%H%M.%S%Z"` - Weaved backup files found but not installed, recovering now' $RACHELSCRIPTSFILE
+    sudo sed -i '10 a mkdir -p /etc/weaved/services #Weaved' $RACHELSCRIPTSFILE
+    sudo sed -i '11 a cp '$RACHELRECOVERYDIR'/Weaved/Weaved*.conf /etc/weaved/services/' $RACHELSCRIPTSFILE
+    sudo sed -i '12 a cp '$RACHELRECOVERYDIR'/Weaved/*.sh /usr/bin/' $RACHELSCRIPTSFILE
+    sudo sed -i '13 a reboot #Weaved' $RACHELSCRIPTSFILE
+    sudo sed -i '14 a fi #Weaved' $RACHELSCRIPTSFILE
 }
 
 downloadOfflineContent(){
@@ -1315,7 +1319,7 @@ kaliteInstall(){
         dpkg -i $INSTALLTMPDIR/$KALITEINSTALLER
         commandStatus
         # Turn logging back on
-        exec &> >(tee -a "$RACHELLOG")
+        loggingStart
         if [[ $ERRORCODE == 0 ]]; then
             echo; printGood "KA Lite $KALITECURRENTVERSION installed."
         else
@@ -1445,10 +1449,11 @@ kaliteSetup(){
 #    echo; printStatus "Setting up KA Lite to start at boot..."
     sudo sed -i '/ka-lite/d' $RACHELSCRIPTSFILE
     sudo sed -i '/kalite/d' $RACHELSCRIPTSFILE
-    sudo sed -i '/sleep 20/d' $RACHELSCRIPTSFILE
+    sudo sed -i '/sleep/d' $RACHELSCRIPTSFILE
 
     # Start KA Lite at boot time
     sudo sed -i '$e echo "# Start kalite at boot time"' $RACHELSCRIPTSFILE
+    sudo sed -i '$e echo "sleep 5 #kalite"' $RACHELSCRIPTSFILE
     sudo sed -i '$e echo "sudo /usr/bin/kalite start"' $RACHELSCRIPTSFILE
     printGood "Done."
 }
@@ -1564,6 +1569,7 @@ repairRachelScripts(){
 # Send output to log file
 rm -f %RACHELSCRIPTSLOG%
 exec 1>> %RACHELSCRIPTSLOG% 2>&1
+echo `date +"%Y%b%d-%H%M.%S%Z"` - Starting RACHEL script
 exit 0
 EOF
 
@@ -1581,6 +1587,7 @@ EOF
         sed -i '/kiwix/d' $RACHELSCRIPTSFILE
         # Add lines to /etc/rc.local that will start kiwix on boot
         sed -i '$e echo "\# Start kiwix on boot"' $RACHELSCRIPTSFILE
+        sed -i '$e echo "echo \\`date +\\"%Y%b%d-%H%M.%S%Z\\"\\` - Starting kiwix"' $RACHELSCRIPTSFILE
         sed -i '$e echo "\/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' $RACHELSCRIPTSFILE
         printGood "Done."
     fi
@@ -1589,13 +1596,15 @@ EOF
         echo; printStatus "Setting up KA Lite to start at boot..."
         # Delete previous setup commands from /etc/rc.local (not used anymore)
         sudo sed -i '/ka-lite/d' /etc/rc.local
-        sudo sed -i '/sleep 20/d' /etc/rc.local
+        sudo sed -i '/sleep/d' /etc/rc.local
         # Delete previous setup commands from the $RACHELSCRIPTSFILE
         sudo sed -i '/ka-lite/d' $RACHELSCRIPTSFILE
         sudo sed -i '/kalite/d' $RACHELSCRIPTSFILE
-        sudo sed -i '/sleep 20/d' $RACHELSCRIPTSFILE
+        sudo sed -i '/sleep/d' $RACHELSCRIPTSFILE
         # Start KA Lite at boot time
         sudo sed -i '$e echo "# Start kalite at boot time"' $RACHELSCRIPTSFILE
+        sed -i '$e echo "echo \\`date +\\"%Y%b%d-%H%M.%S%Z\\"\\` - Starting kalite"' $RACHELSCRIPTSFILE
+        sudo sed -i '$e echo "sleep 5 #kalite"' $RACHELSCRIPTSFILE
         sudo sed -i '$e echo "sudo /usr/bin/kalite start"' $RACHELSCRIPTSFILE
         printGood "Done."
     fi
@@ -1604,13 +1613,18 @@ EOF
     # Clean rachel-scripts.sh
     sed -i '/Weaved/d' $RACHELSCRIPTSFILE
     # Write restore commands to rachel-scripts.sh
-    sudo sed -i '4 a # Restore Weaved configs, if needed' $RACHELSCRIPTSFILE
-    sudo sed -i '5 a if [[ -d '$RACHELRECOVERYDIR'/Weaved ]] && [[ `ls /usr/bin/Weaved*.sh 2>/dev/null | wc -l` == 0 ]]; then' $RACHELSCRIPTSFILE
-    sudo sed -i '6 a mkdir -p /etc/weaved/services #Weaved' $RACHELSCRIPTSFILE
-    sudo sed -i '7 a cp '$RACHELRECOVERYDIR'/Weaved/Weaved*.conf /etc/weaved/services/' $RACHELSCRIPTSFILE
-    sudo sed -i '8 a cp '$RACHELRECOVERYDIR'/Weaved/*.sh /usr/bin/' $RACHELSCRIPTSFILE
-    sudo sed -i '9 a reboot #Weaved' $RACHELSCRIPTSFILE
-    sudo sed -i '10 a fi #Weaved' $RACHELSCRIPTSFILE
+    sudo sed -i '6 a # Restore Weaved configs, if needed' $RACHELSCRIPTSFILE
+    sudo sed -i '7 a echo `date +"%Y%b%d-%H%M.%S%Z"` - Checking Weaved install' $RACHELSCRIPTSFILE
+    sudo sed -i '8 a if [[ -d '$RACHELRECOVERYDIR'/Weaved ]] && [[ `ls /usr/bin/Weaved*.sh 2>/dev/null | wc -l` == 0 ]]; then' $RACHELSCRIPTSFILE
+    sudo sed -i '9 a echo `date +"%Y%b%d-%H%M.%S%Z"` - Weaved backup files found but not installed, recovering now' $RACHELSCRIPTSFILE
+    sudo sed -i '10 a mkdir -p /etc/weaved/services #Weaved' $RACHELSCRIPTSFILE
+    sudo sed -i '11 a cp '$RACHELRECOVERYDIR'/Weaved/Weaved*.conf /etc/weaved/services/' $RACHELSCRIPTSFILE
+    sudo sed -i '12 a cp '$RACHELRECOVERYDIR'/Weaved/*.sh /usr/bin/' $RACHELSCRIPTSFILE
+    sudo sed -i '13 a reboot #Weaved' $RACHELSCRIPTSFILE
+    sudo sed -i '14 a fi #Weaved' $RACHELSCRIPTSFILE
+
+    # Add RACHEL script complete line
+    sed -i '$e echo "echo \\`date +\\"%Y%b%d-%H%M.%S%Z\\"\\` - RACHEL startup completed"' $RACHELSCRIPTSFILE
 }
 
 repairFirmware(){
@@ -1678,7 +1692,7 @@ repairKalite(){
     # Show diagnostic info
     echo; kalite diagnose
     # Turn logging back on
-    exec &> >(tee -a "$RACHELLOG")
+    loggingStart
     echo; printGood "Done."
 }
 
@@ -1701,6 +1715,194 @@ whatToDo(){
     echo "1)Initial Install  2)Install KA Lite  3)Install Kiwix  4)Install Default Weaved Services  5)Install Weaved Service  6)Add/Update Module  7)Add/Update Module List  8)Utilities  9)Exit"
 }
 
+# Interactive mode menu
+interactiveMode(){
+    echo; printQuestion "What you would like to do:"
+    echo "  - [Initial-Install] of RACHEL on a CAP"
+    echo "  - [Install-KA-Lite]"
+    echo "  - [Install-Kiwix]"
+    echo "  - [Install-Default-Weaved-Services] installs the default CAP Weaved services for ports 22, 80, 8080"
+    echo "  - [Install-Weaved-Service] adds a Weaved service to an online account you provide during install"
+    echo "  - [Add-Update-Module] lists current available modules; installs one at a time"
+    echo "  - [Add-Update-Module-List] installs modules from a pre-configured list of modules"
+    echo "  - Other [Utilities]"
+    echo "    - Check your local file's MD5 against our database"
+    echo "    - Download RACHEL content to stage for OFFLINE installs"
+    echo "    - Uninstall a Weaved service"
+    echo "    - Repair an install of a CAP after a firmware upgrade"
+    echo "    - Repair a KA Lite assessment file location"
+    echo "    - Repairs of general bug fixes"
+    echo "    - Sanitize CAP (used for creating the RACHEL USB Multitool)"
+    echo "    - Symlink all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent"
+    echo "    - Testing script"
+    echo "  - [Exit] the installation script"
+    echo
+    select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Update-Module" "Add-Update-Module-List" "Utilities" "Exit"; do
+            case $menu in
+            Initial-Install)
+            newInstall
+            ;;
+
+            Install-KA-Lite)
+            kaliteSetup
+            downloadKAContent
+            # Re-scanning content folder and exercise data 
+            echo; printStatus "Restarting KA Lite in order to re-scan the content folder."
+            kalite restart
+            echo; printGood "Login using wifi at http://192.168.88.1:8008 and register device."
+            echo "After you register, click the new tab called 'Manage', then 'Videos' and download all the missing videos."
+            echo; printGood "Log file saved to: $RACHELLOGDIR/rachel-kalite-$TIMESTAMP.log"
+            printGood "KA Lite Install Complete."
+            mv $RACHELLOG $RACHELLOGDIR/rachel-kalite-$TIMESTAMP.log
+            whatToDo
+            ;;
+
+            Install-Kiwix)
+            kiwix
+            whatToDo
+            ;;
+
+            Install-Default-Weaved-Services)
+            uninstallAllWeavedServices
+            installDefaultWeavedServices
+            backupWeavedService
+            whatToDo
+            ;;
+
+            Install-Weaved-Service)
+            installWeavedService
+            backupWeavedService
+            whatToDo
+            ;;
+
+            Add-Update-Module)
+            contentModuleInstall
+            whatToDo
+            ;;
+
+            Add-Update-Module-List)
+            contentListInstall
+            whatToDo
+            ;;
+
+            Utilities)
+            echo; printQuestion "What utility would you like to use?"
+            echo "  - [Check-MD5] will check a file you provide against our hash database"
+            echo "  - **BETA** [Download-OFFLINE-Content] to stage for OFFLINE (i.e. local) RACHEL installs"
+            echo "  - [Uninstall-Weaved-Service] removes Weaved services, one at a time"
+            echo "  - [Uninstall-ALL-Weaved-Services] removes ALL Weaved services"
+            echo "  - [Repair-Firmware] repairs an install of a CAP after a firmware upgrade"
+            echo "  - [Repair-KA-Lite] repairs KA Lite's mislocation of the assessment file; runs 'kalite manage setup' as well"
+            echo "  - [Repair-Bugs] provides general bug fixes (run when requested)"
+            echo "  - [Sanitize] and prepare CAP for delivery to customer"
+            echo "  - [Build-USB-Image] is used for creating eMMC images used on the RACHEL USB Multitool"
+            echo "  - [Symlink] all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent"
+            echo "  - [Testing] script"
+            echo "  - Return to [Main Menu]"
+            echo
+            select util in "Check-MD5" "Download-OFFLINE-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Repair-Firmware" "Repair-KA-Lite" "Repair-Bugs" "Sanitize" "Build-USB-Image" "Symlink" "Test" "Main-Menu"; do
+                case $util in
+                    Check-MD5)
+                    echo; printStatus "This function will compare the MD5 of the file you provide against our list of known hashes."
+                    printQuestion "What is the full path to the file you want to check?"; read MD5CHKFILE
+                    checkMD5 $MD5CHKFILE
+                    break
+                    ;;
+
+                    Download-OFFLINE-Content)
+                    downloadOfflineContent
+                    break
+                    ;;
+
+                    Backup-Weaved-Services)
+                    backupWeavedService
+                    break
+                    ;;
+
+                    Uninstall-Weaved-Service)
+                    uninstallWeavedService
+                    break
+                    ;;
+
+                    Uninstall-ALL-Weaved-Services)
+                    echo; printError "This uninstaller will completely remove Weaved from your CAP."
+                    echo; printQuestion "Do you still wish to continue?"
+                    read -p "    Enter (y/N) " REPLY
+                    if [[ $REPLY =~ ^[Yy]$ ]]; then
+                        uninstallAllWeavedServices
+                        backupWeavedService
+                    else
+                        printError "Uninstall cancelled."
+                    fi
+                    break
+                    ;;
+
+                    Repair-Firmware)
+                    repairFirmware
+                    break
+                    ;;
+
+                    Repair-KA-Lite)
+                    repairKalite
+                    break
+                    ;;
+
+                    Repair-Bugs)
+                    repairBugs
+                    break
+                    ;;
+
+                    Sanitize)
+                    sanitize
+                    break
+                    ;;
+
+                    Build-USB-Image)
+                    buildUSBImage
+                    break
+                    ;;
+
+                    Symlink)
+                    symlink
+                    break
+                    ;;
+
+                    Test)
+                    testingScript
+                    break
+                    ;;
+
+                    Main-Menu )
+                    break
+                    ;;
+                esac
+            done
+            whatToDo
+            ;;
+
+            Exit)
+            cleanup
+            echo; printStatus "User requested to exit."
+            echo; exit 1
+            ;;
+            esac
+    done
+}
+
+printHelp(){
+    echo "cap-rachel-configure.sh Usage: [-h] [-i] [-r] [-u]"
+    echo; echo "Examples:"
+    echo "./setips.sh -h"
+    echo "Displays this help menu."
+    echo; echo "./setips.sh -i"
+    echo "Interactive mode."
+    echo; echo "./setips.sh -r"
+    echo "Repair issues found in the RACHEL-Plus."
+    echo; echo "./setips -u"
+    echo "Update this script with the latest RELEASE version from GitHub."
+    echo; stty sane
+}
+
 #### MAIN MENU ####
 
 # Logging
@@ -1712,188 +1914,80 @@ printGood "Started:  $(date)"
 printGood "Log directory:  $RACHELLOGDIR"
 printGood "Temporary file directory:  $INSTALLTMPDIR"
 
-# Create temp directories
-mkdir -p $INSTALLTMPDIR $RACHELTMPDIR $RACHELRECOVERYDIR
-
-# Check OS version
-osCheck
-
-# Determine the operational mode - ONLINE or OFFLINE
-opMode
-
-# Build the hash list 
-buildHashList
-
-# Change directory into $INSTALLTMPDIR
-cd $INSTALLTMPDIR
-
-echo; printQuestion "What you would like to do:"
-echo "  - [Initial-Install] of RACHEL on a CAP"
-echo "  - [Install-KA-Lite]"
-echo "  - [Install-Kiwix]"
-echo "  - [Install-Default-Weaved-Services] installs the default CAP Weaved services for ports 22, 80, 8080"
-echo "  - [Install-Weaved-Service] adds a Weaved service to an online account you provide during install"
-echo "  - [Add-Update-Module] lists current available modules; installs one at a time"
-echo "  - [Add-Update-Module-List] installs modules from a pre-configured list of modules"
-echo "  - Other [Utilities]"
-echo "    - Check your local file's MD5 against our database"
-echo "    - Download RACHEL content to stage for OFFLINE installs"
-echo "    - Uninstall a Weaved service"
-echo "    - Repair an install of a CAP after a firmware upgrade"
-echo "    - Repair a KA Lite assessment file location"
-echo "    - Repairs of general bug fixes"
-echo "    - Sanitize CAP (used for creating the RACHEL USB Multitool)"
-echo "    - Symlink all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent"
-echo "    - Testing script"
-echo "  - [Exit] the installation script"
-echo
-select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Update-Module" "Add-Update-Module-List" "Utilities" "Exit"; do
-        case $menu in
-        Initial-Install)
-        newInstall
-        ;;
-
-        Install-KA-Lite)
-        kaliteSetup
-        downloadKAContent
-        # Re-scanning content folder and exercise data 
-        echo; printStatus "Restarting KA Lite in order to re-scan the content folder."
-        kalite restart
-        echo; printGood "Login using wifi at http://192.168.88.1:8008 and register device."
-        echo "After you register, click the new tab called 'Manage', then 'Videos' and download all the missing videos."
-        echo; printGood "Log file saved to: $RACHELLOGDIR/rachel-kalite-$TIMESTAMP.log"
-        printGood "KA Lite Install Complete."
-        mv $RACHELLOG $RACHELLOGDIR/rachel-kalite-$TIMESTAMP.log
-        whatToDo
-        ;;
-
-        Install-Kiwix)
-        kiwix
-        whatToDo
-        ;;
-
-        Install-Default-Weaved-Services)
-        uninstallAllWeavedServices
-        installDefaultWeavedServices
-        backupWeavedService
-        whatToDo
-        ;;
-
-        Install-Weaved-Service)
-        installWeavedService
-        backupWeavedService
-        whatToDo
-        ;;
-
-        Add-Update-Module)
-        contentModuleInstall
-        whatToDo
-        ;;
-
-        Add-Update-Module-List)
-        contentListInstall
-        whatToDo
-        ;;
-
-        Utilities)
-        echo; printQuestion "What utility would you like to use?"
-        echo "  - [Check-MD5] will check a file you provide against our hash database"
-        echo "  - **BETA** [Download-OFFLINE-Content] to stage for OFFLINE (i.e. local) RACHEL installs"
-        echo "  - [Uninstall-Weaved-Service] removes Weaved services, one at a time"
-        echo "  - [Uninstall-ALL-Weaved-Services] removes ALL Weaved services"
-        echo "  - [Repair-Firmware] repairs an install of a CAP after a firmware upgrade"
-        echo "  - [Repair-KA-Lite] repairs KA Lite's mislocation of the assessment file; runs 'kalite manage setup' as well"
-        echo "  - [Repair-Bugs] provides general bug fixes (run when requested)"
-        echo "  - [Sanitize] and prepare CAP for delivery to customer"
-        echo "  - [Build-USB-Image] is used for creating eMMC images used on the RACHEL USB Multitool"
-        echo "  - [Symlink] all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent"
-        echo "  - [Testing] script"
-        echo "  - Return to [Main Menu]"
-        echo
-        select util in "Check-MD5" "Download-OFFLINE-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Repair-Firmware" "Repair-KA-Lite" "Repair-Bugs" "Sanitize" "Build-USB-Image" "Symlink" "Test" "Main-Menu"; do
-            case $util in
-                Check-MD5)
-                echo; printStatus "This function will compare the MD5 of the file you provide against our list of known hashes."
-                printQuestion "What is the full path to the file you want to check?"; read MD5CHKFILE
-                checkMD5 $MD5CHKFILE
-                break
-                ;;
-
-                Download-OFFLINE-Content)
-                downloadOfflineContent
-                break
-                ;;
-
-                Backup-Weaved-Services)
-                backupWeavedService
-                break
-                ;;
-
-                Uninstall-Weaved-Service)
-                uninstallWeavedService
-                break
-                ;;
-
-                Uninstall-ALL-Weaved-Services)
-                echo; printError "This uninstaller will completely remove Weaved from your CAP."
-                echo; printQuestion "Do you still wish to continue?"
-                read -p "    Enter (y/N) " REPLY
-                if [[ $REPLY =~ ^[Yy]$ ]]; then
-                    uninstallAllWeavedServices
-                    backupWeavedService
+if [[ $1 == "" || $1 == "--help" || $1 == "-h" ]]; then
+    printHelp
+else
+    IAM=${0##*/} # Short basename
+    while getopts ":irtu" opt
+    do sc=0 #no option or 1 option arguments
+        case $opt in
+        (i) # Interactive mode
+            # Create temp directories
+            mkdir -p $INSTALLTMPDIR $RACHELTMPDIR $RACHELRECOVERYDIR
+            # Check OS version
+            osCheck
+            # Determine the operational mode - ONLINE or OFFLINE
+            opMode
+            # Build the hash list 
+            buildHashList
+            # Change directory into $INSTALLTMPDIR
+            cd $INSTALLTMPDIR
+            interactiveMode
+            cleanup >&2
+            ;;
+        (r) # REPAIR - quick repair; doesn't hurt if run multiple times.
+            # Check OS version
+            osCheck
+            repairBugs >&2
+            echo; printGood "Repair complete."
+            cleanup >&2
+            ;;
+        (t) # Testing script
+            # Check OS version
+            osCheck
+            # Determine the operational mode - ONLINE or OFFLINE
+            opMode
+            testingScript >&2
+            ;;
+        (u) # UPDATE - Update setips.sh to the latest release build.
+            # Create temp directories
+            mkdir -p $INSTALLTMPDIR $RACHELTMPDIR $RACHELRECOVERYDIR
+            # Check OS version
+            osCheck
+            # Determine the operational mode - ONLINE or OFFLINE
+            opMode
+            if [[ $INTERNET == "1" ]]; then
+                scriptDownloadLink="wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/cap-rachel-configure.sh -O $INSTALLTMPDIR/cap-rachel-configure.sh"
+                $scriptDownloadLink >&2
+                commandStatus
+                if [[ -s $INSTALLTMPDIR/cap-rachel-configure.sh ]]; then
+                    mv $INSTALLTMPDIR/cap-rachel-configure.sh /root/cap-rachel-configure.sh
+                    chmod +x /root/cap-rachel-configure.sh
+                    printGood "Success! Your script was updated; re-run the script for the new version."
                 else
-                    printError "Uninstall cancelled."
+                    printStatus "Fail! Check the log file for more info on what happened:  $RACHELLOG"
+                    echo
                 fi
-                break
-                ;;
-
-                Repair-Firmware)
-                repairFirmware
-                break
-                ;;
-
-                Repair-KA-Lite)
-                repairKalite
-                break
-                ;;
-
-                Repair-Bugs)
-                repairBugs
-                break
-                ;;
-
-                Sanitize)
-                sanitize
-                break
-                ;;
-
-                Build-USB-Image)
-                buildUSBImage
-                break
-                ;;
-
-                Symlink)
-                symlink
-                break
-                ;;
-
-                Test)
-                testingScript
-                break
-                ;;
-
-                Main-Menu )
-                break
-                ;;
-            esac
-        done
-        whatToDo
-        ;;
-
-        Exit)
-        cleanup
-        echo; printStatus "User requested to exit."
-        echo; exit 1
-        ;;
+            else
+                echo; printError "You need to be connected to the internet to update this script."
+            fi
+            cleanup >&2
+            exit 1
+            ;;
+        (\?) #Invalid options
+            echo "$IAM: Invalid option: -$OPTARG" >&2
+            printHelp >&2
+            exit 1
+            ;;
+        (:) #Missing arguments
+            echo "$IAM: Option -$OPTARG argument(s) missing." >&2
+            printHelp >&2
+            exit 1
+            ;;
         esac
-done
+        if [[ $OPTIND != 1 ]]; then #This test fails only if multiple options are stacked after a single "-"
+            shift $((OPTIND - 1 + sc))
+            OPTIND=1
+        fi
+    done
+fi

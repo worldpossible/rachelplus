@@ -66,6 +66,7 @@ sed "s,%RACHELSCRIPTSLOG%,$RACHELSCRIPTSLOG,g" > $RACHELSCRIPTSFILE << 'EOF'
 # Send output to log file
 rm -f %RACHELSCRIPTSLOG%
 exec 1>> %RACHELSCRIPTSLOG% 2>&1
+echo `date +"%Y%b%d-%H%M.%S%Z"` - Starting RACHEL script
 exit 0
 EOF
 
@@ -77,29 +78,33 @@ sudo sed -i '$e echo "bash /root/rachel-scripts.sh&"' /etc/rc.local
 
 # Check/re-add Kiwix
 if [[ -d /var/kiwix ]]; then
-    echo; print_status "Setting up Kiwix to start at boot..."
+    echo; printStatus "Setting up Kiwix to start at boot..."
     # Remove old kiwix boot lines from /etc/rc.local
     sed -i '/kiwix/d' /etc/rc.local
     # Clean up current rachel-scripts.sh file
     sed -i '/kiwix/d' $RACHELSCRIPTSFILE
     # Add lines to /etc/rc.local that will start kiwix on boot
     sed -i '$e echo "\# Start kiwix on boot"' $RACHELSCRIPTSFILE
+    sed -i '$e echo "echo \\`date +\\"%Y%b%d-%H%M.%S%Z\\"\\` - Starting kiwix"' $RACHELSCRIPTSFILE
     sed -i '$e echo "\/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' $RACHELSCRIPTSFILE
+    printGood "Done."
 fi
 
-if [[ -d /var/ka-lite ]]; then
-    echo; print_status "Setting up KA Lite to start at boot..."
-    # Delete previous setup commands from the /etc/rc.local
-    sed -i '/ka-lite/d' /etc/rc.local
-    sed -i '/sleep 20/d' /etc/rc.local
-    # Clean up current rachel-scripts.sh file
-    sed -i '/ka-lite/d' $RACHELSCRIPTSFILE
-    sed -i '/sleep 20/d' $RACHELSCRIPTSFILE
+if [[ -d $KALITEDIR ]]; then
+    echo; printStatus "Setting up KA Lite to start at boot..."
+    # Delete previous setup commands from /etc/rc.local (not used anymore)
+    sudo sed -i '/ka-lite/d' /etc/rc.local
+    sudo sed -i '/sleep/d' /etc/rc.local
+    # Delete previous setup commands from the $RACHELSCRIPTSFILE
+    sudo sed -i '/ka-lite/d' $RACHELSCRIPTSFILE
+    sudo sed -i '/kalite/d' $RACHELSCRIPTSFILE
+    sudo sed -i '/sleep/d' $RACHELSCRIPTSFILE
     # Start KA Lite at boot time
-    sed -i '$e echo "# Start ka-lite at boot time"' $RACHELSCRIPTSFILE
-    sed -i '$e echo "sleep 20"' $RACHELSCRIPTSFILE
-    sed -i '$e echo "/var/ka-lite/bin/kalite restart"' $RACHELSCRIPTSFILE
-    print_good "Done." | tee -a $RACHELLOG
+    sudo sed -i '$e echo "# Start kalite at boot time"' $RACHELSCRIPTSFILE
+    sed -i '$e echo "echo \\`date +\\"%Y%b%d-%H%M.%S%Z\\"\\` - Starting kalite"' $RACHELSCRIPTSFILE
+    sudo sed -i '$e echo "sleep 5 #kalite"' $RACHELSCRIPTSFILE
+    sudo sed -i '$e echo "sudo /usr/bin/kalite start"' $RACHELSCRIPTSFILE
+    printGood "Done."
 fi
 
 # Clean up outdated stuff
@@ -116,6 +121,9 @@ print_good "Done." | tee -a $RACHELLOG
 echo; print_status "Deleting previous iptables script from /etc/rc.local"
 sed -i '/iptables/d' /etc/rc.local
 print_good "Done." | tee -a $RACHELLOG
+
+# Add RACHEL script complete line
+sed -i '$e echo "echo \\`date +\\"%Y%b%d-%H%M.%S%Z\\"\\` - RACHEL startup completed"' $RACHELSCRIPTSFILE
 
 # If $RACHELWWW doesn't exist, set it up
 if [[ ! -d $RACHELWWW ]]; then
