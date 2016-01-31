@@ -1890,7 +1890,7 @@ interactiveMode(){
 }
 
 printHelp(){
-    echo "cap-rachel-configure.sh Usage: [-h] [-i] [-r] [-u]"
+    echo "Usage:  cap-rachel-configure.sh [-h] [-i] [-r] [-u]"
     echo; echo "Examples:"
     echo "./setips.sh -h"
     echo "Displays this help menu."
