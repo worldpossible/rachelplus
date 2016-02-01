@@ -12,7 +12,7 @@ Running the following script will configure the Intel CAP hardware up to the poi
 NOTE:  COPY/PASTE BOTH LINES into your CAP shell/console
 ```bash
 wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/cap-rachel-configure.sh \
--O /root/cap-rachel-configure.sh; bash /root/cap-rachel-configure.sh
+-O /root/cap-rachel-configure.sh; chmod +x /root/cap-rachel-configure.sh; /root/cap-rachel-configure.sh
 ```
 
 The RACHEL install workflow consists of the following steps:
