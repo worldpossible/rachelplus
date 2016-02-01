@@ -141,13 +141,13 @@ done
 EOF
 chmod +x /root/batteryWatcher.sh
 # Check and kill other scripts running
-echo; printStatus "Checking for and killing previously run battery monitoring scripts"
+printStatus "Checking for and killing previously run battery monitoring scripts"
 pid=$(ps aux | grep -v grep | grep "/bin/bash /root/batteryWatcher.sh" | awk '{print $2}')
 if [[ ! -z $pid ]]; then kill $pid; fi
 # Start script
 /root/batteryWatcher.sh&
-echo; printGood "Script started...monitoring battery."
-printGood "Logging shutdowns to /var/log/RACHEL/shutdown.log"
+printGood "Script started...monitoring battery."
+echo "Logging shutdowns to $RACHELLOGDIR/shutdown.log"
 
 # Add battery monitoring start line 
 if [[ -f /root/batteryWatcher.sh ]]; then
@@ -167,6 +167,9 @@ printGood "Done."
 
 # Add RACHEL script complete line
 sed -i '$e echo "echo \\$(date) - RACHEL startup completed"' $RACHELSCRIPTSFILE
+
+# Display currently mounted partitions
+mount
 
 # If $RACHELWWW doesn't exist, set it up
 if [[ ! -d $RACHELWWW ]]; then

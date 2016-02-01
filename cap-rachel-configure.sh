@@ -934,28 +934,8 @@ EOF
         echo "cgi.fix_pathinfo = 1" >> /etc/php5/cgi/php.ini
         printGood "Done."
 
-        # Clone or update the RACHEL content shell from GitHub
-        if [[ $INTERNET == "0" ]]; then cd $DIRCONTENTOFFLINE; else cd $INSTALLTMPDIR; fi
-        echo; printStatus "Checking for pre-existing RACHEL content shell."
-        if [[ ! -d $RACHELWWW ]]; then
-            echo; printStatus "RACHEL content shell does not exist at $RACHELWWW."
-            echo; printStatus "Cloning the RACHEL content shell from GitHub."
-            rm -rf contentshell # in case of previous failed install
-            $GITCLONERACHELCONTENTSHELL
-        else
-            if [[ ! -d $RACHELWWW/.git ]]; then
-                echo; printStatus "$RACHELWWW exists but it wasn't installed from git; installing RACHEL content shell from GitHub."
-                rm -rf contentshell # in case of previous failed install
-                $GITCLONERACHELCONTENTSHELL
-                cp -rf contentshell/* $RACHELWWW/ # overwrite current content with contentshell
-                cp -rf contentshell/.git $RACHELWWW/ # copy over GitHub files
-            else
-                echo; printStatus "$RACHELWWW exists; updating RACHEL content shell from GitHub."
-                cd $RACHELWWW; git pull
-            fi
-        fi
-#        rm -rf $RACHELTMPDIR/contentshell # if online install, remove contentshell temp folder # not sure what this is doing
-        printGood "Done."
+        # Checking contentshell is located at /media/RACHEL/rachel
+        checkContentShell
 
         # Install MySQL client and server
         echo; printStatus "Installing mysql client and server."
@@ -1019,6 +999,30 @@ EOF
         cleanup
         echo; exit 1
     fi
+}
+
+checkContentShell(){
+    # Clone or update the RACHEL content shell from GitHub
+    if [[ $INTERNET == "0" ]]; then cd $DIRCONTENTOFFLINE; else cd $INSTALLTMPDIR; fi
+    echo; printStatus "Checking for pre-existing RACHEL content shell."
+    if [[ ! -d $RACHELWWW ]]; then
+        printStatus "RACHEL content shell does not exist at $RACHELWWW."
+        printStatus "Cloning the RACHEL content shell from GitHub into $(pwd)"
+        rm -rf contentshell # in case of previous failed install
+        $GITCLONERACHELCONTENTSHELL
+    else
+        if [[ ! -d $RACHELWWW/.git ]]; then
+            echo; printStatus "$RACHELWWW exists but it wasn't installed from git; installing RACHEL content shell from GitHub."
+            rm -rf contentshell # in case of previous failed install
+            $GITCLONERACHELCONTENTSHELL
+            cp -rf contentshell/* $RACHELWWW/ # overwrite current content with contentshell
+            cp -rf contentshell/.git $RACHELWWW/ # copy over GitHub files
+        else
+            echo; printStatus "$RACHELWWW exists; updating RACHEL content shell from GitHub."
+            cd $RACHELWWW; git pull
+        fi
+    fi
+    printGood "Done."
 }
 
 contentModuleInstall(){
@@ -1854,6 +1858,7 @@ interactiveMode(){
             echo "  - [Backup-Weaved-Services] backs up configs and restores them if they are not found on boot"
             echo "  - [Uninstall-Weaved-Service] removes Weaved services, one at a time"
             echo "  - [Uninstall-ALL-Weaved-Services] removes ALL Weaved services"
+            echo "  - [Update-Content-Shell] updates the RACHEL contentshell from GitHub"
             echo "  - [Repair-Firmware] repairs an install of a CAP after a firmware upgrade"
             echo "  - [Repair-KA-Lite] repairs KA Lite's mislocation of the assessment file; runs 'kalite manage setup' as well"
             echo "  - [Repair-Bugs] provides general bug fixes (run when requested)"
@@ -1864,7 +1869,7 @@ interactiveMode(){
             echo "  - [Testing] script"
             echo "  - Return to [Main Menu]"
             echo
-            select util in "Install-Battery-Watcher" "Disable-Reset-Button" "Download-OFFLINE-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Repair-Firmware" "Repair-KA-Lite" "Repair-Bugs" "Sanitize" "Build-USB-Image" "Symlink" "Check-MD5" "Test" "Main-Menu"; do
+            select util in "Install-Battery-Watcher" "Disable-Reset-Button" "Download-OFFLINE-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Update-Content-Shell" "Repair-Firmware" "Repair-KA-Lite" "Repair-Bugs" "Sanitize" "Build-USB-Image" "Symlink" "Check-MD5" "Test" "Main-Menu"; do
                 case $util in
                     Install-Battery-Watcher)
                     batteryWatch
@@ -1903,6 +1908,13 @@ interactiveMode(){
                     else
                         printError "Uninstall cancelled."
                     fi
+                    break
+                    ;;
+
+                    Update-Content-Shell)
+                    echo; printStatus "Updating the RACHEL content shell."
+                    apt-get update; apt-get -y install php5-sqlite
+                    checkContentShell
                     break
                     ;;
 
