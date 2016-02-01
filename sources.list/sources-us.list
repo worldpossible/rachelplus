@@ -1,15 +1,13 @@
 ###### Ubuntu Main Repos
 deb http://us.archive.ubuntu.com/ubuntu/ precise main restricted universe multiverse 
-deb-src http://us.archive.ubuntu.com/ubuntu/ precise main restricted universe multiverse 
+deb-src http://us.archive.ubuntu.com/ubuntu/ precise main 
 
 ###### Ubuntu Update Repos
 deb http://us.archive.ubuntu.com/ubuntu/ precise-security main restricted universe multiverse 
 deb http://us.archive.ubuntu.com/ubuntu/ precise-updates main restricted universe multiverse 
-deb http://us.archive.ubuntu.com/ubuntu/ precise-backports main restricted universe multiverse 
-deb-src http://us.archive.ubuntu.com/ubuntu/ precise-security main restricted universe multiverse 
-deb-src http://us.archive.ubuntu.com/ubuntu/ precise-updates main restricted universe multiverse 
-deb-src http://us.archive.ubuntu.com/ubuntu/ precise-backports main restricted universe multiverse 
+
+###### Ubuntu Partner Repo
+deb http://archive.canonical.com/ubuntu precise partner
 
 ###### Ubuntu Extras Repo
 deb http://extras.ubuntu.com/ubuntu precise main
-deb-src http://extras.ubuntu.com/ubuntu precise main
