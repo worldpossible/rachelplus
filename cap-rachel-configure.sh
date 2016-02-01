@@ -940,6 +940,7 @@ EOF
         if [[ ! -d $RACHELWWW ]]; then
             echo; printStatus "RACHEL content shell does not exist at $RACHELWWW."
             echo; printStatus "Cloning the RACHEL content shell from GitHub."
+            rm -rf contentshell # in case of previous failed install
             $GITCLONERACHELCONTENTSHELL
         else
             if [[ ! -d $RACHELWWW/.git ]]; then
@@ -953,7 +954,7 @@ EOF
                 cd $RACHELWWW; git pull
             fi
         fi
-        rm -rf $RACHELTMPDIR/contentshell # if online install, remove contentshell temp folder
+#        rm -rf $RACHELTMPDIR/contentshell # if online install, remove contentshell temp folder # not sure what this is doing
         printGood "Done."
 
         # Install MySQL client and server
@@ -1652,7 +1653,7 @@ repairFirmware(){
     $LIGHTTPDFILE
     commandStatus
     if [[ $ERRORCODE == 1 ]]; then
-        print_error "The lighttpd.conf file did not download correctly; check log file (/var/log/RACHEL/rachel-install.tmp) and try again."
+        printError "The lighttpd.conf file did not download correctly; check log file (/var/log/RACHEL/rachel-install.tmp) and try again."
         echo; break
     else
         mv $INSTALLTMPDIR/lighttpd.conf /usr/local/etc/lighttpd.conf
@@ -1960,13 +1961,13 @@ interactiveMode(){
 printHelp(){
     echo "Usage:  cap-rachel-configure.sh [-h] [-i] [-r] [-u]"
     echo; echo "Examples:"
-    echo "./setips.sh -h"
+    echo "./cap-rachel-configure.sh -h"
     echo "Displays this help menu."
-    echo; echo "./setips.sh -i"
+    echo; echo "./cap-rachel-configure.sh -i"
     echo "Interactive mode."
-    echo; echo "./setips.sh -r"
+    echo; echo "./cap-rachel-configure.sh -r"
     echo "Repair issues found in the RACHEL-Plus."
-    echo; echo "./setips -u"
+    echo; echo "./cap-rachel-configure.sh -u"
     echo "Update this script with the latest RELEASE version from GitHub."
     echo; stty sane
 }
