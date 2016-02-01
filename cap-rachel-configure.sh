@@ -15,7 +15,7 @@ GITCONTENTSHELL="https://raw.githubusercontent.com/rachelproject/contentshell/ma
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 OS="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 OSVERSION=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-VERSION=0130162040 # To get current version - date +%m%d%y%H%M
+VERSION=0131161535 # To get current version - date +%m%d%y%H%M
 TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
 INTERNET="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 RACHELLOGDIR="/var/log/RACHEL"
@@ -137,7 +137,7 @@ opMode(){
                 echo; printQuestion "What is the location of your content folder? "; read DIRCONTENTOFFLINE
             fi
             if [[ ! -d $DIRCONTENTOFFLINE ]]; then
-                printError "The folder location does not exist!  Do you want to continue?"
+                echo; printError "The folder location does not exist!  Do you want to continue?"
                 read -p "    Enter (y/N) " REPLY
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
                     DIRCONTENTOFFLINE=""
@@ -311,7 +311,10 @@ rebootCAP(){
 }
 
 cleanup(){
-    # No log as it won't clean up the tmp file
+    # Store log file
+    mv $RACHELLOG $RACHELLOGDIR/cap-rachel-configure-$TIMESTAMP.log
+    echo; printGood "Log file saved to: $RACHELLOGDIR/cap-rachel-configure-$TIMESTAMP.log"
+    # Provide option to NOT clean up tmp files
     echo; printQuestion "Were there errors?"
     read -p "Enter 'y' to exit without cleaning up temporary folders/files. (y/N) " REPLY
     if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
@@ -661,15 +664,15 @@ backupWeavedService(){
     # Clean rachel-scripts.sh
     sed -i '/Weaved/d' $RACHELSCRIPTSFILE
     # Write restore commands to rachel-scripts.sh
-    sudo sed -i '6 a # Restore Weaved configs, if needed' $RACHELSCRIPTSFILE
-    sudo sed -i '7 a echo `date +"%Y%b%d-%H%M.%S%Z"` - Checking Weaved install' $RACHELSCRIPTSFILE
-    sudo sed -i '8 a if [[ -d '$RACHELRECOVERYDIR'/Weaved ]] && [[ `ls /usr/bin/Weaved*.sh 2>/dev/null | wc -l` == 0 ]]; then' $RACHELSCRIPTSFILE
-    sudo sed -i '9 a echo `date +"%Y%b%d-%H%M.%S%Z"` - Weaved backup files found but not installed, recovering now' $RACHELSCRIPTSFILE
-    sudo sed -i '10 a mkdir -p /etc/weaved/services #Weaved' $RACHELSCRIPTSFILE
-    sudo sed -i '11 a cp '$RACHELRECOVERYDIR'/Weaved/Weaved*.conf /etc/weaved/services/' $RACHELSCRIPTSFILE
-    sudo sed -i '12 a cp '$RACHELRECOVERYDIR'/Weaved/*.sh /usr/bin/' $RACHELSCRIPTSFILE
-    sudo sed -i '13 a reboot #Weaved' $RACHELSCRIPTSFILE
-    sudo sed -i '14 a fi #Weaved' $RACHELSCRIPTSFILE
+    sudo sed -i '5 a # Restore Weaved configs, if needed' $RACHELSCRIPTSFILE
+    sudo sed -i '6 a echo \$(date) - Checking Weaved install' $RACHELSCRIPTSFILE
+    sudo sed -i '7 a if [[ -d '$RACHELRECOVERYDIR'/Weaved ]] && [[ `ls /usr/bin/Weaved*.sh 2>/dev/null | wc -l` == 0 ]]; then' $RACHELSCRIPTSFILE
+    sudo sed -i '8 a echo \$(date) - Weaved backup files found but not installed, recovering now' $RACHELSCRIPTSFILE
+    sudo sed -i '9 a mkdir -p /etc/weaved/services #Weaved' $RACHELSCRIPTSFILE
+    sudo sed -i '10 a cp '$RACHELRECOVERYDIR'/Weaved/Weaved*.conf /etc/weaved/services/' $RACHELSCRIPTSFILE
+    sudo sed -i '11 a cp '$RACHELRECOVERYDIR'/Weaved/*.sh /usr/bin/' $RACHELSCRIPTSFILE
+    sudo sed -i '12 a reboot #Weaved' $RACHELSCRIPTSFILE
+    sudo sed -i '13 a fi #Weaved' $RACHELSCRIPTSFILE
 }
 
 downloadOfflineContent(){
@@ -678,11 +681,11 @@ downloadOfflineContent(){
     echo; printStatus "** BETA ** Downloading RACHEL content for OFFLINE installs."
 
     echo; printQuestion "The OFFLINE RACHEL content folder is set to:  $DIRCONTENTOFFLINE"
-    read -p "Do you want to change the default location? (y/n) " -r
+    read -p "    Do you want to change the default location? (y/n) " -r
     if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
         echo; printQuestion "What is the location of your content folder? "; read DIRCONTENTOFFLINE
         if [[ ! -d $DIRCONTENTOFFLINE ]]; then
-            printError "The folder location does not exist!  Please identify the full path to your OFFLINE content folder and try again."
+            echo; printError "The folder location does not exist!  Please identify the full path to your OFFLINE content folder and try again."
             rm -rf $INSTALLTMPDIR $RACHELTMPDIR
             exit 1
         fi
@@ -1268,11 +1271,6 @@ contentListInstall(){
     echo; printStatus "Verifying proper permissions on modules."
     chown -R root:root $RACHELWWW/modules
     printGood "Done."
-    # Cleanup
-    mv $RACHELLOG $RACHELLOGDIR/rachel-content-$TIMESTAMP.log
-    echo; printGood "Log file saved to: $RACHELLOGDIR/rachel-content-$TIMESTAMP.log"
-    printGood "KA Lite Content Install Complete."
-    echo; printGood "Refresh the RACHEL homepage to view your new content."
 }
 
 kaliteRemove(){
@@ -1569,7 +1567,7 @@ repairRachelScripts(){
 # Send output to log file
 rm -f %RACHELSCRIPTSLOG%
 exec 1>> %RACHELSCRIPTSLOG% 2>&1
-echo `date +"%Y%b%d-%H%M.%S%Z"` - Starting RACHEL script
+echo $(date) - Starting RACHEL script
 exit 0
 EOF
 
@@ -1587,13 +1585,12 @@ EOF
         sed -i '/kiwix/d' $RACHELSCRIPTSFILE
         # Add lines to /etc/rc.local that will start kiwix on boot
         sed -i '$e echo "\# Start kiwix on boot"' $RACHELSCRIPTSFILE
-        sed -i '$e echo "echo \\`date +\\"%Y%b%d-%H%M.%S%Z\\"\\` - Starting kiwix"' $RACHELSCRIPTSFILE
+        sed -i '$e echo "echo \\$(date) - Starting kiwix"' $RACHELSCRIPTSFILE
         sed -i '$e echo "\/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' $RACHELSCRIPTSFILE
         printGood "Done."
     fi
 
     if [[ -d $KALITEDIR ]]; then
-        echo; printStatus "Setting up KA Lite to start at boot..."
         # Delete previous setup commands from /etc/rc.local (not used anymore)
         sudo sed -i '/ka-lite/d' /etc/rc.local
         sudo sed -i '/sleep/d' /etc/rc.local
@@ -1601,9 +1598,10 @@ EOF
         sudo sed -i '/ka-lite/d' $RACHELSCRIPTSFILE
         sudo sed -i '/kalite/d' $RACHELSCRIPTSFILE
         sudo sed -i '/sleep/d' $RACHELSCRIPTSFILE
+        echo; printStatus "Setting up KA Lite to start at boot..."
         # Start KA Lite at boot time
         sudo sed -i '$e echo "# Start kalite at boot time"' $RACHELSCRIPTSFILE
-        sed -i '$e echo "echo \\`date +\\"%Y%b%d-%H%M.%S%Z\\"\\` - Starting kalite"' $RACHELSCRIPTSFILE
+        sed -i '$e echo "echo \\$(date) - Starting kalite"' $RACHELSCRIPTSFILE
         sudo sed -i '$e echo "sleep 5 #kalite"' $RACHELSCRIPTSFILE
         sudo sed -i '$e echo "sudo /usr/bin/kalite start"' $RACHELSCRIPTSFILE
         printGood "Done."
@@ -1613,18 +1611,34 @@ EOF
     # Clean rachel-scripts.sh
     sed -i '/Weaved/d' $RACHELSCRIPTSFILE
     # Write restore commands to rachel-scripts.sh
-    sudo sed -i '6 a # Restore Weaved configs, if needed' $RACHELSCRIPTSFILE
-    sudo sed -i '7 a echo `date +"%Y%b%d-%H%M.%S%Z"` - Checking Weaved install' $RACHELSCRIPTSFILE
-    sudo sed -i '8 a if [[ -d '$RACHELRECOVERYDIR'/Weaved ]] && [[ `ls /usr/bin/Weaved*.sh 2>/dev/null | wc -l` == 0 ]]; then' $RACHELSCRIPTSFILE
-    sudo sed -i '9 a echo `date +"%Y%b%d-%H%M.%S%Z"` - Weaved backup files found but not installed, recovering now' $RACHELSCRIPTSFILE
-    sudo sed -i '10 a mkdir -p /etc/weaved/services #Weaved' $RACHELSCRIPTSFILE
-    sudo sed -i '11 a cp '$RACHELRECOVERYDIR'/Weaved/Weaved*.conf /etc/weaved/services/' $RACHELSCRIPTSFILE
-    sudo sed -i '12 a cp '$RACHELRECOVERYDIR'/Weaved/*.sh /usr/bin/' $RACHELSCRIPTSFILE
-    sudo sed -i '13 a reboot #Weaved' $RACHELSCRIPTSFILE
-    sudo sed -i '14 a fi #Weaved' $RACHELSCRIPTSFILE
+    sudo sed -i '5 a # Restore Weaved configs, if needed' $RACHELSCRIPTSFILE
+    sudo sed -i '6 a echo \$(date) - Checking Weaved install' $RACHELSCRIPTSFILE
+    sudo sed -i '7 a if [[ -d '$RACHELRECOVERYDIR'/Weaved ]] && [[ `ls /usr/bin/Weaved*.sh 2>/dev/null | wc -l` == 0 ]]; then' $RACHELSCRIPTSFILE
+    sudo sed -i '8 a echo \$(date) - Weaved backup files found but not installed, recovering now' $RACHELSCRIPTSFILE
+    sudo sed -i '9 a mkdir -p /etc/weaved/services #Weaved' $RACHELSCRIPTSFILE
+    sudo sed -i '10 a cp '$RACHELRECOVERYDIR'/Weaved/Weaved*.conf /etc/weaved/services/' $RACHELSCRIPTSFILE
+    sudo sed -i '11 a cp '$RACHELRECOVERYDIR'/Weaved/*.sh /usr/bin/' $RACHELSCRIPTSFILE
+    sudo sed -i '12 a reboot #Weaved' $RACHELSCRIPTSFILE
+    sudo sed -i '13 a fi #Weaved' $RACHELSCRIPTSFILE
+
+    # Add battery monitoring start line 
+    if [[ -f /root/batteryWatcher.sh ]]; then
+        # Clean rachel-scripts.sh
+        sed -i '/battery/d' $RACHELSCRIPTSFILE
+        sed -i '$e echo "# Start battery monitoring"' $RACHELSCRIPTSFILE
+        sed -i '$e echo "echo \\$(date) - Starting battery monitor"' $RACHELSCRIPTSFILE
+        sed -i '$e echo "bash /root/batteryWatcher.sh&"' $RACHELSCRIPTSFILE
+    fi
+
+    # Check for disable reset button flag
+    echo; printStatus "Added check to disable the reset button"
+    sed -i '$e echo "\# Check if we should disable reset button"' $RACHELSCRIPTSFILE
+    sed -i '$e echo "echo \\$(date) - Checking if we should disable reset button"' $RACHELSCRIPTSFILE
+    sed -i '$e echo "if [[ -f /root/disable_reset ]]; then killall reset_button; echo \\"Reset button disabled\\"; fi"' $RACHELSCRIPTSFILE
+    printGood "Done."        
 
     # Add RACHEL script complete line
-    sed -i '$e echo "echo \\`date +\\"%Y%b%d-%H%M.%S%Z\\"\\` - RACHEL startup completed"' $RACHELSCRIPTSFILE
+    sed -i '$e echo "echo \\$(date) - RACHEL startup completed"' $RACHELSCRIPTSFILE
 }
 
 repairFirmware(){
@@ -1657,7 +1671,6 @@ repairFirmware(){
     # Check captive portal files
     checkCaptivePortal
 
-    # Clean up outdated stuff
     # Remove outdated startup script
     rm -f /root/iptables-rachel.sh
 
@@ -1709,6 +1722,48 @@ repairBugs(){
     fi
 }
 
+batteryWatch(){
+    echo; printStatus "Creating /root/batteryWatcher.sh"
+    echo "This script will monitor the battery charge level and shutdown this device with less than 3% battery charge."
+    # Create batteryWatcher script
+    cat > /root/batteryWatcher.sh << 'EOF'
+#!/bin/bash
+while :; do
+    if [[ $(cat /tmp/chargeStatus) -lt 0 ]]; then
+        if [[ $(cat /tmp/batteryLastChargeLevel) -lt 3 ]]; then
+            echo "$(date) - Low battery shutdown" >> /var/log/RACHEL/shutdown.log
+            kalite stop
+            shutdown -h now
+            exit 0
+        fi
+    fi
+    sleep 10
+done
+EOF
+    chmod +x /root/batteryWatcher.sh
+    # Check and kill other scripts running
+    echo; printStatus "Checking for and killing previously run battery monitoring scripts"
+    pid=$(ps aux | grep -v grep | grep "/bin/bash /root/batteryWatcher.sh" | awk '{print $2}')
+    if [[ ! -z $pid ]]; then kill $pid; fi
+    # Start script
+    /root/batteryWatcher.sh&
+    echo; printGood "Script started...monitoring battery."
+    printGood "Logging shutdowns to /var/log/RACHEL/shutdown.log"
+}
+
+disableResetButton(){
+    echo; printStatus "Disabling the reset button"
+    pid=$(ps aux | grep -v grep | grep "reset_button" | awk '{print $2}')
+    if [[ ! -z $pid ]]; then 
+        kill $pid
+        echo; printGood "Reset button disabled; do not delete the file /root/disable_reset unless"
+        echo "    you want to re-enable the reset button."
+    else 
+        echo; printGood "Reset button already disabled."
+    fi
+    echo "Reset button disabled.  Delete this file to re-enable." > /root/disable_reset
+}
+
 # Loop to redisplay main menu
 whatToDo(){
     echo; printQuestion "What would you like to do next?"
@@ -1726,14 +1781,15 @@ interactiveMode(){
     echo "  - [Add-Update-Module] lists current available modules; installs one at a time"
     echo "  - [Add-Update-Module-List] installs modules from a pre-configured list of modules"
     echo "  - Other [Utilities]"
-    echo "    - Check your local file's MD5 against our database"
+    echo "    - Install a battery monitor that cleanly shuts down this device with less than 3% battery"
     echo "    - Download RACHEL content to stage for OFFLINE installs"
-    echo "    - Uninstall a Weaved service"
+    echo "    - Backup or Uninstall Weaved services"
     echo "    - Repair an install of a CAP after a firmware upgrade"
     echo "    - Repair a KA Lite assessment file location"
     echo "    - Repairs of general bug fixes"
     echo "    - Sanitize CAP (used for creating the RACHEL USB Multitool)"
     echo "    - Symlink all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent"
+    echo "    - Check your local file's MD5 against our database"
     echo "    - Testing script"
     echo "  - [Exit] the installation script"
     echo
@@ -1751,9 +1807,7 @@ interactiveMode(){
             kalite restart
             echo; printGood "Login using wifi at http://192.168.88.1:8008 and register device."
             echo "After you register, click the new tab called 'Manage', then 'Videos' and download all the missing videos."
-            echo; printGood "Log file saved to: $RACHELLOGDIR/rachel-kalite-$TIMESTAMP.log"
             printGood "KA Lite Install Complete."
-            mv $RACHELLOG $RACHELLOGDIR/rachel-kalite-$TIMESTAMP.log
             whatToDo
             ;;
 
@@ -1787,8 +1841,10 @@ interactiveMode(){
 
             Utilities)
             echo; printQuestion "What utility would you like to use?"
-            echo "  - [Check-MD5] will check a file you provide against our hash database"
+            echo "  - [Install-Battery-Watcher] monitors battery and shutdowns the device with less than 3% battery"
+            echo "  - [Disable-Reset-Button] removes the ability to reset the device by use of the reset button"
             echo "  - **BETA** [Download-OFFLINE-Content] to stage for OFFLINE (i.e. local) RACHEL installs"
+            echo "  - [Backup-Weaved-Services] backs up configs and restores them if they are not found on boot"
             echo "  - [Uninstall-Weaved-Service] removes Weaved services, one at a time"
             echo "  - [Uninstall-ALL-Weaved-Services] removes ALL Weaved services"
             echo "  - [Repair-Firmware] repairs an install of a CAP after a firmware upgrade"
@@ -1797,15 +1853,21 @@ interactiveMode(){
             echo "  - [Sanitize] and prepare CAP for delivery to customer"
             echo "  - [Build-USB-Image] is used for creating eMMC images used on the RACHEL USB Multitool"
             echo "  - [Symlink] all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent"
+            echo "  - [Check-MD5] will check a file you provide against our hash database"
             echo "  - [Testing] script"
             echo "  - Return to [Main Menu]"
             echo
-            select util in "Check-MD5" "Download-OFFLINE-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Repair-Firmware" "Repair-KA-Lite" "Repair-Bugs" "Sanitize" "Build-USB-Image" "Symlink" "Test" "Main-Menu"; do
+            select util in "Install-Battery-Watcher" "Disable-Reset-Button" "Download-OFFLINE-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Repair-Firmware" "Repair-KA-Lite" "Repair-Bugs" "Sanitize" "Build-USB-Image" "Symlink" "Check-MD5" "Test" "Main-Menu"; do
                 case $util in
-                    Check-MD5)
-                    echo; printStatus "This function will compare the MD5 of the file you provide against our list of known hashes."
-                    printQuestion "What is the full path to the file you want to check?"; read MD5CHKFILE
-                    checkMD5 $MD5CHKFILE
+                    Install-Battery-Watcher)
+                    batteryWatch
+                    repairRachelScripts
+                    break
+                    ;;
+
+                    Disable-Reset-Button)
+                    disableResetButton
+                    repairRachelScripts
                     break
                     ;;
 
@@ -1867,6 +1929,13 @@ interactiveMode(){
                     break
                     ;;
 
+                    Check-MD5)
+                    echo; printStatus "This function will compare the MD5 of the file you provide against our list of known hashes."
+                    printQuestion "What is the full path to the file you want to check?"; read MD5CHKFILE
+                    checkMD5 $MD5CHKFILE
+                    break
+                    ;;
+
                     Test)
                     testingScript
                     break
@@ -1881,9 +1950,8 @@ interactiveMode(){
             ;;
 
             Exit)
-            cleanup
             echo; printStatus "User requested to exit."
-            echo; exit 1
+            break
             ;;
             esac
     done
@@ -1933,21 +2001,21 @@ else
             # Change directory into $INSTALLTMPDIR
             cd $INSTALLTMPDIR
             interactiveMode
-            cleanup >&2
+            cleanup
             ;;
         (r) # REPAIR - quick repair; doesn't hurt if run multiple times.
             # Check OS version
             osCheck
-            repairBugs >&2
+            repairBugs
             echo; printGood "Repair complete."
-            cleanup >&2
+            cleanup
             ;;
         (t) # Testing script
             # Check OS version
             osCheck
             # Determine the operational mode - ONLINE or OFFLINE
             opMode
-            testingScript >&2
+            testingScript
             ;;
         (u) # UPDATE - Update setips.sh to the latest release build.
             # Create temp directories
@@ -1971,17 +2039,17 @@ else
             else
                 echo; printError "You need to be connected to the internet to update this script."
             fi
-            cleanup >&2
+            cleanup
             exit 1
             ;;
         (\?) #Invalid options
-            echo "$IAM: Invalid option: -$OPTARG" >&2
-            printHelp >&2
+            echo "$IAM: Invalid option: -$OPTARG"
+            printHelp
             exit 1
             ;;
         (:) #Missing arguments
-            echo "$IAM: Option -$OPTARG argument(s) missing." >&2
-            printHelp >&2
+            echo "$IAM: Option -$OPTARG argument(s) missing."
+            printHelp
             exit 1
             ;;
         esac

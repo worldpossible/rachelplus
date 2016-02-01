@@ -66,7 +66,7 @@ sed "s,%RACHELSCRIPTSLOG%,$RACHELSCRIPTSLOG,g" > $RACHELSCRIPTSFILE << 'EOF'
 # Send output to log file
 rm -f %RACHELSCRIPTSLOG%
 exec 1>> %RACHELSCRIPTSLOG% 2>&1
-echo `date +"%Y%b%d-%H%M.%S%Z"` - Starting RACHEL script
+echo $(date) - Starting RACHEL script
 exit 0
 EOF
 
@@ -85,13 +85,12 @@ if [[ -d /var/kiwix ]]; then
     sed -i '/kiwix/d' $RACHELSCRIPTSFILE
     # Add lines to /etc/rc.local that will start kiwix on boot
     sed -i '$e echo "\# Start kiwix on boot"' $RACHELSCRIPTSFILE
-    sed -i '$e echo "echo \\`date +\\"%Y%b%d-%H%M.%S%Z\\"\\` - Starting kiwix"' $RACHELSCRIPTSFILE
+    sed -i '$e echo "echo \\$(date) - Starting kiwix"' $RACHELSCRIPTSFILE
     sed -i '$e echo "\/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' $RACHELSCRIPTSFILE
     printGood "Done."
 fi
 
 if [[ -d $KALITEDIR ]]; then
-    echo; printStatus "Setting up KA Lite to start at boot..."
     # Delete previous setup commands from /etc/rc.local (not used anymore)
     sudo sed -i '/ka-lite/d' /etc/rc.local
     sudo sed -i '/sleep/d' /etc/rc.local
@@ -99,15 +98,15 @@ if [[ -d $KALITEDIR ]]; then
     sudo sed -i '/ka-lite/d' $RACHELSCRIPTSFILE
     sudo sed -i '/kalite/d' $RACHELSCRIPTSFILE
     sudo sed -i '/sleep/d' $RACHELSCRIPTSFILE
+    echo; printStatus "Setting up KA Lite to start at boot..."
     # Start KA Lite at boot time
     sudo sed -i '$e echo "# Start kalite at boot time"' $RACHELSCRIPTSFILE
-    sed -i '$e echo "echo \\`date +\\"%Y%b%d-%H%M.%S%Z\\"\\` - Starting kalite"' $RACHELSCRIPTSFILE
+    sed -i '$e echo "echo \\$(date) - Starting kalite"' $RACHELSCRIPTSFILE
     sudo sed -i '$e echo "sleep 5 #kalite"' $RACHELSCRIPTSFILE
     sudo sed -i '$e echo "sudo /usr/bin/kalite start"' $RACHELSCRIPTSFILE
     printGood "Done."
 fi
 
-# Clean up outdated stuff
 # Remove outdated startup script
 rm -f /root/iptables-rachel.sh
 
@@ -122,8 +121,52 @@ echo; print_status "Deleting previous iptables script from /etc/rc.local"
 sed -i '/iptables/d' /etc/rc.local
 print_good "Done." | tee -a $RACHELLOG
 
+# Add battery monitor for safe shutdown
+echo; printStatus "Creating /root/batteryWatcher.sh"
+echo "This script will monitor the battery charge level and shutdown this device with less than 3% battery charge."
+# Create batteryWatcher script
+cat > /root/batteryWatcher.sh << 'EOF'
+#!/bin/bash
+while :; do
+    if [[ $(cat /tmp/chargeStatus) -lt 0 ]]; then
+        if [[ $(cat /tmp/batteryLastChargeLevel) -lt 3 ]]; then
+            echo "$(date) - Low battery shutdown" >> /var/log/RACHEL/shutdown.log
+            kalite stop
+            shutdown -h now
+            exit 0
+        fi
+    fi
+    sleep 10
+done
+EOF
+chmod +x /root/batteryWatcher.sh
+# Check and kill other scripts running
+echo; printStatus "Checking for and killing previously run battery monitoring scripts"
+pid=$(ps aux | grep -v grep | grep "/bin/bash /root/batteryWatcher.sh" | awk '{print $2}')
+if [[ ! -z $pid ]]; then kill $pid; fi
+# Start script
+/root/batteryWatcher.sh&
+echo; printGood "Script started...monitoring battery."
+printGood "Logging shutdowns to /var/log/RACHEL/shutdown.log"
+
+# Add battery monitoring start line 
+if [[ -f /root/batteryWatcher.sh ]]; then
+    # Clean rachel-scripts.sh
+    sed -i '/battery/d' $RACHELSCRIPTSFILE
+    sed -i '$e echo "# Start battery monitoring"' $RACHELSCRIPTSFILE
+    sed -i '$e echo "echo \\$(date) - Starting battery monitor"' $RACHELSCRIPTSFILE
+    sed -i '$e echo "bash /root/batteryWatcher.sh&"' $RACHELSCRIPTSFILE
+fi
+
+# Check for disable reset button flag
+echo; printStatus "Added check to disable the reset button"
+sed -i '$e echo "\# Check if we should disable reset button"' $RACHELSCRIPTSFILE
+sed -i '$e echo "echo \\$(date) - Checking if we should disable reset button"' $RACHELSCRIPTSFILE
+sed -i '$e echo "if [[ -f /root/disable_reset ]]; then killall reset_button; echo \\"Reset button disabled\\"; fi"' $RACHELSCRIPTSFILE
+printGood "Done."         
+
 # Add RACHEL script complete line
-sed -i '$e echo "echo \\`date +\\"%Y%b%d-%H%M.%S%Z\\"\\` - RACHEL startup completed"' $RACHELSCRIPTSFILE
+sed -i '$e echo "echo \\$(date) - RACHEL startup completed"' $RACHELSCRIPTSFILE
 
 # If $RACHELWWW doesn't exist, set it up
 if [[ ! -d $RACHELWWW ]]; then
