@@ -1002,6 +1002,11 @@ EOF
             echo -e "/dev/sda3\t/media/RACHEL\t\text4\tauto,nobootwait 0\t0" >> /etc/fstab
             printGood "Done."
 
+            # Add rachel-scripts.sh startup in /etc/rc.local
+            sed -i '/rachel/d' /etc/rc.local
+            sudo sed -i '$e echo "# Add rachel startup scripts"' /etc/rc.local
+            sudo sed -i '$e echo "bash /root/rachel-scripts.sh&"' /etc/rc.local
+
             # Add lines to $RACHELSCRIPTSFILE that will start the next script to run on reboot
             sudo sed -i '$e echo "bash '$INSTALLTMPDIR'\/cap-rachel-first-install-2.sh&"' $RACHELSCRIPTSFILE
 
@@ -1573,8 +1578,9 @@ exit 0
 EOF
 
     # Add rachel-scripts.sh startup in /etc/rc.local
-    sed -i '/scripts/d' /etc/rc.local
-    sudo sed -i '$e echo "# Add RACHEL startup scripts"' /etc/rc.local
+    sed -i '/RACHEL/d' /etc/rc.local
+    sed -i '/rachel/d' /etc/rc.local
+    sudo sed -i '$e echo "# Add rachel startup scripts"' /etc/rc.local
     sudo sed -i '$e echo "bash /root/rachel-scripts.sh&"' /etc/rc.local
 
     # Check/re-add Kiwix
