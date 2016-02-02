@@ -127,6 +127,7 @@ echo "This script will monitor the battery charge level and shutdown this device
 # Create batteryWatcher script
 cat > /root/batteryWatcher.sh << 'EOF'
 #!/bin/bash
+sleep 120
 while :; do
     if [[ $(cat /tmp/chargeStatus) -lt 0 ]]; then
         if [[ $(cat /tmp/batteryLastChargeLevel) -lt 3 ]]; then
@@ -140,6 +141,7 @@ while :; do
 done
 EOF
 chmod +x /root/batteryWatcher.sh
+
 # Check and kill other scripts running
 printStatus "Checking for and killing previously run battery monitoring scripts"
 pid=$(ps aux | grep -v grep | grep "/bin/bash /root/batteryWatcher.sh" | awk '{print $2}')
