@@ -912,8 +912,8 @@ EOF
     echo "$RACHELLOGDIR"
 
     # Ask if you are ready to install
-    echo; printQuestion "NOTE: If /media/RACHEL/rachel folder exists, it will NOT destroy any content."
-    echo "It will update the contentshell files with the latest ones from GitHub."
+    echo; printError "WARNING:  This will completely wipe your CAP and restore to RACHEL defaults."
+    echo "Any downloaded modules WILL be erased during this process."
 
     echo; read -p "Are you ready to start the install? (y/n) " -r
     if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
@@ -1783,7 +1783,7 @@ whatToDo(){
 # Interactive mode menu
 interactiveMode(){
     echo; printQuestion "What you would like to do:"
-    echo "  - [Initial-Install] of RACHEL on a CAP"
+    echo "  - [Initial-Install] of RACHEL on a CAP (completely erases any content)"
     echo "  - [Install-KA-Lite]"
     echo "  - [Install-Kiwix]"
     echo "  - [Install-Default-Weaved-Services] installs the default CAP Weaved services for ports 22, 80, 8080"
