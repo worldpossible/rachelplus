@@ -39,7 +39,7 @@ echo; printGood "RACHEL CAP Install - Script 2 started at $(date)"
 sudo sed -i '/cap-rachel/d' /etc/rc.local
 
 # If this script is running, we don't want any previous data, so force creation of new filesystems
-umount /dev/sda1 /dev/sda2 /dev/sda3
+#umount /dev/sda1 /dev/sda2 /dev/sda3
 
 # Create the new filesystems so we can write files to them
 echo; printStatus "Creating filesystems"
@@ -48,6 +48,14 @@ mkfs.ext4 -L "uploaded" -U 88888888-8888-8888-8888-888888888888 /dev/sda2
 mkfs.ext4 -L "RACHEL" -U 99999999-9999-9999-9999-999999999999 /dev/sda3
 printGood "Done."
 
+# Add the new RACHEL partition /dev/sda3 to mount on boot
+echo; printStatus "Adding /dev/sda3 into /etc/fstab"
+sed -i '/\/dev\/sda/d' /etc/fstab
+echo -e "/dev/sda1\t/media/preloaded\t\text4\tauto,nobootwait 0\t0" >> /etc/fstab
+echo -e "/dev/sda2\t/media/uploaded\t\text4\tauto,nobootwait 0\t0" >> /etc/fstab
+echo -e "/dev/sda3\t/media/RACHEL\t\text4\tauto,nobootwait 0\t0" >> /etc/fstab
+printGood "Done."
+        
 # Add lines to /etc/rc.local that will start the next script to run on reboot
 sudo sed -i '$e echo "bash '$INSTALLTMPDIR'\/cap-rachel-first-install-3.sh&"' /etc/rc.local
 

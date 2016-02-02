@@ -935,7 +935,9 @@ EOF
         printGood "Done."
 
         # Checking contentshell is located at /media/RACHEL/rachel
-        checkContentShell
+        echo; printStatus "Cloning the RACHEL content shell from GitHub into $(pwd)"
+        rm -rf contentshell # in case of previous failed install
+        $GITCLONERACHELCONTENTSHELL
 
         # Install MySQL client and server
         echo; printStatus "Installing mysql client and server."
@@ -952,47 +954,44 @@ EOF
         echo; printStatus "Updating lighttpd.conf to RACHEL version"
         mv $INSTALLTMPDIR/lighttpd.conf /usr/local/etc/lighttpd.conf
         printGood "Done."
-        
-        # Check if /media/RACHEL/rachel is already mounted
-        if grep -qs '/media/RACHEL' /proc/mounts; then
-            echo; printStatus "This hard drive is already partitioned for RACHEL, skipping hard drive repartitioning."
-            echo; printGood "RACHEL CAP Install - Script ended at $(date)"
-            echo; printGood "RACHEL CAP Install - Script 2 skipped (hard drive repartitioning) at $(date)"
-            echo; printStatus "Executing RACHEL CAP Install - Script 3; CAP will reboot when install is complete."
-            bash $INSTALLTMPDIR/cap-rachel-first-install-3.sh
-        else
-            # Repartition external 500GB hard drive into 3 partitions
-            echo; printStatus "Backup current partition table to /root/gpt.backup"
-            sgdisk -b /root/gpt.backup /dev/sda
-            echo; printStatus "Unmounting any mounted partitions."
-            umount /dev/sda1 /dev/sda2
-            echo; printStatus "Repartitioning hard drive"
-            sgdisk -p /dev/sda
-            sgdisk -o /dev/sda
-            parted -s /dev/sda mklabel gpt
-            sgdisk -n 1:2048:+20G -c 1:"preloaded" -u 1:77777777-7777-7777-7777-777777777777 -t 1:8300 /dev/sda
-            sgdisk -n 2:21G:+100G -c 2:"uploaded" -u 2:88888888-8888-8888-8888-888888888888 -t 2:8300 /dev/sda
-            sgdisk -n 3:122G:-1M -c 3:"RACHEL" -u 3:99999999-9999-9999-9999-999999999999 -t 3:8300 /dev/sda
-            sgdisk -p /dev/sda
-            printGood "Done."
 
-            # Add the new RACHEL partition /dev/sda3 to mount on boot
-            echo; printStatus "Adding /dev/sda3 into /etc/fstab"
-            sed -i '/\/dev\/sda3/d' /etc/fstab
-            echo -e "/dev/sda3\t/media/RACHEL\t\text4\tauto,nobootwait 0\t0" >> /etc/fstab
-            printGood "Done."
+        cat > /etc/fstab << EOF
+# <filesystem> <mountpoint> <type> <options> <dump> <pass>
+proc    /proc   proc    nodev,noexec,nosuid     0       0
+UUID=44444444-4444-4444-4444-444444444444       /       ext4    nobootwait,errors=remount-ro    0       1
+UUID=33333333-3333-3333-3333-333333333333       /boot   ext4    defaults        0       2
+UUID=DEAD-BEEF  /boot/efi       vfat    utf8,umask=007,gid=46   0       0
+UUID=55555555-5555-5555-5555-555555555555       /recovery       ext4    defaults        0       0
+UUID=66666666-6666-6666-6666-666666666666       none    swap    sw      0       0
+EOF
 
-            # Add rachel-scripts.sh startup in /etc/rc.local
-            sed -i '/rachel/d' /etc/rc.local
-            sudo sed -i '$e echo "# Add rachel startup scripts"' /etc/rc.local
-            sudo sed -i '$e echo "bash /root/rachel-scripts.sh&"' /etc/rc.local
+        # Repartition external 500GB hard drive into 3 partitions
+        echo; printStatus "Backup current partition table to /root/gpt.backup"
+        sgdisk -b /root/gpt.backup /dev/sda
+        echo; printStatus "Unmounting any mounted partitions."
+        umount /dev/sda1 /dev/sda2
+        echo; printStatus "Repartitioning hard drive"
+        sgdisk -p /dev/sda
+        sgdisk -o /dev/sda
+        parted -s /dev/sda mklabel gpt
+        sgdisk -n 1:2048:41945087 -c 1:"preloaded" -u 1:77777777-7777-7777-7777-777777777777 -t 1:8300 /dev/sda
+        sgdisk -n 2:41945088:251660287 -c 2:"uploaded" -u 2:88888888-8888-8888-8888-888888888888 -t 2:8300 /dev/sda
+    #            sgdisk -n 2:21G:+100G -c 2:"uploaded" -u 2:88888888-8888-8888-8888-888888888888 -t 2:8300 /dev/sda
+        sgdisk -n 3:251660288:-1M -c 3:"RACHEL" -u 3:99999999-9999-9999-9999-999999999999 -t 3:8300 /dev/sda
+    #            sgdisk -n 3:122G:-1M -c 3:"RACHEL" -u 3:99999999-9999-9999-9999-999999999999 -t 3:8300 /dev/sda
+        sgdisk -p /dev/sda
+        printGood "Done."
 
-            # Add lines to $RACHELSCRIPTSFILE that will start the next script to run on reboot
-            sudo sed -i '$e echo "bash '$INSTALLTMPDIR'\/cap-rachel-first-install-2.sh&"' $RACHELSCRIPTSFILE
+        # Add rachel-scripts.sh startup in /etc/rc.local
+        sed -i '/rachel/d' /etc/rc.local
+        sudo sed -i '$e echo "# Add rachel startup scripts"' /etc/rc.local
+        sudo sed -i '$e echo "bash /root/rachel-scripts.sh&"' /etc/rc.local
 
-            echo; printGood "RACHEL CAP Install - Script ended at $(date)"
-            rebootCAP
-        fi
+        # Add lines to $RACHELSCRIPTSFILE that will start the next script to run on reboot
+        sudo sed -i '$e echo "bash '$INSTALLTMPDIR'\/cap-rachel-first-install-2.sh&"' $RACHELSCRIPTSFILE
+
+        echo; printGood "RACHEL CAP Install - Script ended at $(date)"
+        rebootCAP
     else
         echo; printError "User requests not to continue...exiting at $(date)"
         # Deleting the install script commands
