@@ -198,7 +198,7 @@ printGood "Done."
 
 # Deleting the install script commands
 echo; printStatus "Deleting the install scripts."
-rm -rf /root/cap-rachel-* $RACHELTMPDIR
+rm -rf $INSTALLTMPDIR $RACHELTMPDIR
 printGood "Done."
 
 # Add header/date/time to install log file
