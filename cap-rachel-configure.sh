@@ -1021,7 +1021,7 @@ checkContentShell(){
             cd $RACHELWWW; git pull
         fi
     fi
-    echo; printStatus "Restarting lighttpd web server to activate changes."
+    printStatus "Restarting lighttpd web server to activate changes."
     killall lighttpd
     printGood "Done."
 }
@@ -1570,7 +1570,7 @@ checkCaptivePortal(){
 
 repairRachelScripts(){
     # Fixing /root/rachel-scripts.sh
-    echo; printStatus "Fixing $RACHELSCRIPTSFILE"
+    echo; printStatus "Updating $RACHELSCRIPTSFILE"
 
     # Add rachel-scripts.sh script
     sed "s,%RACHELSCRIPTSLOG%,$RACHELSCRIPTSLOG,g" > $RACHELSCRIPTSFILE << 'EOF'
@@ -1651,7 +1651,7 @@ EOF
 
     # Add RACHEL script complete line
     sed -i '$e echo "echo \\$(date) - RACHEL startup completed"' $RACHELSCRIPTSFILE
-    printGood "Done."
+    echo; printGood "Rachel script update completed."
 }
 
 repairFirmware(){
