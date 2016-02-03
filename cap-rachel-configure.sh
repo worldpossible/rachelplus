@@ -1831,12 +1831,14 @@ interactiveMode(){
             kalite restart
             echo; printGood "Login using wifi at http://192.168.88.1:8008 and register device."
             echo "After you register, click the new tab called 'Manage', then 'Videos' and download all the missing videos."
+            repairRachelScripts
             printGood "KA Lite Install Complete."
             whatToDo
             ;;
 
             Install-Kiwix)
             kiwix
+            repairRachelScripts
             whatToDo
             ;;
 
