@@ -2059,7 +2059,8 @@ else
                 if [[ -s $INSTALLTMPDIR/cap-rachel-configure.sh ]]; then
                     mv $INSTALLTMPDIR/cap-rachel-configure.sh /root/cap-rachel-configure.sh
                     chmod +x /root/cap-rachel-configure.sh
-                    printGood "Success! Your script was updated; re-run the script for the new version."
+                    versionNum=$(cat cap-rachel-configure.sh |grep version|head -n 1|cut -d"=" -f2|cut -d" " -f1)
+                    printGood "Success! Your script was updated to v$versionNum; RE-RUN the script to use the new version."
                 else
                     printStatus "Fail! Check the log file for more info on what happened:  $RACHELLOG"
                     echo
