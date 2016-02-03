@@ -1739,7 +1739,7 @@ batteryWatch(){
     cat > /root/batteryWatcher.sh << 'EOF'
 #!/bin/bash
 while :; do
-    if [[ $(cat /tmp/chargeStatus) -lt 0 ]]; then
+    if [[ $(cat /tmp/chargeStatus) -lt -200 ]]; then
         if [[ $(cat /tmp/batteryLastChargeLevel) -lt 3 ]]; then
             echo "$(date) - Low battery shutdown" >> /var/log/RACHEL/shutdown.log
             kalite stop
