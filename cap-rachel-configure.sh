@@ -15,7 +15,7 @@ GITCONTENTSHELL="https://raw.githubusercontent.com/rachelproject/contentshell/ma
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 OS="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 OSVERSION=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-VERSION=0131161535 # To get current version - date +%m%d%y%H%M
+VERSION=20160203.0836 # To get current version - date +%Y%m%d.%H%M
 TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
 INTERNET="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 RACHELLOGDIR="/var/log/RACHEL"
@@ -1720,6 +1720,12 @@ repairKalite(){
 }
 
 repairBugs(){
+    # Update to the latest contentshell
+    checkContentShell
+
+    # Add battery monitor
+    installBatteryWatch
+
     # Fixing issue with 10.10.10.10 redirect and sleep times
     repairRachelScripts
 
@@ -1732,7 +1738,7 @@ repairBugs(){
     fi
 }
 
-batteryWatch(){
+installBatteryWatch(){
     echo; printStatus "Creating /root/batteryWatcher.sh"
     echo "This script will monitor the battery charge level and shutdown this device with less than 3% battery charge."
     # Create batteryWatcher script
@@ -1871,7 +1877,7 @@ interactiveMode(){
             select util in "Install-Battery-Watcher" "Disable-Reset-Button" "Download-OFFLINE-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Update-Content-Shell" "Repair-Firmware" "Repair-KA-Lite" "Repair-Bugs" "Sanitize" "Build-USB-Image" "Symlink" "Check-MD5" "Test" "Main-Menu"; do
                 case $util in
                     Install-Battery-Watcher)
-                    batteryWatch
+                    installBatteryWatch
                     repairRachelScripts
                     break
                     ;;
