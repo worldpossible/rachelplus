@@ -15,7 +15,7 @@ GITCONTENTSHELL="https://raw.githubusercontent.com/rachelproject/contentshell/ma
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 OS="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 OSVERSION=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-VERSION=20160203.0842 # To get current version - date +%Y%m%d.%H%M
+VERSION=20160203.0859 # To get current version - date +%Y%m%d.%H%M
 TIMESTAMP=$(date +"%b-%d-%Y-%H%M%Z")
 INTERNET="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 RACHELLOGDIR="/var/log/RACHEL"
@@ -1021,6 +1021,8 @@ checkContentShell(){
             cd $RACHELWWW; git pull
         fi
     fi
+    echo; printStatus "Restarting lighttpd web server to activate changes."
+    killall lighttpd
     printGood "Done."
 }
 
@@ -1649,6 +1651,7 @@ EOF
 
     # Add RACHEL script complete line
     sed -i '$e echo "echo \\$(date) - RACHEL startup completed"' $RACHELSCRIPTSFILE
+    printGood "Done."
 }
 
 repairFirmware(){
@@ -1729,6 +1732,11 @@ repairBugs(){
     # Fixing issue with 10.10.10.10 redirect and sleep times
     repairRachelScripts
 
+    # Add local content module
+    echo; printStatus "Adding the local content module."
+    rsync -avz $RSYNCDIR/rachelmods/local_content $RACHELWWW/modules/
+    printGood "Done."
+
     # Fix GCF links
     if [[ -d $RACHELWWW/modules/GCF2015 ]]; then
         echo; printStatus "Fixing GCF index.htmlf links"
@@ -1758,13 +1766,13 @@ done
 EOF
     chmod +x /root/batteryWatcher.sh
     # Check and kill other scripts running
-    echo; printStatus "Checking for and killing previously run battery monitoring scripts"
+    printStatus "Checking for and killing previously run battery monitoring scripts"
     pid=$(ps aux | grep -v grep | grep "/bin/bash /root/batteryWatcher.sh" | awk '{print $2}')
     if [[ ! -z $pid ]]; then kill $pid; fi
     # Start script
     /root/batteryWatcher.sh&
-    echo; printGood "Script started...monitoring battery."
-    printGood "Logging shutdowns to /var/log/RACHEL/shutdown.log"
+    printStatus "Logging shutdowns to /var/log/RACHEL/shutdown.log"
+    printGood "Script started...monitoring battery."
 }
 
 disableResetButton(){
@@ -2028,15 +2036,20 @@ else
             cleanup
             ;;
         (r) # REPAIR - quick repair; doesn't hurt if run multiple times.
-            # Create temp directories
-            mkdir -p $INSTALLTMPDIR
-            # Determine the operational mode - ONLINE or OFFLINE
-            opMode
-            # Check OS version
-            osCheck
-            repairBugs
-            echo; printGood "Repair complete."
+            if [[ $INTERNET == "1" ]]; then
+                # Create temp directories
+                mkdir -p $INSTALLTMPDIR
+                # Determine the operational mode - ONLINE or OFFLINE
+                opMode
+                # Check OS version
+                osCheck
+                repairBugs
+                echo; printGood "Repair complete."
+            else
+                echo; printError "You need to be connected to the internet to repair this script."
+            fi
             cleanup
+            exit 1
             ;;
         (t) # Testing script
             # Check OS version
@@ -2059,7 +2072,7 @@ else
                 if [[ -s $INSTALLTMPDIR/cap-rachel-configure.sh ]]; then
                     mv $INSTALLTMPDIR/cap-rachel-configure.sh /root/cap-rachel-configure.sh
                     chmod +x /root/cap-rachel-configure.sh
-                    versionNum=$(cat cap-rachel-configure.sh |grep version|head -n 1|cut -d"=" -f2|cut -d" " -f1)
+                    versionNum=$(cat /root/cap-rachel-configure.sh |grep version|head -n 1|cut -d"=" -f2|cut -d" " -f1)
                     printGood "Success! Your script was updated to v$versionNum; RE-RUN the script to use the new version."
                 else
                     printStatus "Fail! Check the log file for more info on what happened:  $RACHELLOG"
