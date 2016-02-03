@@ -196,6 +196,11 @@ else
 fi
 printGood "Done."
 
+# Add local content module
+echo; printStatus "Adding the local content module."
+rsync -avz $RSYNCDIR/rachelmods/local_content $RACHELWWW/modules/
+printGood "Done."
+
 # Deleting the install script commands
 echo; printStatus "Deleting the install scripts."
 rm -rf $INSTALLTMPDIR $RACHELTMPDIR
