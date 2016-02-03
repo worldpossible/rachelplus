@@ -2028,6 +2028,10 @@ else
             cleanup
             ;;
         (r) # REPAIR - quick repair; doesn't hurt if run multiple times.
+            # Create temp directories
+            mkdir -p $INSTALLTMPDIR
+            # Determine the operational mode - ONLINE or OFFLINE
+            opMode
             # Check OS version
             osCheck
             repairBugs
