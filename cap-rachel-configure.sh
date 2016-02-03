@@ -801,20 +801,6 @@ newInstall(){
     sed -i 's/ec-server/WRTD-303N-Server/g' /etc/hosts
     printGood "Done."
 
-    # Add rachel-scripts.sh script - because it doesn't exist
-    sed "s,%RACHELSCRIPTSLOG%,$RACHELSCRIPTSLOG,g" > $RACHELSCRIPTSFILE << 'EOF'
-#!/bin/bash
-# Send output to log file
-rm -f %RACHELSCRIPTSLOG%
-exec 1>> %RACHELSCRIPTSLOG% 2>&1
-exit 0
-EOF
-
-    # Delete previous setup commands from the $RACHELSCRIPTSFILE
-    echo; printStatus "Delete previous RACHEL setup commands from $RACHELSCRIPTSFILE"
-    sed -i '/cap-rachel/d' $RACHELSCRIPTSFILE
-    printGood "Done."
-
     ## sources.list - replace the package repos for more reliable ones (/etc/apt/sources.list)
     # Backup current sources.list
     cp /etc/apt/sources.list /etc/apt/sources.list.bak
@@ -917,6 +903,20 @@ EOF
 
     echo; read -p "Are you ready to start the install? (y/n) " -r
     if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
+        # Add rachel-scripts.sh script - because it doesn't exist
+        sed "s,%RACHELSCRIPTSLOG%,$RACHELSCRIPTSLOG,g" > $RACHELSCRIPTSFILE << 'EOF'
+#!/bin/bash
+# Send output to log file
+rm -f %RACHELSCRIPTSLOG%
+exec 1>> %RACHELSCRIPTSLOG% 2>&1
+exit 0
+EOF
+
+        # Delete previous setup commands from the $RACHELSCRIPTSFILE
+        echo; printStatus "Delete previous RACHEL setup commands from $RACHELSCRIPTSFILE"
+        sed -i '/cap-rachel/d' $RACHELSCRIPTSFILE
+        printGood "Done."
+
         echo; printStatus "Starting first install script...please wait patiently (about 30 secs) for first reboot."
         printStatus "The entire script (with reboots) takes 2-5 minutes."
 
