@@ -1468,6 +1468,7 @@ kaliteSetup(){
 }
 
 downloadKAContent(){
+    ERRORCODE=0
     # Setup KA Lite content
     echo; printStatus "KA Lite Content Installer"
     echo; printQuestion "Do you want to install KA Lite video content located on a local USB or folder?"
@@ -1493,17 +1494,21 @@ downloadKAContent(){
             $KALITECONTENTINSTALL
             commandStatus
             if [[ $ERRORCODE == 1 ]]; then
-                echo; printError "Primary repository for KA Content is not responding; attempting to download from the backup repository."
-                echo "WEBSITE:  $WGETONLINE/downloads/public_ftp/z-holding/ka-lite_content.zip"
-                wget -c $WGETONLINE/downloads/public_ftp/z-holding/ka-lite_content.zip -O $RACHELTMPDIR/ka-lite_content.zip
-                # Checking user provided file MD5 against known good version
-                checkMD5 $RACHELTMPDIR/ka-lite_content.zip
-                if [[ $MD5STATUS == 1 ]]; then
-                    echo; printGood "Installing the KA Lite Content."
+                echo; printError "Primary repo unavailable, do you want to download the entire zip from the backup repo?"
+                read -p "    Enter (y/N) " REPLY
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    echo; printStatus "Attempting to download from the backup repository."
+                    echo "WEBSITE:  $WGETONLINE/downloads/public_ftp/z-holding/ka-lite_content.zip"
+                    wget -c $WGETONLINE/downloads/public_ftp/z-holding/ka-lite_content.zip -O $RACHELTMPDIR/ka-lite_content.zip
+                    # Checking user provided file MD5 against known good version
+                    checkMD5 $RACHELTMPDIR/ka-lite_content.zip
+                    if [[ $MD5STATUS == 1 ]]; then
+                        echo; printGood "Installing the KA Lite Content."
+                    fi
+                    unzip -o $RACHELTMPDIR/ka-lite_content.zip "kacontent/*" -d "$KALITERCONTENTDIR/"
+                    commandStatus
+                    if [[ $ERRORCODE == 1 ]]; then printError "Something went wrong; check $RACHELLOG for errors."; fi
                 fi
-                unzip -o $RACHELTMPDIR/ka-lite_content.zip "kacontent/*" -d "$KALITERCONTENTDIR/"
-                commandStatus
-                if [[ $ERRORCODE == 1 ]]; then printError "Something went wrong; check $RACHELLOG for errors."; fi
             fi
         else
             echo; printStatus "Skipping content download/check."
@@ -1804,6 +1809,7 @@ interactiveMode(){
     echo "  - [Install-Weaved-Service] adds a Weaved service to an online account you provide during install"
     echo "  - [Add-Update-Module] lists current available modules; installs one at a time"
     echo "  - [Add-Update-Module-List] installs modules from a pre-configured list of modules"
+    echo "  - [Download-KA-Content] checks for updated KA Lite video content"
     echo "  - Other [Utilities]"
     echo "    - Install a battery monitor that cleanly shuts down this device with less than 3% battery"
     echo "    - Download RACHEL content to stage for OFFLINE installs"
@@ -1817,7 +1823,7 @@ interactiveMode(){
     echo "    - Testing script"
     echo "  - [Exit] the installation script"
     echo
-    select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Update-Module" "Add-Update-Module-List" "Utilities" "Exit"; do
+    select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Update-Module" "Add-Update-Module-List" "Download-KA-Content" "Utilities" "Exit"; do
             case $menu in
             Initial-Install)
             newInstall
@@ -1862,6 +1868,11 @@ interactiveMode(){
 
             Add-Update-Module-List)
             contentListInstall
+            whatToDo
+            ;;
+
+            Download-KA-Content)
+            downloadKAContent
             whatToDo
             ;;
 
