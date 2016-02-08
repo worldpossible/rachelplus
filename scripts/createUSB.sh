@@ -186,7 +186,7 @@ buildUSBImage(){
 			echo
 			read -p "    Select 'n' to exit. (y/N) " -r
 			if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
-				echo "It takes about 45 minutes to create the 3 images; then, the USB script will continue."
+				echo "It takes about 75 minutes (on a RACHEL-Plus CAP) to create the 3 images; then, the USB script will continue."
 				rm -rf $0 $installTmpDir $rachelTmpDir
 				echo; time /root/generate_recovery.sh $rachelRecoveryDir/
 				echo
@@ -195,13 +195,16 @@ buildUSBImage(){
 				exit 1
 		    fi
 		fi
+		buildSaveDir=$(ls $rachelRecoveryDir | grep ^2)
+		echo; printStatus "Checking $rachelRecoveryDir/$buildSaveDir for the three .tar.xz files."
 		if [[ $createdNewImages == 1 ]]; then
-			if [[ ! -f $rachelRecoveryDir/$partition_dir/boot.tar.xz ]] || [[ ! -f $rachelRecoveryDir/$partition_dir/efi.tar.xz ]] || [[ ! -f $rachelRecoveryDir/$partition_dir/rootfs.tar.xz ]]; then
-				echo; printError "One or more of the .tar.xz were not created, check log file:  $createLog"
-				echo "    You may also want to check the directory where the .tar.xz files are created:  $rachelRecoveryDir"
+			if [[ ! -f $rachelRecoveryDir/$buildSaveDir/boot.tar.xz ]] || [[ ! -f $rachelRecoveryDir/$buildSaveDir/efi.tar.xz ]] || [[ ! -f $rachelRecoveryDir/$buildSaveDir/rootfs.tar.xz ]]; then
+				printError "One or more of the .tar.xz were not created, check log file:  $createLog"
+				echo "    You may also want to check the directory where the .tar.xz files are created:  $rachelRecoveryDir/$buildSaveDir"
 				echo; exit 1
 			else
-				cp $rachelRecoveryDir/$partition_dir/*.tar.xz $mountName/
+				printGood "Found the files; copying the .tar.xz files to the USB drive."
+				cp $rachelRecoveryDir/$buildSaveDir/*.tar.xz $mountName/
 			fi
 		fi
 	fi
