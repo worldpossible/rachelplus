@@ -62,7 +62,7 @@ identifySavePath(){
 identifyUSBVersion(){
 	# Identify the device name
 	echo; read -p "[?] What will be the version number for the RACHEL Recovery USB (e.g. 1-2-16_v2)? " usbVersion
-	imageName="RACHEL_Recovery_USB_$usbVersion_$usbDate.img"
+	imageName="RACHEL_Recovery_USB_"$usbVersion"_$usbDate.img"
 	echo; printGood "Image name:  $imageName"
 }
 
@@ -154,6 +154,8 @@ buildUSBImage(){
 		echo "    (Select 'n' if you already have the three .tar.xz images on the USB)"
 		read -p "    Enter (y/N) " REPLY
 		if [[ $REPLY =~ ^[Yy]$ ]]; then
+			# Set the createdNewImages flag
+			createdNewImages=1
 			# Delete any previous .tar.xz files
 			rm -f $mountName/*.tar.xz
 			# Sanitize?
@@ -182,6 +184,15 @@ buildUSBImage(){
 				echo; /root/generate_recovery.sh $rachelRecoveryDir/
 				echo
 		    fi
+		fi
+	fi
+	if [[ $createdNewImages == 1 ]]; then
+		if [[ ! -f $rachelRecoveryDir/boot.tar.xz ]] || [[ ! -f $rachelRecoveryDir/efi.tar.xz ]] || [[ ! -f $rachelRecoveryDir/rootfs.tar.xz ]]; then
+			echo; printError "One or more of the .tar.xz were not created, check log file:  $createLog"
+			echo "    You may also want to check the directory where the .tar.xz files are created:  $rachelRecoveryDir"
+			echo; exit 1
+		else
+			cp $rachelRecoveryDir/20*/*.tar.xz $mountName/
 		fi
 	fi
 	if [[ ! -f $mountName/boot.tar.xz ]] || [[ ! -f $mountName/efi.tar.xz ]] || [[ ! -f $mountName/rootfs.tar.xz ]]; then
