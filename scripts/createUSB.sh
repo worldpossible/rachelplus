@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # RACHEL Recovery USB Image Creation Script
 # By: sam@hfc
 # Usage:  ./createUSB.sh
@@ -28,22 +28,23 @@ installTmpDir="/root/cap-rachel-install.tmp"
 rachelTmpDir="/media/RACHEL/cap-rachel-install.tmp"
 rachelRecoveryDir="/media/RACHEL/recovery"
 weavedInstall="wget -c https://github.com/weaved/installer/raw/master/Intel_CAP/weaved_IntelCAP.tar -O /root/weaved_IntelCAP.tar"
-createLog="/media/RACHEL/recovery/createUSB-$timestamp.log"
 
 loggingStart(){
+	if [[ $os == "cap" ]]; then
+		createLog="/media/RACHEL/recovery/createUSB-$timestamp.log"
+	else
+		createLog="./createUSB-$timestamp.log"
+	fi
 	exec &> >(tee "$createLog")
 }
 
 identifyOS(){
 	if [[ $(cat /etc/hostname) == "WRTD-303N-Server" ]]; then
 		os=cap
-		printGood "You are running the script on a RACHEL-Plus CAP."
 	elif [[ -f /etc/issue ]]; then
 		os=linux
-		printGood "You are running the script on a Unix variant."
 	elif [[ -d /Volumes ]]; then
 		os=osx
-		printGood "You are running the script on OSX."
 	else
 		echo; printError "Your OS is unknown; sorry, I can not continue."
 		echo; exit 1
@@ -53,8 +54,14 @@ identifyOS(){
 identifySavePath(){
 	if [[ $os == "cap" ]]; then
 		imageSavePath=$imageSavePathCAP
+		printGood "You are running the script on a RACHEL-Plus CAP."
 	else
 		imageSavePath=$imageSavePath
+		if [[ $os == "linux" ]]; then
+			printGood "You are running the script on a Unix variant."
+		elif [[ $os == "osx" ]]; then
+			printGood "You are running the script on OSX."
+		fi
 	fi
 	printGood "Saving image to $imageSavePath"
 }
@@ -89,7 +96,7 @@ confirmRecoveryUSB(){
 		mountName=$(mount | grep "$usbDeviceName"s1 | awk '{print $3}')
 	fi
 	if [[ -z $mountName ]]; then
-		echo; printError "I couldn't find a valid, mounted patition, exiting."
+		echo; printError "I couldn't find a mounted USB for that disk, exiting."
 		echo; exit 1
 	fi
 	# Check for update.sh; if not found, exit
@@ -181,18 +188,21 @@ buildUSBImage(){
 			if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
 				echo "It takes about 45 minutes to create the 3 images; then, the USB script will continue."
 				rm -rf $0 $installTmpDir $rachelTmpDir
-				echo; /root/generate_recovery.sh $rachelRecoveryDir/
+				echo; time /root/generate_recovery.sh $rachelRecoveryDir/
 				echo
+			else
+				printError "User requested to exit, exiting."
+				exit 1
 		    fi
 		fi
-	fi
-	if [[ $createdNewImages == 1 ]]; then
-		if [[ ! -f $rachelRecoveryDir/boot.tar.xz ]] || [[ ! -f $rachelRecoveryDir/efi.tar.xz ]] || [[ ! -f $rachelRecoveryDir/rootfs.tar.xz ]]; then
-			echo; printError "One or more of the .tar.xz were not created, check log file:  $createLog"
-			echo "    You may also want to check the directory where the .tar.xz files are created:  $rachelRecoveryDir"
-			echo; exit 1
-		else
-			cp $rachelRecoveryDir/20*/*.tar.xz $mountName/
+		if [[ $createdNewImages == 1 ]]; then
+			if [[ ! -f $rachelRecoveryDir/$partition_dir/boot.tar.xz ]] || [[ ! -f $rachelRecoveryDir/$partition_dir/efi.tar.xz ]] || [[ ! -f $rachelRecoveryDir/$partition_dir/rootfs.tar.xz ]]; then
+				echo; printError "One or more of the .tar.xz were not created, check log file:  $createLog"
+				echo "    You may also want to check the directory where the .tar.xz files are created:  $rachelRecoveryDir"
+				echo; exit 1
+			else
+				cp $rachelRecoveryDir/$partition_dir/*.tar.xz $mountName/
+			fi
 		fi
 	fi
 	if [[ ! -f $mountName/boot.tar.xz ]] || [[ ! -f $mountName/efi.tar.xz ]] || [[ ! -f $mountName/rootfs.tar.xz ]]; then
@@ -269,11 +279,11 @@ compressHashUSBImage(){
 }
 
 ##### MAIN PROGRAM
+identifyOS
 loggingStart
 echo; echo "RACHEL Recovery USB Image Creation Script"
 printGood "Script started:  $(date)"
 printGood "Log file:  $createLog"
-identifyOS
 identifySavePath
 identifyUSBVersion
 identifyDeviceNum
