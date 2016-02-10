@@ -25,9 +25,12 @@ usbDate=$(date +"%Y%m%d")
 imageSavePath="$HOME"
 imageSavePathCAP="/media/RACHEL/recovery"
 installTmpDir="/root/cap-rachel-install.tmp"
+rachelPartition="/media/RACHEL"
+rachelWWW="$rachelPartition/rachel"
 rachelTmpDir="/media/RACHEL/cap-rachel-install.tmp"
 rachelRecoveryDir="/media/RACHEL/recovery"
 weavedInstall="wget -c https://github.com/weaved/installer/raw/master/Intel_CAP/weaved_IntelCAP.tar -O /root/weaved_IntelCAP.tar"
+rsyncDIR="rsync://dev.worldpossible.org"
 
 loggingStart(){
 	if [[ $os == "cap" ]]; then
@@ -68,7 +71,7 @@ identifySavePath(){
 
 identifyUSBVersion(){
 	# Identify the device name
-	echo; read -p "[?] What will be the version number for the RACHEL Recovery USB (e.g. 1-2-16_v2)? " usbVersion
+	echo; printQuestion "What will be the version number for the RACHEL Recovery USB (e.g. 1-2-16_v2)? "; read usbVersion
 	imageName="RACHEL_Recovery_USB_"$usbVersion"_$usbDate.img"
 	echo; printGood "Image name:  $imageName"
 }
@@ -77,11 +80,11 @@ identifyDeviceNum(){
 	# Identify the device name
 	if [[ $os == "linux" ]] || [[ $os == "cap" ]]; then
 		fdisk -l
-		echo; read -p "[?] What is the device name that you want to image (for /dev/sdb, enter 'sdb')? " diskNum
+		echo; printQuestion "What is the device name that you want to image (for /dev/sdb, enter 'sdb')? "; read diskNum
 		usbDeviceName="/dev/$diskNum"
 	elif [[ $os == "osx" ]]; then
 		diskutil list
-		echo; read -p "[?] What is the number of the device that you want to image (for /dev/disk1, enter '1')? " diskNum
+		echo; printQuestion "What is the number of the device that you want to image (for /dev/disk1, enter '1')? "; read diskNum
 		usbDeviceName="/dev/disk$diskNum"
 	fi
 	echo; printGood "Device name:  $usbDeviceName"
@@ -142,9 +145,8 @@ sanitize(){
 	rm -rf /recovery/20* $rachelRecoveryDir/20*
 	# Clean bash history
 	echo "" > /root/.bash_history
-	echo; printQuestion "Do you want to remove any currently activated Weaved services and run the default Weaved setup?"
-	echo "If you enter 'y', we will install the staged default Weaved services for ports 22, 80, and 8080."
-	read -p "    Enter (y/N) " REPLY
+	echo; printQuestion "Do you want to remove any currently activated Weaved services and run the default Weaved setup? (y/N)"
+	echo "If you enter 'y', we will install the staged default Weaved services for ports 22, 80, and 8080."; read REPLY
 	if [[ $REPLY =~ ^[Yy]$ ]]; then
 		# Remove previous Weaved installs
 		rm -rf /usr/bin/notify_Weaved*.sh /usr/bin/Weaved*.sh /etc/weaved/services/Weaved*.conf /root/Weaved*.log
@@ -157,17 +159,15 @@ sanitize(){
 buildUSBImage(){
 	if [[ $os == "cap" ]]; then
 		echo; printStatus "You are running this script from a RACHEL-Plus CAP."
-		printQuestion "Do you want to create/build the *.tar.xz files from this device?"
-		echo "    (Select 'n' if you already have the three .tar.xz images on the USB)"
-		read -p "    Enter (y/N) " REPLY
+		printQuestion "Do you want to create/build the *.tar.xz files from this device? (y/N)"
+		echo "Select 'n' if you already have the three .tar.xz images on the USB."; read REPLY
 		if [[ $REPLY =~ ^[Yy]$ ]]; then
 			# Set the createdNewImages flag
 			createdNewImages=1
 			# Delete any previous .tar.xz files
 			rm -f $mountName/*.tar.xz
 			# Sanitize?
-			echo; printQuestion "Do you want to sanitize this device prior to building the *.tar.xz files?"
-			read -p "    Enter (y/N) " REPLY
+			echo; printQuestion "Do you want to sanitize this device prior to building the *.tar.xz files? (y/N) "; read REPLY
 			if [[ $REPLY =~ ^[Yy]$ ]]; then
 			    sanitize
 			fi
@@ -180,11 +180,11 @@ buildUSBImage(){
 			echo; printStatus "Delete KA Lite Device ID and clearing crypto keys from the database"
 			kalite manage runcode "from django.conf import settings; settings.DEBUG_ALLOW_DELETIONS = True; from securesync.models import Device; Device.objects.all().delete(); from fle_utils.config.models import Settings; Settings.objects.all().delete()"
 			echo; printQuestion "Do you want to run the /root/generate_recovery.sh script?"
-			echo "    The script will save the *.tar.xz files to /media/RACHEL/recovery"
+			echo "The script will save the *.tar.xz files to /media/RACHEL/recovery"
 			echo
-			echo "    **WARNING** You MUST be logged in via wifi or you will get disconnected and your script will fail during script execution."
+			echo "**WARNING** You MUST be logged in via wifi or you will get disconnected and your script will fail during script execution."
 			echo
-			read -p "    Select 'n' to exit. (y/N) " -r
+			echo "Select 'n' to exit. (y/N)"; read REPLY
 			if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
 				echo "It takes about 75 minutes (on a RACHEL-Plus CAP) to create the 3 images; then, the USB script will continue."
 				rm -rf $0 $installTmpDir $rachelTmpDir
@@ -234,8 +234,14 @@ setUSBVersion(){
 }
 
 setRecoveryMETHOD(){
-	echo; printStatus "Setting the recovery method to '1' for the default recovery method"
+	echo; printStatus "Setting the recovery method to '1' for the default recovery method."
 	awk 'BEGIN{OFS=FS="\""} $1~/METHOD=/ {$2="1";}1' $mountName/update.sh > update.tmp; mv update.tmp update.sh
+}
+
+addDefaultModules(){
+	echo; printStatus "Adding the local_content and ka-lite modules."
+	rsync -avz $rsyncDIR/rachelmods/local_content $mountName/rachel-files/contentshell/modules/
+	rsync -avz $rsyncDIR/rachelmods/ka-lite $mountName/rachel-files/contentshell/modules/
 }
 
 unmountUSB(){
@@ -295,11 +301,12 @@ buildUSBImage
 removeOSXJunk
 setUSBVersion
 setRecoveryMETHOD
-unmountUSB
-imageUSB
-compressHashUSBImage
+addDefaultModules
+#unmountUSB
+#imageUSB
+#compressHashUSBImage
 echo; printStatus "RACHEL USB Recovery image build completed; final image sizes:"
-du -h $imageSavePath/$imageName*
+#du -h $imageSavePath/$imageName*
 echo; printGood "Script ended:  $(date)"
 # Logging off
 exec &>/dev/tty
