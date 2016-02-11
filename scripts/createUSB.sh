@@ -239,9 +239,14 @@ setRecoveryMETHOD(){
 }
 
 addDefaultModules(){
-	echo; printStatus "Adding the local_content and ka-lite modules."
-	rsync -avz $rsyncDIR/rachelmods/local_content $mountName/rachel-files/contentshell/modules/
-	rsync -avz $rsyncDIR/rachelmods/ka-lite $mountName/rachel-files/contentshell/modules/
+	if [[ -d /media/RACHEL/rachel/modules/local_content ]]; then
+		echo; printStatus "Adding the local_content module."
+		rsync -avz --no-perms --no-owner --no-group $rsyncDIR/rachelmods/local_content $mountName/rachel-files/contentshell/modules/
+	fi
+	if [[ -d /media/RACHEL/rachel/modules/ka-lite ]]; then
+		echo; printStatus "Adding the ka-lite module."
+		rsync -avz --no-perms --no-owner --no-group $rsyncDIR/rachelmods/ka-lite $mountName/rachel-files/contentshell/modules/
+	fi
 }
 
 unmountUSB(){
@@ -258,7 +263,7 @@ unmountUSB(){
 
 imageUSB(){
 	# Image the USB - show the imaging time when complete; only copy our first 2 partitions to minimize space
-	echo; printStatus "Creating image of USB drive (on USB 2.0 = ~55min; on USB 3.0 = ~2min30sec)."
+	echo; printStatus "Creating image of USB drive (on USB 2.0 = ~55min; on USB 3.0 = ~2min20sec)."
 	echo "File location:  $imageSavePath/$imageName"
 	if [[ $os == "linux" ]] || [[ $os == "cap" ]]; then
 		usbDeviceName=$usbDeviceName
@@ -272,12 +277,12 @@ imageUSB(){
 compressHashUSBImage(){
 	cd $imageSavePath
 	# Compress the .img file (should reduce the image from 3.76GB to about 2.1GB)
-	echo; printStatus "Compressing .img file."
+	echo; printStatus "Compressing .img file (on RACHEL-Plus CAP = ~11min)."
 	echo "Running cmd:  zip -9 -o $imageName.zip $imageName"
 	time zip -9 -o $imageName.zip $imageName
 	
 	# MD5 hash the files
-	echo; printStatus "Calculating MD5 hash of both the .img and .img.zip files."
+	echo; printStatus "Calculating MD5 hash of both the .img and .img.zip files (on RACHEL-Plus CAP = ~45s)."
 	if [[ $os == "linux" ]] || [[ $os == "cap" ]]; then
 		md5app=md5sum
 	elif [[ $os == "osx" ]]; then
@@ -302,11 +307,11 @@ removeOSXJunk
 setUSBVersion
 setRecoveryMETHOD
 addDefaultModules
-#unmountUSB
-#imageUSB
-#compressHashUSBImage
+unmountUSB
+imageUSB
+compressHashUSBImage
 echo; printStatus "RACHEL USB Recovery image build completed; final image sizes:"
-#du -h $imageSavePath/$imageName*
+du -h $imageSavePath/$imageName*
 echo; printGood "Script ended:  $(date)"
 # Logging off
 exec &>/dev/tty
