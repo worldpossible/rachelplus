@@ -1,0 +1,9 @@
+#grab french subtitles
+#grab french KA-lite videos
+#edit sqlite db to show french modules
+weaved
+
+./cap-rachel-configure.sh -i
+1
+4
+y
