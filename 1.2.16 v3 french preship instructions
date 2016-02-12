@@ -2,8 +2,6 @@
 #edit sqlite db to show french modules
 weaved
 
-sudo rsync -avzy jeremy@192.168.1.74://home/jeremy/RACHEL_EN/rachel/modules/windows_apps /media/RACHEL/rachel/modules/
-
 ./cap-rachel-configure.sh -i
 1
 4
