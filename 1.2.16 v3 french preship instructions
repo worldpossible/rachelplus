@@ -1,6 +1,24 @@
+A) When performing over network
+ sudo rm -r /media/RACHEL/kiwix/data/index/*fr*
+ sudo rm -r /media/RACHEL/kiwix/data/content/*fr*
+ sudo rm -r /media/RACHEL/kiwix/data/library/*fr*
+ 
+ rsync -avzy jeremy@192.168.1.74://home/jeremy/RACHEL_FR/kiwix/data /media/RACHEL/kiwix/.
+ rsync -avzy jeremy@192.168.1.74://home/jeremy/RACHEL_FR/kiwix_html/* /media/RACHEL/rachel/modules/.
+ 
+ B) When using attached storage
+ sudo rm -r /media/RACHEL/kiwix/data/index/*fr*
+ sudo rm -r /media/RACHEL/kiwix/data/content/*fr*
+ sudo rm -r /media/RACHEL/kiwix/data/library/*fr*
+ 
+ sudo cp -r /media/XX/media/RACHEL/kiwix/data /media/RACHEL/kiwix/.
+ sudo cp -r /media/XX/media/RACHEL/rachel/modules/fr* /media/RACHEL/rachel/modules/.
+ 
+ REGARDLESS OF A OR B
 #grab french subtitles
 #edit sqlite db to show french modules
 weaved
+
 
 ./cap-rachel-configure.sh -i
 1
