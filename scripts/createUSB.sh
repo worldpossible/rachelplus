@@ -149,7 +149,7 @@ sanitize(){
 	echo "If you enter 'y', we will install the staged default Weaved services for ports 22, 80, and 8080."; read REPLY
 	if [[ $REPLY =~ ^[Yy]$ ]]; then
 		# Remove previous Weaved installs
-		rm -rf /usr/bin/notify_Weaved*.sh /usr/bin/Weaved*.sh /etc/weaved/services/Weaved*.conf /root/Weaved*.log
+		rm -rf /usr/bin/notify_Weaved*.sh /usr/bin/Weaved*.sh /etc/weaved /root/Weaved*.log
 		# Install default weaved services
 		installDefaultWeavedServices
 	fi
