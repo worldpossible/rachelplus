@@ -1521,6 +1521,35 @@ downloadKAContent(){
     fi
 }
 
+installKALanguagePack(){
+	trap ctrlC INT
+	echo; printStatus "Available language packs for KA-Lite:"
+	echo "Language name		Code"
+	echo "Arabic			ar"
+	echo "Bulgarian		bg"
+	echo "Burmese			my"
+	echo "Danish			da"
+	echo "English			en"
+	echo "French			fr"
+	echo "German			de"
+	echo "Hindi			hi"
+	echo "Kannada			kn"
+	echo "Lao			lo"
+	echo "Polish			pl"
+	echo "Portuguese, BR		pt-BR"
+	echo "Spanish			es-ES"
+	echo "Swahili			sw"
+	echo "Tamil			ta"
+	echo "Xhosa			xh"
+	echo "Zulu			zul"
+
+	echo; printQuestion "What KA-Lite Language Pack would you like to install (only enter the code)?"; read languagePack
+	wget -c http://pantry.learningequality.org/downloads/ka-lite/0.16/content/contentpacks/$languagePack.zip
+#	wget -c http://keep.learningequality.org/media/language_packs/0.15/$languagePack.zip $RACHELPARTITION/$languagePack.zip
+	kalite manage languagepackdownload --from-file=$RACHELPARTITION/$languagePack.zip -l$languagePack --commandline
+	echo; printGood "Installed the KA-Lite Language Pack:  $languagePack"
+}
+
 checkCaptivePortal(){
     ERRORCODE=0
 
@@ -1801,7 +1830,7 @@ disableResetButton(){
 # Loop to redisplay main menu
 whatToDo(){
     echo; printQuestion "What would you like to do next?"
-    echo "1)Initial Install  2)Install KA Lite  3)Install Kiwix  4)Install Default Weaved Services  5)Install Weaved Service  6)Add/Update Module  7)Add/Update Module List  8)Download-KA-Content  9)Utilities  10)Exit"
+    echo "1)Initial Install  2)Install KA Lite  3)Install Kiwix  4)Install Default Weaved Services  5)Install Weaved Service  6)Add/Update Module  7)Add/Update Module List  8)Download-KA-Content  9)Install-KA-LanguagePack  10)Utilities  11)Exit"
 }
 
 # Interactive mode menu
@@ -1828,7 +1857,7 @@ interactiveMode(){
     echo "    - Testing script"
     echo "  - [Exit] the installation script"
     echo
-    select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Update-Module" "Add-Update-Module-List" "Download-KA-Content" "Utilities" "Exit"; do
+    select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Update-Module" "Add-Update-Module-List" "Download-KA-Content" "Install-KA-LanguagePack" "Utilities" "Exit"; do
             case $menu in
             Initial-Install)
             newInstall
@@ -1878,6 +1907,11 @@ interactiveMode(){
 
             Download-KA-Content)
             downloadKAContent
+            whatToDo
+            ;;
+
+            Install-KA-LanguagePack)
+            installKALanguagePack
             whatToDo
             ;;
 
