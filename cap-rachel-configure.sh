@@ -11,6 +11,7 @@ CONTENTONLINE="rsync://rachel.golearn.us/content" # Another RACHEL rsync reposit
 WGETONLINE="http://rachelfriends.org" # RACHEL large file repo (ka-lite_content, etc)
 GITRACHELPLUS="https://raw.githubusercontent.com/rachelproject/rachelplus/master" # RACHELPlus Scripts GitHub Repo
 GITCONTENTSHELL="https://raw.githubusercontent.com/rachelproject/contentshell/master" # RACHELPlus ContentShell GitHub Repo
+GITCONTENTSHELLCOMMIT="2e6f273"
 
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 OS="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
@@ -1009,16 +1010,20 @@ checkContentShell(){
         printStatus "Cloning the RACHEL content shell from GitHub into $(pwd)"
         rm -rf contentshell # in case of previous failed install
         $GITCLONERACHELCONTENTSHELL
+		cd contentshell; git checkout $GITCONTENTSHELLCOMMIT; cd ..
+        cp -rf contentshell/* $RACHELWWW/
+        cp -rf contentshell/.git $RACHELWWW/
     else
         if [[ ! -d $RACHELWWW/.git ]]; then
             echo; printStatus "$RACHELWWW exists but it wasn't installed from git; installing RACHEL content shell from GitHub."
             rm -rf contentshell # in case of previous failed install
             $GITCLONERACHELCONTENTSHELL
+            cd contentshell; git checkout $GITCONTENTSHELLCOMMIT; cd ..
             cp -rf contentshell/* $RACHELWWW/ # overwrite current content with contentshell
             cp -rf contentshell/.git $RACHELWWW/ # copy over GitHub files
         else
             echo; printStatus "$RACHELWWW exists; updating RACHEL content shell from GitHub."
-            cd $RACHELWWW; git pull
+            cd $RACHELWWW; git pull; git checkout $GITCONTENTSHELLCOMMIT
         fi
     fi
     printStatus "Restarting lighttpd web server to activate changes."
@@ -1731,16 +1736,16 @@ repairBugs(){
     # Update to the latest contentshell
     checkContentShell
 
+    # Add local content module
+    echo; printStatus "Adding the local content module."
+    rsync -avz $RSYNCDIR/rachelmods/local_content $RACHELWWW/modules/
+    printGood "Done."
+
     # Add battery monitor
     installBatteryWatch
 
     # Fixing issue with 10.10.10.10 redirect and sleep times
     repairRachelScripts
-
-    # Add local content module
-    echo; printStatus "Adding the local content module."
-    rsync -avz $RSYNCDIR/rachelmods/local_content $RACHELWWW/modules/
-    printGood "Done."
 
     # Fix GCF links
     if [[ -d $RACHELWWW/modules/GCF2015 ]]; then
@@ -2049,18 +2054,14 @@ else
             cleanup
             ;;
         (r) # REPAIR - quick repair; doesn't hurt if run multiple times.
-            if [[ $INTERNET == "1" ]]; then
-                # Create temp directories
-                mkdir -p $INSTALLTMPDIR
-                # Determine the operational mode - ONLINE or OFFLINE
-                opMode
-                # Check OS version
-                osCheck
-                repairBugs
-                echo; printGood "Repair complete."
-            else
-                echo; printError "You need to be connected to the internet to repair this script."
-            fi
+            # Create temp directories
+            mkdir -p $INSTALLTMPDIR
+            # Determine the operational mode - ONLINE or OFFLINE
+            opMode
+            # Check OS version
+            osCheck
+            repairBugs
+            echo; printGood "Repair complete."
             cleanup
             exit 1
             ;;
