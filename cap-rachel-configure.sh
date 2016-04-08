@@ -30,7 +30,7 @@ RACHELSCRIPTSLOG="/var/log/RACHEL/rachel-scripts.log"
 KALITEUSER="root"
 KALITEDIR="/root/.kalite" # Installed as user 'root'
 KALITERCONTENTDIR="/media/RACHEL/kacontent"
-KALITECURRENTVERSION="0.15.1"
+KALITECURRENTVERSION="0.16.1"
 KALITEINSTALLER="ka-lite-bundle-$KALITECURRENTVERSION.deb"
 KALITESETTINGS="$KALITEDIR/settings.py"
 INSTALLTMPDIR="/root/cap-rachel-install.tmp"
@@ -1023,7 +1023,7 @@ checkContentShell(){
             cp -rf contentshell/.git $RACHELWWW/ # copy over GitHub files
         else
             echo; printStatus "$RACHELWWW exists; updating RACHEL content shell from GitHub."
-            cd $RACHELWWW; git pull; git checkout $GITCONTENTSHELLCOMMIT
+            cd $RACHELWWW; git fetch --all; git reset --hard origin/master; git checkout $GITCONTENTSHELLCOMMIT
         fi
     fi
     printStatus "Restarting lighttpd web server to activate changes."
@@ -1042,7 +1042,7 @@ contentModuleInstall(){
         if [[ $REPLY =~ ^[Nn]$ ]]; then rm -f /tmp/module.lst; fi
     fi
     SELECTMODULE=1
-    MODULELIST=$(rsync --list-only rsync://dev.worldpossible.org/rachelmods | egrep '^d' | awk '{print $5}' | tail -n +2)
+    MODULELIST=$(rsync --list-only $RSYNCDIR/rachelmods | egrep '^d' | awk '{print $5}' | tail -n +2)
     while [[ $SELECTMODULE == 1 ]]; do
         echo; printStatus "What RACHEL module would you like to select for download or update?"
         echo "(Ctrl-C to cancel module install)"
@@ -1094,6 +1094,7 @@ contentListInstall(){
     fi
 
     echo; printQuestion "What content you would like to install:"
+    echo "  - [Custom] - Provide a local link for a custom list"
     echo "  - [English] - English content"
     echo "  - [Español] - Español content"
     echo "  - [Français] - Français content"
@@ -1101,8 +1102,21 @@ contentListInstall(){
     echo "  - [Hindi] - Hindi content"
     echo "  - Exit to the [Main Menu]"
     echo
-    select menu in "English" "Español" "Français" "Português" "Hindi" "Main-Menu"; do
+    select menu in "Custom" "English" "Español" "Français" "Português" "Hindi" "Main-Menu"; do
         case $menu in
+ 		Custom)
+		echo; printQuestion "What is the full path to the local file location of your custom module list?"; read CUSTOMMODULELIST || return
+		while :; do
+			if [[ ! -f $ASSESSMENTFILE ]]; then
+			echo; printError "FILE NOT FOUND - You must provide a file path of a location accessible from the CAP."
+			echo; printQuestion "What is the full path to the file location of your custom module list?"; read CUSTOMMODULELIST
+		else
+			break
+		fi
+		done
+		break
+		;;
+
         English)
         echo; printQuestion "What content you would like to install:"
         echo "  - [English-KA] - English content based on KA"
