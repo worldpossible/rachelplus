@@ -45,6 +45,8 @@ buildHashList(){
 65fe77df27169637f20198901591dff0 ka-lite_content.zip
 bd905efe7046423c1f736717a59ef82c ka-lite-bundle-0.15.0.deb
 18998e1253ca720adb2b54159119ce80 ka-lite-bundle-0.15.1.deb
+996f610686da40ffd85ffbcb129c0c91 ka-lite-bundle-0.16.0.deb
+dbe9f1384988c00e409553f80edb49da ka-lite-bundle-0.16.1.deb
 922b05e10e42bc3869e8b8f8bf625f07 kiwix-0.9+wikipedia_en_all_2015-05.zip
 31963611e46e717e00b30f6f6d8833ac kiwix-0.9+wikipedia_en_for-schools_2013-01.zip
 b61fdc3937aa226f34f685ba0bc29db1 kiwix-0.9-linux-i686.tar.bz2
