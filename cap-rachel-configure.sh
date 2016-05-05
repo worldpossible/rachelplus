@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160427.1444 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=220160505.1703 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -1746,6 +1746,18 @@ updateModuleNames(){
     mv medline_plus-es es-medline_plus 2>/dev/null
     mv wikipedia_for_schools en-wikipedia_for_schools 2>/dev/null
     mv windows_apps en-windows_apps 2>/dev/null
+    mv afristory en-afristory 2>/dev/null
+    mv fr_ka_lite fr-kalite 2>/dev/null
+    mv fr_wiki fr-wikipedia 2>/dev/null
+    mv fr_wikib fr-wikibooks 2>/dev/null
+    mv fr_wikis fr-wikisource 2>/dev/null
+    mv fr_wikiv fr-wikiversity 2>/dev/null
+    mv fr_wikivoy fr-wikivoyage 2>/dev/null
+    mv fr_wikt fr-wiktionary 2>/dev/null
+    mv law_library en-law_library 2>/dev/null
+    mv oya en-oya 2>/dev/null
+    mv PhET en-PhET 2>/dev/null
+    mv TED en-TED 2>/dev/null
 }
 
 repairRachelScripts(){
