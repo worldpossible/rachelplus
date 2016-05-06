@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160506.0826 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160506.1603 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -48,9 +48,19 @@ bd905efe7046423c1f736717a59ef82c ka-lite-bundle-0.15.0.deb
 18998e1253ca720adb2b54159119ce80 ka-lite-bundle-0.15.1.deb
 996f610686da40ffd85ffbcb129c0c91 ka-lite-bundle-0.16.0.deb
 dbe9f1384988c00e409553f80edb49da ka-lite-bundle-0.16.1.deb
-922b05e10e42bc3869e8b8f8bf625f07 kiwix-0.9+wikipedia_en_all_2015-05.zip
-31963611e46e717e00b30f6f6d8833ac kiwix-0.9+wikipedia_en_for-schools_2013-01.zip
 b61fdc3937aa226f34f685ba0bc29db1 kiwix-0.9-linux-i686.tar.bz2
+EOF
+}
+
+# Rsync Module Exclude List
+buildRsyncModuleExcludeList(){
+    cat > $rachelScriptsDir/rsyncExclude.list << 'EOF'
+*.zip
+en-afristory.old
+KALite0.14_content
+KALite0.15_content
+rsync.sh
+extra-build-files
 EOF
 }
 
@@ -99,7 +109,8 @@ loggingStart(){
 }
 
 cleanup(){
-    kill $!; trap 'kill $1' SIGTERM
+    stty sane
+#    kill $!; trap 'kill $1' SIGTERM
 #    echo; printError "Cancelled by user."
 
     # Store log file
@@ -115,16 +126,13 @@ cleanup(){
     echo; printStatus "Cleaning up install scripts."
     rm -rf $installTmpDir $rachelTmpDir
     printGood "Done."
-
-    stty sane
     echo; exit $?
 }
 
 testingScript(){
     set -x
 
-    installDefaultWeavedServices
-    backupWeavedService
+    downloadOfflineContent
 
     set +x
     exit 1
@@ -207,7 +215,6 @@ onlineVariables(){
     KALITEINSTALL="rsync -avhz --progress $contentOnline/$kaliteInstaller $installTmpDir/$kaliteInstaller"
     KALITECONTENTINSTALL="rsync -avhz --progress $contentOnline/kacontent/ /media/RACHEL/kacontent/"
     KIWIXINSTALL="wget -c $wgetOnline/downloads/public_ftp/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $rachelTmpDir/kiwix-0.9-linux-i686.tar.bz2"
-    KIWIXSAMPLEDATA="wget -c $wgetOnline/downloads/public_ftp/z-holding/Ray_Charles.tar.bz -O $rachelTmpDir/Ray_Charles.tar.bz"
     WEAVEDINSTALL="wget -c https://github.com/weaved/installer/raw/master/Intel_CAP/weaved_IntelCAP.tar -O $rachelScriptsDir/weaved_IntelCAP.tar"
     WEAVEDSINGLEINSTALL="wget -c https://github.com/weaved/installer/raw/master/weaved_software/installer.sh -O $rachelScriptsDir/weaved_software/installer.sh"
     WEAVEDUNINSTALLER="wget -c https://github.com/weaved/installer/raw/master/weaved_software/uninstaller.sh -O $rachelScriptsDir/weaved_software/uninstaller.sh"
@@ -238,7 +245,6 @@ offlineVariables(){
     KALITEINSTALL="rsync -avhz --progress $dirContentOffline/$kaliteInstaller $installTmpDir/$kaliteInstaller"
     KALITECONTENTINSTALL="rsync -avhz --progress $dirContentOffline/kacontent/ /media/RACHEL/kacontent/"
     KIWIXINSTALL=""
-    KIWIXSAMPLEDATA=""
     WEAVEDINSTALL=""
     WEAVEDSINGLEINSTALL=""
     WEAVEDUNINSTALLER=""
@@ -298,15 +304,18 @@ checkSHA1(){
 checkMD5(){
     echo; printStatus "Checking MD5 of: $MD5CHKFILE"
     MD5_1=$(cat $installTmpDir/hashes.md5 | grep $(basename $1) | awk '{print $1}')
-    if [[ -z $MD5_1 ]]; then printError "Sorry, we do not have a hash for that file in our database."; break; fi
-    printStatus "NOTE:  This process may take a minute on larger files...be patient."
-    MD5_2=$(md5sum $1 | awk '{print $1}')
-    if [[ $MD5_1 != $MD5_2 ]]; then
-      printError "MD5 check failed.  Please check your file and the RACHEL log ($rachelLog) for errors."
-      MD5STATUS=0
+    if [[ -z $MD5_1 ]]; then 
+        printError "Sorry, we do not have a hash for that file in our database."
     else
-      printGood "Yeah...MD5's match; your file is okay."
-      MD5STATUS=1
+        printStatus "NOTE:  This process may take a minute on larger files...be patient."
+        MD5_2=$(md5sum $1 | awk '{print $1}')
+        if [[ $MD5_1 != $MD5_2 ]]; then
+          printError "MD5 check failed.  Please check your file and the RACHEL log ($rachelLog) for errors."
+          MD5STATUS=0
+        else
+          printGood "Yeah...MD5's match; your file is okay."
+          MD5STATUS=1
+        fi
     fi
 }
 
@@ -482,15 +491,6 @@ kiwix(){
     chown -R root:root /var/kiwix
     # Make content directory
     mkdir -p /media/RACHEL/kiwix
-    echo; printQuestion "Kiwix will not start successfully until either the sample data or actual content is installed."
-    read -p "Do you want to download a small sample data file? (y/n) " -r
-    if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
-        $KIWIXSAMPLEDATA
-        # Download a test file
-        tar -C /media/RACHEL/kiwix -xjvf Ray_Charles.tar.bz
-        cp /media/RACHEL/kiwix/data/library/wikipedia_en_ray_charles_2015-06.zim.xml  /media/RACHEL/kiwix/data/library/library.xml
-        rm Ray_Charles.tar.bz
-    fi
     # Start up Kiwix
     echo; printStatus "Starting Kiwix server."
     /var/kiwix/bin/kiwix-serve --daemon --port=81 --library /media/RACHEL/kiwix/data/library/library.xml
@@ -761,35 +761,85 @@ backupWeavedService(){
 }
 
 downloadOfflineContent(){
-    printHeader
-    echo; printStatus "** BETA ** Downloading RACHEL content for OFFLINE installs."
-
+    if [[ $internet == 0 ]]; then echo; printError "You need to be online to download/update your OFFLINE content."; break; fi
     echo; printQuestion "The OFFLINE RACHEL content folder is set to:  $dirContentOffline"
-    read -p "    Do you want to change the default location? (y/n) " -r
+    echo "Do you want to change the default location? (y/N) "; read REPLY
     if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
-        echo; printQuestion "What is the location of your content folder? "; read dirContentOffline
+        echo; printQuestion "What is the location of your content folder (no trailing slash; example, /media/usb)? "; read dirContentOffline
+    fi
+    while :; do
         if [[ ! -d $dirContentOffline ]]; then
-            echo; printError "The folder location does not exist!  Please check the path to your OFFLINE content folder and try again."
-            rm -rf $installTmpDir $rachelTmpDir
-            exit 1
+            printError "The folder location does not exist!  Please check the path to your OFFLINE content folder and try again."
+            echo; printQuestion "What is the location of your content folder (no trailing slash; example, /media/usb)? "; read dirContentOffline
+        else
+            break
         fi
-    fi
-    wget -c $wgetOnline/downloads/public_ftp/z-holding/dirlist.txt -O $dirContentOffline/dirlist.txt        
-    # List the current directories on rachelfriends with this command:
-    #   for i in $(ls -d */); do echo ${i%%/}; done
-    if [[ ! -f $dirContentOffline/dirlist.txt ]]; then
-        echo; printError "The file $dirContentOffline/dirlist.txt is missing!"
-        echo "    This file is a list of rsync folders; without it, I don't know what to rsync."
-        echo "    Create a newline separated list of directories to rsync in a file called 'dirlist.txt'."
-        echo "    Put the file in the same directory $dirContentOffline"
-    else
-        echo; printStatus "Rsyncing core RACHEL content from $rsyncOnline"
-        while read p; do
-            echo; rsync -avz --ignore-existing $rsyncOnline/rachelmods/$p $dirContentOffline/rachelmods
-            commandStatus
-        done<$dirContentOffline/dirlist.txt
+    done
+
+    # Downloading RACHEL modules
+    echo "" > $rachelScriptsDir/rsyncInclude.list
+    ## Add user input to languages they want to support
+    echo; printQuestion "What language content you would like to download for OFFLINE install:"
+    echo "  - [Arabic] - Arabic content"
+    echo "  - [Deutsch] - German content"
+    echo "  - [English] - English content"
+    echo "  - [Español] - Spanish content"
+    echo "  - [Français] - French content"
+    echo "  - [Português] - Portuguese content"
+    echo "  - [Hindi] - Hindi content"
+    echo
+    select menu in "Arabic" "Deutsch" "English" "Español" "Français" "Português" "Hindi"; do
+        case $menu in
+        Arabic)
+            echo "#Arabic" >> $rachelScriptsDir/rsyncInclude.list
+            echo "ar-*" >> $rachelScriptsDir/rsyncInclude.list
+        ;;
+        Deutsch)
+            echo "#German" >> $rachelScriptsDir/rsyncInclude.list
+            echo "de-*" >> $rachelScriptsDir/rsyncInclude.list
+        ;;
+        English)
+            echo "#English" >> $rachelScriptsDir/rsyncInclude.list
+            echo "en-*" >> $rachelScriptsDir/rsyncInclude.list
+        ;;
+        Español)
+            echo "#Spanish" >> $rachelScriptsDir/rsyncInclude.list
+            echo "es-*" >> $rachelScriptsDir/rsyncInclude.list
+        ;;
+        Français)
+            echo "#French" >> $rachelScriptsDir/rsyncInclude.list
+            echo "fr-*" >> $rachelScriptsDir/rsyncInclude.list
+        ;;
+        Português)
+            echo "#Portuguese" >> $rachelScriptsDir/rsyncInclude.list
+            echo "pt-*" >> $rachelScriptsDir/rsyncInclude.list
+        ;;
+        Hindi)
+            echo "#Hindi" >> $rachelScriptsDir/rsyncInclude.list
+            echo "hi-*" >> $rachelScriptsDir/rsyncInclude.list
+        ;;
+        esac
+        echo; printStatus "Language modules included:"
+        sed -i '/^\x*$/d' $rachelScriptsDir/rsyncInclude.list
+        sort -u $rachelScriptsDir/rsyncInclude.list > $rachelScriptsDir/rsyncInclude.list.tmp; mv $rachelScriptsDir/rsyncInclude.list.tmp $rachelScriptsDir/rsyncInclude.list
+        echo "$(cat $rachelScriptsDir/rsyncInclude.list | grep \# | cut -d"#" -f2)"
+        echo; printQuestion "Do you wish to select another language? (Y/n)"; read REPLY
+        if [[ $REPLY =~ ^[Nn]$ ]]; then
+            break
+        fi
+    done
+    buildRsyncModuleExcludeList
+#    MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" --include-from "$rachelScriptsDir/rsyncInclude.list" --exclude '*' rsync://dev.worldpossible.org/rachelmods/ | awk '{print $5}' | tail -n +2)
+    MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" --include-from "$rachelScriptsDir/rsyncInclude.list" --exclude '*' $RSYNCDIR/rachelmods/ | awk '{print $5}' | tail -n +2)
+    echo; printStatus "Rsyncing core RACHEL content from $RSYNCDIR"
+    while IFS= read -r module; do
+        echo; printStatus "Downloading $module"
+        rsync -avz --update --delete $RSYNCDIR/rachelmods/$module $dirContentOffline/rachelmods
+        commandStatus
         printGood "Done."
-    fi
+    done <<< "$MODULELIST"
+
+    # Downloading Github repo:  rachelplus
     printStatus "Downloading/updating the GitHub repo:  rachelplus"
     if [[ -d $dirContentOffline/rachelplus ]]; then 
         cd $dirContentOffline/rachelplus; git fetch; git reset --hard origin
@@ -799,6 +849,7 @@ downloadOfflineContent(){
     commandStatus
     printGood "Done."
 
+    # Downloading Github repo:  contentshell
     echo; printStatus "Downloading/updating the GitHub repo:  contentshell"
     if [[ -d $dirContentOffline/contentshell ]]; then 
         cd $dirContentOffline/contentshell; git fetch; git reset --hard origin
@@ -808,6 +859,7 @@ downloadOfflineContent(){
     commandStatus
     printGood "Done."
 
+    # Downloading Github repo:  kalite
     echo; printStatus "Checking/downloading:  KA Lite"
     if [[ -f $dirContentOffline/$kaliteInstaller ]]; then
         # Checking user provided file MD5 against known good version
@@ -823,48 +875,33 @@ downloadOfflineContent(){
     commandStatus
     printGood "Done."
 
-    # Download ka-lite_content.zip
+    # Download kalite content
     echo; printStatus "Downloading/updating:  KA Lite content media files"
+    rsync -avhP $RSYNCDIR/rachelmods/KALite0.14_content $dirContentOffline
+    commandStatus
     rsync -avhP $contentOnline/kacontent $dirContentOffline
     commandStatus
     printGood "Done."
 
-    echo; printStatus "Downloading/updating kiwix and data."
+    # Downloading kiwix
+    echo; printStatus "Downloading/updating kiwix."
     wget -c $wgetOnline/downloads/public_ftp/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $dirContentOffline/kiwix-0.9-linux-i686.tar.bz2
-    wget -c $wgetOnline/downloads/public_ftp/z-holding/Ray_Charles.tar.bz -O $dirContentOffline/Ray_Charles.tar.bz
-    wget -c http://download.kiwix.org/portable/wikipedia/kiwix-0.9+wikipedia_en_for-schools_2013-01.zip -O $dirContentOffline/kiwix-0.9+wikipedia_en_for-schools_2013-01.zip
-    wget -c http://download.kiwix.org/portable/wikipedia/kiwix-0.9+wikipedia_en_all_2015-05.zip -O $dirContentOffline/kiwix-0.9+wikipedia_en_all_2015-05.zip
-
+    commandStatus
     printGood "Done."
 
     # Downloading deb packages
     echo; printStatus "Downloading/updating Git and PHP."
-    mkdir $dirContentOffline/offlinepkgs
+    mkdir -p $dirContentOffline/offlinepkgs
     cd $dirContentOffline/offlinepkgs
     apt-get download php5-cgi php5-common php5-mysql php5-sqlite git git-man liberror-perl python-m2crypto mysql-server mysql-client libapache2-mod-auth-mysql sqlite3
+    commandStatus
     printGood "Done."
-
-    # Show list of expected downloaded content
-    echo; printGood "Download of offline content complete."
-    echo; echo "You should have the following in your offline repository:  $dirContentOffline"    
-    echo "- - - - - - - - - - - -" 
-    echo "contentshell [folder]"
-    echo "kacontent [folder]"
-    echo "$kaliteInstaller [file]"
-    echo "$KIWIXINSTALLER [file]"
-    echo "$KIWIXWIKIALL [file]"
-    echo "$KIWIXWIKISCHOOLS [file]"
-    echo "offlinekgs [folder]"
-    echo "rachelplus [folder]"
-    echo "Ray_Charles.tar.bz [file]"
-    echo "rachelmods [folder with the following folders]:"
-    cat /tmp/module.lst
 
     echo; printStatus "This is your current offline directory listing:"
     echo "- - - - - - - - - - - -" 
-    ls -l $dirContentOffline/
+    ls -l $dirContentOffline/ | awk '{ print $9 }'
     echo; echo "Modules downloaded:"
-    ls -l $dirContentOffline/rachelmods/
+    ls -l $dirContentOffline/rachelmods/ | awk '{ print $9 }'
 }
 
 newInstall(){
@@ -1201,11 +1238,11 @@ contentListInstall(){
         echo; printQuestion "What is the full path to the local file location of your custom module list?"; read CUSTOMMODULELIST || return
         while :; do
             if [[ ! -f $ASSESSMENTFILE ]]; then
-            echo; printError "FILE NOT FOUND - You must provide a file path of a location accessible from the CAP."
-            echo; printQuestion "What is the full path to the file location of your custom module list?"; read CUSTOMMODULELIST
-        else
-            break
-        fi
+                echo; printError "FILE NOT FOUND - You must provide a file path of a location accessible from the CAP."
+                echo; printQuestion "What is the full path to the file location of your custom module list?"; read CUSTOMMODULELIST
+            else
+                break
+            fi
         done
         break
         ;;
@@ -1695,7 +1732,6 @@ updateModuleNames(){
     mv kalite-es es-kalite 2>/dev/null
     mv musictheory en-musictheory 2>/dev/null
     mv scratch en-scratch 2>/dev/null
-    mv wikipedia_for_schools-es es-wikipedia_for_schools 2>/dev/null
     mv asst_medical en-asst_medical 2>/dev/null
     mv ebooks-es es-ebooks 2>/dev/null
     mv hesperian_health en-hesperian_health 2>/dev/null
@@ -1727,7 +1763,6 @@ updateModuleNames(){
     mv guatemala-es es-guatemala 2>/dev/null
     mv ka-lite en-kalite 2>/dev/null
     mv medline_plus-es es-medline_plus 2>/dev/null
-    mv wikipedia_for_schools en-wikipedia_for_schools 2>/dev/null
     mv windows_apps en-windows_apps 2>/dev/null
     mv afristory en-afristory 2>/dev/null
     mv fr_ka_lite fr-kalite 2>/dev/null
@@ -1741,6 +1776,16 @@ updateModuleNames(){
     mv oya en-oya 2>/dev/null
     mv PhET en-PhET 2>/dev/null
     mv TED en-TED 2>/dev/null
+    if [[ -d wikipedia_for_schools-es/wp ]]; then
+        mv wikipedia_for_schools-es es-wikipedia_for_schools-nonzim 2>/dev/null
+    else
+        mv wikipedia_for_schools-es es-wikipedia_for_schools 2>/dev/null
+    fi
+    if [[ -d wikipedia_for_schools/wp ]]; then
+        mv wikipedia_for_schools en-wikipedia_for_schools-nonzim 2>/dev/null
+    else
+        mv wikipedia_for_schools en-wikipedia_for_schools 2>/dev/null
+    fi
 }
 
 repairRachelScripts(){
@@ -2094,9 +2139,10 @@ interactiveMode(){
             ;;
 
             Add-Update-Module-List)
-            updateModuleNames
-            contentListInstall
-            repairKiwixLibrary
+            echo; printError "This option is currently unavailable."
+#            updateModuleNames
+#            contentListInstall
+#            repairKiwixLibrary
             whatToDo
             ;;
 
@@ -2247,6 +2293,7 @@ printHelp(){
     echo "Repair issues found in the RACHEL-Plus."
     echo; echo "./cap-rachel-configure.sh -u"
     echo "Update this script with the latest RELEASE version from GitHub."
+    echo; echo "To EXIT the interactive script at anytime, press Ctrl-C"
     echo; stty sane
 }
 
@@ -2290,6 +2337,7 @@ else
             buildHashList
             # Change directory into $installTmpDir
             cd $installTmpDir
+            echo; printStatus "If needed, you may EXIT the interactive script at anytime, press Ctrl-C"
             interactiveMode
             ;;
         (r) # REPAIR - quick repair; doesn't hurt if run multiple times.
