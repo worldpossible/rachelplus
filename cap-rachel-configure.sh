@@ -5,7 +5,7 @@
 # For offline builds, run the Download-Offline-Content script in the Utilities menu.
 
 # COMMON VARIABLES - Change as needed
-dirContentOffline="/media/nas/rachel-content" # Enter directory of downloaded RACHEL content for offline install (e.g. I mounted my external USB on my CAP but plugging the external USB into and running the command 'fdisk -l' to find the right drive, then 'mkdir /media/RACHEL-Content' to create a folder to mount to, then 'mount /dev/sdb1 /media/RACHEL-Content' to mount the USB drive.)
+dirContentOffline="/media/usbhd-sdb1" # Enter directory of downloaded RACHEL content for offline install (e.g. I mounted my external USB on my CAP but plugging the external USB into and running the command 'fdisk -l' to find the right drive, then 'mkdir /media/RACHEL-Content' to create a folder to mount to, then 'mount /dev/sdb1 /media/RACHEL-Content' to mount the USB drive.)
 rsyncOnline="rsync://dev.worldpossible.org" # The current RACHEL rsync repository
 contentOnline="rsync://rachel.golearn.us/content" # Another RACHEL rsync repository
 wgetOnline="http://rachelfriends.org" # RACHEL large file repo (ka-lite_content, etc)
@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=220160505.1703 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160506.0824 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -37,7 +37,7 @@ kaliteSettings="$kaliteDir/settings.py"
 installTmpDir="/root/cap-rachel-install.tmp"
 rachelTmpDir="/media/RACHEL/cap-rachel-install.tmp"
 rachelRecoveryDir="/media/RACHEL/recovery"
-ERRORCODE="0"
+errorCode="0"
 
 # MD5 hash list
 buildHashList(){
@@ -165,6 +165,7 @@ opMode(){
                     exit 1
                 fi
             fi
+            offlineVariables
             break
         ;;
         esac
@@ -203,6 +204,7 @@ onlineVariables(){
     GITCLONERACHELCONTENTSHELL="git clone https://github.com/rachelproject/contentshell contentshell"
     RSYNCDIR="$rsyncOnline"
     ASSESSMENTITEMSJSON="wget -c $gitRachelPlus/assessmentitems.json -O /var/ka-lite/data/khan/assessmentitems.json"
+    KACONTENTFOLDER=""
     KALITEINSTALL="rsync -avhz --progress $contentOnline/$kaliteInstaller $installTmpDir/$kaliteInstaller"
     KALITECONTENTINSTALL="rsync -avhz --progress $contentOnline/kacontent/ /media/RACHEL/kacontent/"
     KIWIXINSTALL="wget -c $wgetOnline/downloads/public_ftp/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $rachelTmpDir/kiwix-0.9-linux-i686.tar.bz2"
@@ -234,6 +236,7 @@ offlineVariables(){
     GITCLONERACHELCONTENTSHELL=""
     RSYNCDIR="$dirContentOffline"
     ASSESSMENTITEMSJSON="rsync -avhz --progress $dirContentOffline/rachelplus/assessmentitems.json /var/ka-lite/data/khan/assessmentitems.json"
+    KACONTENTFOLDER="$dirContentOffline/kacontent"
     KALITEINSTALL="rsync -avhz --progress $dirContentOffline/$kaliteInstaller $installTmpDir/$kaliteInstaller"
     KALITECONTENTINSTALL="rsync -avhz --progress $dirContentOffline/kacontent/ /media/RACHEL/kacontent/"
     KIWIXINSTALL=""
@@ -283,7 +286,7 @@ commandStatus(){
     export EXITCODE="$?"
     if [[ $EXITCODE != 0 ]]; then
         printError "Command failed.  Exit code: $EXITCODE"
-        export ERRORCODE="1"
+        export errorCode="1"
     else
         printGood "Command successful."
     fi
@@ -514,13 +517,13 @@ repairKiwixLibrary(){
     rm -f $library; touch $library
 
     # Find all the zim files in the modules directoy
-    ls /media/RACHEL/rachel/modules/*/data/content/*.zim|sed 's/ /\n/g' > $tmp
+    ls $rachelWWW/modules/*/data/content/*.zim|sed 's/ /\n/g' > $tmp
 
     # Check for sqlite3 install
     checkForHiddenModules(){
         if [[ -f $db ]]; then
             # Remove modules that are marked hidden on main menu
-            for d in $(sqlite3 /media/RACHEL/rachel/admin.sqlite 'select moddir from modules where hidden = 1'); do
+            for d in $(sqlite3 $rachelWWW/admin.sqlite 'select moddir from modules where hidden = 1'); do
                 sed -i '/'$d'/d' $tmp
             done
         fi
@@ -629,7 +632,7 @@ installDefaultWeavedServices(){
 
     tar xvf weaved_IntelCAP.tar
     commandStatus
-    if [[ $ERRORCODE == 0 ]] && [[ -d $rachelScriptsDir/weaved_software ]]; then
+    if [[ $errorCode == 0 ]] && [[ -d $rachelScriptsDir/weaved_software ]]; then
         rm -f $rachelScriptsDir/weaved_IntelCAP.tar
         echo; printGood "Done."
         # Run installer
@@ -655,7 +658,7 @@ installWeavedService(){
         $WEAVEDSINGLEINSTALL
         commandStatus
 
-        if [[ $ERRORCODE == 0 ]] && [[ -f $rachelScriptsDir/weaved_software/installer.sh ]]; then
+        if [[ $errorCode == 0 ]] && [[ -f $rachelScriptsDir/weaved_software/installer.sh ]]; then
             # Fix OS Arch check in installer.sh
             sed -i 's/\[ "$machineType" = "x86_64" \] && \[ "$osName" = "Linux" \]/\[ "$osName" = "Linux" \]/g' $rachelScriptsDir/weaved_software/installer.sh
             sed -i 's/\.\/bin/\./g' $rachelScriptsDir/weaved_software/installer.sh
@@ -730,7 +733,7 @@ uninstallWeavedService(){
         if [[ $internet == "1" ]]; then
             $WEAVEDUNINSTALLER
             commandStatus
-            if [[ $ERRORCODE == 0 ]] && [[ -f $rachelScriptsDir/weaved_software/uninstaller.sh ]]; then
+            if [[ $errorCode == 0 ]] && [[ -f $rachelScriptsDir/weaved_software/uninstaller.sh ]]; then
                 weavedUninstaller
             else
                 printError "Download failed; check log file ($rachelLog) and try again."
@@ -782,7 +785,7 @@ downloadOfflineContent(){
     if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
         echo; printQuestion "What is the location of your content folder? "; read dirContentOffline
         if [[ ! -d $dirContentOffline ]]; then
-            echo; printError "The folder location does not exist!  Please identify the full path to your OFFLINE content folder and try again."
+            echo; printError "The folder location does not exist!  Please check the path to your OFFLINE content folder and try again."
             rm -rf $installTmpDir $rachelTmpDir
             exit 1
         fi
@@ -981,7 +984,7 @@ newInstall(){
     commandStatus
 
     # Check if files downloaded correctly
-    if [[ $ERRORCODE == 0 ]]; then
+    if [[ $errorCode == 0 ]]; then
         echo; printGood "Done."
     else
         echo; printError "One or more files did not download correctly; check log file ($rachelLog) and try again."
@@ -1155,7 +1158,7 @@ contentModuleInstall(){
         if [[ $REPLY =~ ^[Nn]$ ]]; then rm -f /tmp/module.lst; fi
     fi
     SELECTMODULE=1
-    MODULELIST=$(rsync --list-only $RSYNCDIR/rachelmods | egrep '^d' | awk '{print $5}' | tail -n +2)
+    MODULELIST=$(rsync --list-only $RSYNCDIR/rachelmods/ | egrep '^d' | awk '{print $5}' | tail -n +2)
     while [[ $SELECTMODULE == 1 ]]; do
         echo; printStatus "What RACHEL module would you like to select for download or update?"
         echo "(Ctrl-C to cancel module install)"
@@ -1187,7 +1190,7 @@ contentModuleInstall(){
 
 contentListInstall(){
     printHeader
-    ERRORCODE="0"
+    errorCode="0"
     echo; printStatus "Installing RACHEL content."
     if [[ $internet == "0" ]]; then cd $dirContentOffline; else cd $rachelTmpDir; fi
 
@@ -1293,7 +1296,7 @@ contentListInstall(){
                 $CONTENTWIKI
                 commandStatus
                 unzip -o $FILENAME "data/*" -d "$rachelPartition/kiwix/"
-                if [[ $ERRORCODE == 1 ]]; then
+                if [[ $errorCode == 1 ]]; then
                     echo; printError "The zip file did not download correctly; if you want to try again, click 'yes' when it asks"
                     echo "  if there were errors. The download will then continue where it left off."
                     echo "  For more information, check the log file ($rachelLog)."
@@ -1327,7 +1330,7 @@ contentListInstall(){
                 $CONTENTWIKI
                 commandStatus
                 unzip -o $FILENAME "data/*" -d "$rachelPartition/kiwix/"
-                if [[ $ERRORCODE == 1 ]]; then
+                if [[ $errorCode == 1 ]]; then
                     echo; printError "The zip file did not download correctly; if you want to try again, click 'yes' when it asks"
                     echo "  if there were errors. The download will then continue where it left off."
                     echo "  For more information, check the log file ($rachelLog)."
@@ -1405,7 +1408,7 @@ contentListInstall(){
     done
 
     # Check for errors is downloads
-    if [[ $ERRORCODE == 1 ]]; then
+    if [[ $errorCode == 1 ]]; then
         echo; printError "One or more of the updates did not download correctly; for more information, check the log file ($rachelLog)."
     fi
 
@@ -1460,7 +1463,7 @@ kaliteInstall(){
         commandStatus
         # Turn logging back on
         loggingStart
-        if [[ $ERRORCODE == 0 ]]; then
+        if [[ $errorCode == 0 ]]; then
             echo; printGood "KA Lite $kaliteCurrentVersion installed."
         else
             echo; printError "Something went wrong, please check the log file ($rachelLog) and try again."
@@ -1558,7 +1561,7 @@ kaliteSetup(){
                 # Primary download server
                 wget -c https://learningequality.org/downloads/ka-lite/0.15/content/khan_assessment.zip -O $installTmpDir/khan_assessment.zip
                 commandStatus
-                    if [[ $ERRORCODE == 1 ]]; then
+                    if [[ $errorCode == 1 ]]; then
                     # Secondary download server
                     rsync -avhP $contentOnline/khan_assessment.zip $installTmpDir/khan_assessment.zip
                 fi
@@ -1599,20 +1602,22 @@ kaliteSetup(){
 }
 
 downloadKAContent(){
-    ERRORCODE=0
+    errorCode=0
     # Setup KA Lite content
     echo; printStatus "KA Lite Content Installer"
     echo; printQuestion "Do you want to install KA Lite video content located on a local USB or folder?"
     read -p "    Enter (y/N) " REPLY
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        while :; do
-            echo; printQuestion "What is the full path to the file location for KA Lite content (i.e. /path/to/your-usb-drive-or-folder)?"; read KACONTENTFOLDER || return
-            if [[ ! -d $KACONTENTFOLDER ]]; then
-                echo; printError "FOLDER NOT FOUND - You must provide a full path to a location accessible from the CAP."
-            else
-                break
-            fi
-        done
+        if [[ $internet == 1 ]]; then
+            while :; do
+                echo; printQuestion "What is the full path to the file location for KA Lite content (i.e. /path/to/your-usb-drive-or-folder)?"; read KACONTENTFOLDER || return
+                if [[ ! -d $KACONTENTFOLDER ]]; then
+                    echo; printError "FOLDER NOT FOUND - You must provide a full path to a location accessible from the CAP."
+                else
+                    break
+                fi
+            done
+        fi
         echo; printStatus "Copying KA Lite content files from $KACONTENTFOLDER to $kaliteContentDir"
         rsync -avhP $KACONTENTFOLDER/ $kaliteContentDir/
     elif [[ $internet == 1 ]]; then
@@ -1624,7 +1629,7 @@ downloadKAContent(){
             echo "WEBSITE:  $contentOnline/kacontent"
             $KALITECONTENTINSTALL
             commandStatus
-            if [[ $ERRORCODE == 1 ]]; then
+            if [[ $errorCode == 1 ]]; then
                 echo; printError "Primary repo unavailable, do you want to download the entire zip from the backup repo?"
                 read -p "    Enter (y/N) " REPLY
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -1638,7 +1643,7 @@ downloadKAContent(){
                     fi
                     unzip -o $rachelTmpDir/ka-lite_content.zip "kacontent/*" -d "$kaliteContentDir/"
                     commandStatus
-                    if [[ $ERRORCODE == 1 ]]; then printError "Something went wrong; check $rachelLog for errors."; fi
+                    if [[ $errorCode == 1 ]]; then printError "Something went wrong; check $rachelLog for errors."; fi
                 fi
             fi
         else
@@ -1648,7 +1653,7 @@ downloadKAContent(){
 }
 
 checkCaptivePortal(){
-    ERRORCODE=0
+    errorCode=0
 
     # Download RACHEL Captive Portal files
     echo; printStatus "Checking Captive Portal files."
@@ -1697,7 +1702,7 @@ checkCaptivePortal(){
         commandStatus
     fi
 
-    if [[ $ERRORCODE == 1 ]]; then 
+    if [[ $errorCode == 1 ]]; then 
         printError "Something may have gone wrong; check $rachelLog for errors."
     else 
         printGood "Done."
@@ -1865,7 +1870,7 @@ repairFirmware(){
     ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies and ensuring the file downloads correctly)
     $LIGHTTPDFILE
     commandStatus
-    if [[ $ERRORCODE == 1 ]]; then
+    if [[ $errorCode == 1 ]]; then
         printError "The lighttpd.conf file did not download correctly; check log file (/var/log/rachel/rachel-install.tmp) and try again."
         echo; break
     else
