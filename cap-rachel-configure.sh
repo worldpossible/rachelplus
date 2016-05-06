@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160506.0824 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160506.0826 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -51,7 +51,6 @@ dbe9f1384988c00e409553f80edb49da ka-lite-bundle-0.16.1.deb
 922b05e10e42bc3869e8b8f8bf625f07 kiwix-0.9+wikipedia_en_all_2015-05.zip
 31963611e46e717e00b30f6f6d8833ac kiwix-0.9+wikipedia_en_for-schools_2013-01.zip
 b61fdc3937aa226f34f685ba0bc29db1 kiwix-0.9-linux-i686.tar.bz2
-4150c320a03bdae01a805fc4c3f6eb9a sphider_plus.sql
 EOF
 }
 
@@ -212,7 +211,6 @@ onlineVariables(){
     WEAVEDINSTALL="wget -c https://github.com/weaved/installer/raw/master/Intel_CAP/weaved_IntelCAP.tar -O $rachelScriptsDir/weaved_IntelCAP.tar"
     WEAVEDSINGLEINSTALL="wget -c https://github.com/weaved/installer/raw/master/weaved_software/installer.sh -O $rachelScriptsDir/weaved_software/installer.sh"
     WEAVEDUNINSTALLER="wget -c https://github.com/weaved/installer/raw/master/weaved_software/uninstaller.sh -O $rachelScriptsDir/weaved_software/uninstaller.sh"
-    SPHIDERPLUSSQLINSTALL="wget -c $wgetOnline/z-SQLdatabase/sphider_plus.sql -O $rachelTmpDir/sphider_plus.sql"
     DOWNLOADCONTENTSCRIPT="wget -c $gitRachelPlus/scripts"
     CONTENTWIKI="wget -c http://download.kiwix.org/portable/wikipedia/$FILENAME -O $rachelTmpDir/$FILENAME"
 }
@@ -244,7 +242,6 @@ offlineVariables(){
     WEAVEDINSTALL=""
     WEAVEDSINGLEINSTALL=""
     WEAVEDUNINSTALLER=""
-    SPHIDERPLUSSQLINSTALL=""
     DOWNLOADCONTENTSCRIPT="rsync -avhz --progress $dirContentOffline/rachelplus/scripts"
     CONTENTWIKIALL=""
 }
@@ -609,19 +606,6 @@ EOF
     printGood "Done."
 }
 
-sphider_plus_sql(){
-    RESULT=`mysqlshow --user=root --password=root sphider_plus| grep -v Wildcard | grep -o sphider_plus`
-    if [ "$RESULT" == "sphider_plus" ]; then
-        echo; printError "The sphider_plus database is already installed."
-    else
-        echo; printStatus "Installing sphider_plus.sql...be patient, this takes a couple minutes."
-        $SPHIDERPLUSSQLINSTALL
-        if [[ $internet == "0" ]]; then cd $dirContentOffline; else cd $rachelTmpDir; fi
-        echo "create database sphider_plus" | mysql -u root -proot
-        mysql -u root -proot sphider_plus < sphider_plus.sql
-    fi
-}
-
 installDefaultWeavedServices(){
     echo; printStatus "Installing Weaved service."
     cd $rachelScriptsDir
@@ -853,11 +837,6 @@ downloadOfflineContent(){
 
     printGood "Done."
 
-    echo; printStatus "Downloading/updating sphider_plus.sql"
-    wget -c $wgetOnline/z-SQLdatabase/sphider_plus.sql -O $dirContentOffline/sphider_plus.sql
-    commandStatus
-    printGood "Done."
-
     # Downloading deb packages
     echo; printStatus "Downloading/updating Git and PHP."
     mkdir $dirContentOffline/offlinepkgs
@@ -878,7 +857,6 @@ downloadOfflineContent(){
     echo "offlinekgs [folder]"
     echo "rachelplus [folder]"
     echo "Ray_Charles.tar.bz [file]"
-    echo "sphider_plus.sql [file]"
     echo "rachelmods [folder with the following folders]:"
     cat /tmp/module.lst
 
