@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160506.1603 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160507.0143 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -1956,10 +1956,11 @@ repairBugs(){
     mv /etc/init/procps.conf /etc/init/procps.conf.old 2>/dev/null # otherwise quite a pkgs won't install
     # Turn off logging b/c upgrade uses a couple graphical screens; if on, causes issues
     exec &>/dev/tty
-    apt-get update; apt-get -y upgrade
+    apt-get update
+    #apt-get -y upgrade # Test
     # Turn logging back on
     loggingStart
-    apt-get -y install php5-sqlite php-pear make
+    apt-get -y install php5-sqlite php-pear make gcc-multilib
     pecl info stem > /dev/null
     if [[ $? -ge 1 ]]; then 
         echo; printStatus "Installing the stem module."
@@ -1975,7 +1976,7 @@ repairBugs(){
 
     # Add local content module
     echo; printStatus "Adding the local content module."
-    rsync -avz $RSYNCDIR/rachelmods/local_content $rachelWWW/modules/
+    rsync -avz $RSYNCDIR/rachelmods/en-local_content $rachelWWW/modules/
     printGood "Done."
 
     # Add battery monitor
@@ -2046,6 +2047,8 @@ disableResetButton(){
 
 updateRachelFolders(){
     mkdir -p $rachelScriptsDir
+    # Move rachel log dir
+    if [[ -d /var/log/RACHEL ]]; then mv /var/log/RACHEL $rachelLogDir; fi
     # Move rachel-scripts.sh
     if [[ -f /root/rachel-scripts.sh ]]; then mv /root/rachel-scripts.sh $rachelScriptsFile; fi
     # Move battery watcher
