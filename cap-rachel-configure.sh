@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160507.0211 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160507.1905 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -42,7 +42,8 @@ errorCode="0"
 # MD5 hash list
 buildHashList(){
     cat > $installTmpDir/hashes.md5 << 'EOF'
-15b6aa51d8292b7b0cbfe36927b8e714 khan_assessment.zip
+97ed60c5cdb905e016983b19a94b408a khan_assessment.zip
+15b6aa51d8292b7b0cbfe36927b8e714 khan_assessment_0.15.zip
 65fe77df27169637f20198901591dff0 ka-lite_content.zip
 bd905efe7046423c1f736717a59ef82c ka-lite-bundle-0.15.0.deb
 18998e1253ca720adb2b54159119ce80 ka-lite-bundle-0.15.1.deb
@@ -109,8 +110,7 @@ loggingStart(){
 }
 
 cleanup(){
-    stty sane
-#    kill $!; trap 'kill $1' SIGTERM
+    kill $!; trap 'kill $1' SIGTERM
 #    echo; printError "Cancelled by user."
 
     # Store log file
@@ -126,6 +126,7 @@ cleanup(){
     echo; printStatus "Cleaning up install scripts."
     rm -rf $installTmpDir $rachelTmpDir
     printGood "Done."
+    stty sane
     echo; exit $?
 }
 
@@ -1462,7 +1463,7 @@ kaliteRemove(){
 }
 
 kaliteInstall(){
-    # Downloading KA Lite 0.15
+    # Downloading KA Lite
     echo; printStatus "Downloading KA Lite Version $kaliteCurrentVersion"
     $KALITEINSTALL
     # Checking user provided file MD5 against known good version
@@ -1491,7 +1492,7 @@ kaliteInstall(){
 kaliteSetup(){
     echo; printStatus "Setting up KA Lite."
 
-    # Determine version of KA Lite --> kaliteVersionDate (0=No KA LITE, 1=Version prior to 0.15, 2=Version greater than 0.15)
+    # Determine version of KA Lite --> kaliteVersionDate (0=No KA LITE, 1=Version prior to 0.15, 2=Version greater than/equal to 0.15)
     if [[ -f /var/ka-lite/kalite/local_settings.py ]]; then
         kaliteVersion=$(/var/ka-lite/bin/kalite manage --version)
         echo; printError "KA Lite Version $kaliteVersion is no longer supported and should be updated."
@@ -1574,7 +1575,7 @@ kaliteSetup(){
             read -p "    Enter (y/N) " REPLY
             if [[ $REPLY =~ ^[Yy]$ ]]; then
                 # Primary download server
-                wget -c https://learningequality.org/downloads/ka-lite/0.15/content/khan_assessment.zip -O $installTmpDir/khan_assessment.zip
+                wget -c https://learningequality.org/downloads/ka-lite/0.16/content/khan_assessment.zip -O $installTmpDir/khan_assessment.zip
                 commandStatus
                     if [[ $errorCode == 1 ]]; then
                     # Secondary download server
@@ -1597,7 +1598,7 @@ kaliteSetup(){
 
     # Install module for RACHEL index.php
     echo; printStatus "Syncing RACHEL web interface 'KA Lite module'."
-    rsync -avz --ignore-existing $RSYNCDIR/rachelmods/en-kalite $rachelWWW/modules/
+    rsync -avz --ignore-existing --exclude="en-kalite/content" --delete $RSYNCDIR/rachelmods/en-kalite $rachelWWW/modules/
 
     # Delete previous setup commands from /etc/rc.local (not used anymore)
     sudo sed -i '/ka-lite/d' /etc/rc.local
