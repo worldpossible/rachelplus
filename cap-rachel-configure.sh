@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160507.0143 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160507.0156 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -893,7 +893,7 @@ downloadOfflineContent(){
     echo; printStatus "Downloading/updating Git and PHP."
     mkdir -p $dirContentOffline/offlinepkgs
     cd $dirContentOffline/offlinepkgs
-    apt-get download php5-cgi php5-common php5-mysql php5-sqlite git git-man liberror-perl python-m2crypto mysql-server mysql-client libapache2-mod-auth-mysql sqlite3
+    apt-get download php5-cgi php5-common php5-mysql php5-sqlite php-pear make git git-man liberror-perl python-m2crypto mysql-server mysql-client libapache2-mod-auth-mysql sqlite3 gcc-multilib
     commandStatus
     printGood "Done."
 
@@ -1043,7 +1043,7 @@ EOF
 
         # Install packages
         echo; printStatus "Installing packages."
-        apt-get -y install php5-cgi git-core python-m2crypto php5-sqlite sqlite3 php-pear make
+        apt-get -y install php5-cgi git-core python-m2crypto php5-sqlite sqlite3 php-pear make gcc-multilib
         # Add support for multi-language front page
         echo "\n" | pecl install stem
         # Add support for stem extension
@@ -1960,7 +1960,7 @@ repairBugs(){
     #apt-get -y upgrade # Test
     # Turn logging back on
     loggingStart
-    apt-get -y install php5-sqlite php-pear make gcc-multilib
+    apt-get -y install php5-sqlite php-pear make gcc-multilib sqlite3
     pecl info stem > /dev/null
     if [[ $? -ge 1 ]]; then 
         echo; printStatus "Installing the stem module."
@@ -2048,6 +2048,7 @@ disableResetButton(){
 updateRachelFolders(){
     mkdir -p $rachelScriptsDir
     # Move rachel log dir
+    if [[ -d $rachelLogDir ]] && [[ -d /var/log/RACHEL ]]; then cp /var/log/RACHEL/* $rachelLogDir/; rm -rf /var/log/RACHEL; fi
     if [[ -d /var/log/RACHEL ]]; then mv /var/log/RACHEL $rachelLogDir; fi
     # Move rachel-scripts.sh
     if [[ -f /root/rachel-scripts.sh ]]; then mv /root/rachel-scripts.sh $rachelScriptsFile; fi
