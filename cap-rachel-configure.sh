@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160507.0156 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160507.0211 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -1597,7 +1597,7 @@ kaliteSetup(){
 
     # Install module for RACHEL index.php
     echo; printStatus "Syncing RACHEL web interface 'KA Lite module'."
-    rsync -avz --ignore-existing $RSYNCDIR/rachelmods/ka-lite $rachelWWW/modules/
+    rsync -avz --ignore-existing $RSYNCDIR/rachelmods/en-kalite $rachelWWW/modules/
 
     # Delete previous setup commands from /etc/rc.local (not used anymore)
     sudo sed -i '/ka-lite/d' /etc/rc.local
@@ -2069,14 +2069,14 @@ updateRachelFolders(){
 # Loop to redisplay main menu
 whatToDo(){
     echo; printQuestion "What would you like to do next?"
-    echo "1)Initial Install  2)Install KA Lite  3)Install Kiwix  4)Install Default Weaved Services  5)Install Weaved Service  6)Add/Update Module  7)Add/Update Module List  8)Download-KA-Content  9)Utilities  10)Exit"
+    echo "1)Initial Install  2)Install/Upgrade KALite  3)Install Kiwix  4)Install Default Weaved Services  5)Install Weaved Service  6)Add/Update Module  7)Add/Update Module List  8)Download-KA-Content  9)Utilities  10)Exit"
 }
 
 # Interactive mode menu
 interactiveMode(){
     echo; printQuestion "What you would like to do:"
     echo "  - [Initial-Install] of RACHEL on a CAP (completely erases any content)"
-    echo "  - [Install-KA-Lite]"
+    echo "  - [Install-Upgrade-KALite]"
     echo "  - [Install-Kiwix]"
     echo "  - [Install-Default-Weaved-Services] installs the default CAP Weaved services for ports 22, 80, 8080"
     echo "  - [Install-Weaved-Service] adds a Weaved service to an online account you provide during install"
@@ -2096,13 +2096,13 @@ interactiveMode(){
     echo "    - Testing script"
     echo "  - [Exit] the installation script"
     echo
-    select menu in "Initial-Install" "Install-KA-Lite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Update-Module" "Add-Update-Module-List" "Download-KA-Content" "Utilities" "Exit"; do
+    select menu in "Initial-Install" "Install-Upgrade-KALite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Update-Module" "Add-Update-Module-List" "Download-KA-Content" "Utilities" "Exit"; do
             case $menu in
             Initial-Install)
             newInstall
             ;;
 
-            Install-KA-Lite)
+            Install-Upgrade-KALite)
             kaliteSetup
             downloadKAContent
             # Re-scanning content folder and exercise data 
