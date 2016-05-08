@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160507.2108 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160507.2259 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -907,17 +907,7 @@ downloadOfflineContent(){
     ls -l $dirContentOffline/rachelmods/ | awk '{ print $9 }'
 }
 
-newInstall(){
-    printHeader
-    echo; printStatus "Conducting a new install of RACHEL on a CAP."
-
-    cd $installTmpDir
-
-    # Fix hostname issue in /etc/hosts
-    echo; printStatus "Fixing hostname in /etc/hosts"
-    sed -i 's/ec-server/WRTD-303N-Server/g' /etc/hosts
-    printGood "Done."
-
+changePackageRepo(){
     ## sources.list - replace the package repos for more reliable ones (/etc/apt/sources.list)
     # Backup current sources.list
     cp /etc/apt/sources.list /etc/apt/sources.list.bak
@@ -965,7 +955,22 @@ newInstall(){
         esac
         printGood "Done."
         break
-    done
+    done    
+}
+
+newInstall(){
+    printHeader
+    echo; printStatus "Conducting a new install of RACHEL on a CAP."
+
+    cd $installTmpDir
+
+    # Fix hostname issue in /etc/hosts
+    echo; printStatus "Fixing hostname in /etc/hosts"
+    sed -i 's/ec-server/WRTD-303N-Server/g' /etc/hosts
+    printGood "Done."
+
+    # Update package repos
+    changePackageRepo
 
     # Download/stage GitHub files to $installTmpDir
     echo; printStatus "Downloading RACHEL install scripts for CAP to the temp folder $installTmpDir."
@@ -1977,7 +1982,6 @@ repairBugs(){
 
     # Add local content module
     echo; printStatus "Adding the local content module."
-    echo "rsync -avz $RSYNCDIR/rachelmods/en-local_content $rachelWWW/modules/" # Test
     rsync -avz $RSYNCDIR/rachelmods/en-local_content $rachelWWW/modules/
     printGood "Done."
 
@@ -2170,12 +2174,13 @@ interactiveMode(){
             echo "  - [Repair-Bugs] provides general bug fixes (run when requested)"
             echo "  - [Sanitize] and prepare CAP for delivery to customer"
             echo "  - [Build-USB-Image] is used for creating eMMC images used on the RACHEL USB Multitool"
+            echo "  - [Change-Package-Repo] allows you to change where in the world your packages are pulled from"
             echo "  - [Symlink] all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent"
             echo "  - [Check-MD5] will check a file you provide against our hash database"
             echo "  - [Testing] script"
             echo "  - Return to [Main Menu]"
             echo
-            select util in "Install-Battery-Watcher" "Disable-Reset-Button" "Download-OFFLINE-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Update-Content-Shell" "Repair-Kiwix-Library" "Repair-Firmware" "Repair-KA-Lite" "Repair-Bugs" "Sanitize" "Build-USB-Image" "Symlink" "Check-MD5" "Test" "Main-Menu"; do
+            select util in "Install-Battery-Watcher" "Disable-Reset-Button" "Download-OFFLINE-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Update-Content-Shell" "Repair-Kiwix-Library" "Repair-Firmware" "Repair-KA-Lite" "Repair-Bugs" "Sanitize" "Build-USB-Image" "Change-Package-Repo" "Symlink" "Check-MD5" "Test" "Main-Menu"; do
                 case $util in
                     Install-Battery-Watcher)
                     installBatteryWatch
@@ -2250,6 +2255,11 @@ interactiveMode(){
 
                     Build-USB-Image)
                     buildUSBImage
+                    break
+                    ;;
+
+                    Change-Package-Repo)
+                    changePackageRepo
                     break
                     ;;
 
