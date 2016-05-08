@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160507.1905 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160507.2108 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -122,6 +122,8 @@ cleanup(){
     if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
         exit 1
     fi
+    # Ensure the start script are executable
+    chmod +x /etc/rc.local $rachelScriptsFile
     # Deleting the install script commands
     echo; printStatus "Cleaning up install scripts."
     rm -rf $installTmpDir $rachelTmpDir
@@ -1953,14 +1955,15 @@ repairKalite(){
 }
 
 repairBugs(){
+    # Update modules names to new structure
+    updateModuleNames
+
+    # Update rachel folder structure
+    updateRachelFolders
+
     # Update to the latest contentshell
     mv /etc/init/procps.conf /etc/init/procps.conf.old 2>/dev/null # otherwise quite a pkgs won't install
-    # Turn off logging b/c upgrade uses a couple graphical screens; if on, causes issues
-    exec &>/dev/tty
     apt-get update
-    #apt-get -y upgrade # Test
-    # Turn logging back on
-    loggingStart
     apt-get -y install php5-sqlite php-pear make gcc-multilib sqlite3
     pecl info stem > /dev/null
     if [[ $? -ge 1 ]]; then 
@@ -1972,11 +1975,9 @@ repairBugs(){
     fi
     checkContentShell
 
-    # Update rachel folder structure
-    updateRachelFolders
-
     # Add local content module
     echo; printStatus "Adding the local content module."
+    echo "rsync -avz $RSYNCDIR/rachelmods/en-local_content $rachelWWW/modules/" # Test
     rsync -avz $RSYNCDIR/rachelmods/en-local_content $rachelWWW/modules/
     printGood "Done."
 
@@ -2062,9 +2063,7 @@ updateRachelFolders(){
     # Move weaved folder
     if [[ -d /root/weaved_software ]]; then mv /root/weaved_software $rachelScriptsDir/; fi
     # Move rachelKiwixStart script
-    if [[ -f /root/rachelKiwixStart.sh ]]; then mv /root/rachelKiwixStart.sh $rachelScriptsDir/; fi    
-    repairRachelScripts
-    updateModuleNames
+    if [[ -f /root/rachelKiwixStart.sh ]]; then mv /root/rachelKiwixStart.sh $rachelScriptsDir/; fi
 }
 
 # Loop to redisplay main menu
@@ -2312,10 +2311,13 @@ if [[ -f /root/rachel-scripts.sh ]]; then
     echo; printError "Your RACHEL folder structure is outdated!"
     echo "The configure script will still be located at /root/cap-rachel-configure.sh"
     echo "All other RACHEL scripts/files will be located in the folder called 'rachel-scripts'"
-    echo "Updated your RACHEL install in 10 seconds."
+    echo "Updating your RACHEL install in 10 seconds."
     echo; sleep 10
-    updateRachelFolders; repairBugs
+    echo; printStatus "Beginning RACHEL update..."
+    mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir
+    opMode; updateRachelFolders; repairBugs
     echo; printGood "Your RACHEL install was successfully updated."
+    exit 1
 fi
 
 # Display current script version
@@ -2347,11 +2349,11 @@ else
             ;;
         (r) # REPAIR - quick repair; doesn't hurt if run multiple times.
             # Create temp directories
-            mkdir -p $installTmpDir
-            # Determine the operational mode - ONLINE or OFFLINE
-            opMode
+            mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir
             # Check OS version
             osCheck
+            # Determine the operational mode - ONLINE or OFFLINE
+            opMode
             repairBugs
             echo; printGood "Repair complete."
             
