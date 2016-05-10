@@ -65,6 +65,25 @@ extra-build-files
 EOF
 }
 
+# Rsync Language Exclude List
+buildRsyncLangExcludeList(){
+    cat > $rachelScriptsDir/rsyncLangExclude.list << 'EOF'
+*radiolab
+*TED
+*GCF
+*kalite*
+*ka-lite*
+*kaos
+*wikipedia
+*nonzim
+*law_library
+*oya
+*afristory-za
+*khan_academy
+*khan_health
+EOF
+}
+
 printGood(){
     echo -e "\x1B[01;32m[+]\x1B[0m $1"
 }
@@ -517,7 +536,7 @@ repairKiwixLibrary(){
     rm -f $library; touch $library
 
     # Find all the zim files in the modules directoy
-    ls $rachelWWW/modules/*/data/content/*.zim|sed 's/ /\n/g' > $tmp
+    ls $rachelWWW/modules/*/data/content/*.zim*|sed 's/ /\n/g' > $tmp
 
     # Check for sqlite3 install
     checkForHiddenModules(){
@@ -547,7 +566,7 @@ repairKiwixLibrary(){
         if [[ -d "$moddir/data/index/$zim.idx" ]]; then
             cmd="$cmd --indexPath=$moddir/data/index/$zim.idx"
         fi
-        $cmd
+        $cmd 2>/dev/null
         if [[ $? -ge 1 ]]; then echo "Couldn't add $zim to library"; fi
     done
 
@@ -832,7 +851,6 @@ downloadOfflineContent(){
         fi
     done
     buildRsyncModuleExcludeList
-#    MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" --include-from "$rachelScriptsDir/rsyncInclude.list" --exclude '*' rsync://dev.worldpossible.org/rachelmods/ | awk '{print $5}' | tail -n +2)
     MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" --include-from "$rachelScriptsDir/rsyncInclude.list" --exclude '*' $RSYNCDIR/rachelmods/ | awk '{print $5}' | tail -n +2)
     echo; printStatus "Rsyncing core RACHEL content from $RSYNCDIR"
     while IFS= read -r module; do
@@ -1211,234 +1229,79 @@ contentModuleInstall(){
     rm -f /tmp/module.lst
 }
 
-contentListInstall(){
-    printHeader
-    errorCode="0"
-    echo; printStatus "Installing RACHEL content."
-    if [[ $internet == "0" ]]; then cd $dirContentOffline; else cd $rachelTmpDir; fi
-
-    # Add header/date/time to install log file
-    echo; printError "CAUTION:  This process may take quite awhile if you do you not have a fast network connection."
-    echo "If you get disconnected, you only have to rerun this install again to continue.  It will not re-download content already on the CAP."
-
-    if [[ -d $rachelWWW/modules ]]; then
-        # Check permissions on modules
-        echo; printStatus "Verifying proper permissions on modules prior to install."
-        chown -R root:root $rachelWWW/modules
-        printGood "Done."
-    else
-        # Create a modules directory
-        mkdir $rachelWWW/modules
-    fi
-
-    echo; printQuestion "What content you would like to install:"
-    echo "  - [Custom] - Provide a local link for a custom list"
+contentLanguageInstall(){
+    languageMenu(){
+        echo; printQuestion "What additional language would like to download/update?"
+        echo "1)Arabic  2)Deutsch  3)English  4)Español  5)Français  6)Português  7)Hindi"        
+    }
+    # Downloading KA Lite language videos
+    echo "" > $rachelScriptsDir/rsyncInclude.list
+    ## Add user input to languages they want to support
+    echo; printStatus "The language install will install all modules from the language(s) you choose."
+    echo "The installer WILL NOT install very large modules (i.e. modules for radiolab, TED, GCF,"
+    echo "KA Lite, KAOS, Oregon Law Library, or the full version of Wikipedia).  These modules must be"
+    echo "installed individually using the Add-Update-Module option."
+    echo; printQuestion "What language content you would like to download for OFFLINE install:"
+    echo "  - [Arabic] - Arabic content"
+    echo "  - [Deutsch] - German content"
     echo "  - [English] - English content"
-    echo "  - [Español] - Español content"
-    echo "  - [Français] - Français content"
-    echo "  - [Português] - Português content"
+    echo "  - [Español] - Spanish content"
+    echo "  - [Français] - French content"
+    echo "  - [Português] - Portuguese content"
     echo "  - [Hindi] - Hindi content"
-    echo "  - Exit to the [Main Menu]"
     echo
-    select menu in "Custom" "English" "Español" "Français" "Português" "Hindi" "Main-Menu"; do
+    select menu in "Arabic" "Deutsch" "English" "Español" "Français" "Português" "Hindi"; do
         case $menu in
-        Custom)
-        echo; printQuestion "What is the full path to the local file location of your custom module list?"; read CUSTOMMODULELIST || return
-        while :; do
-            if [[ ! -f $ASSESSMENTFILE ]]; then
-                echo; printError "FILE NOT FOUND - You must provide a file path of a location accessible from the CAP."
-                echo; printQuestion "What is the full path to the file location of your custom module list?"; read CUSTOMMODULELIST
-            else
-                break
-            fi
-        done
-        break
+        Arabic)
+            echo "#Arabic" >> $rachelScriptsDir/rsyncInclude.list
+            echo "ar-*" >> $rachelScriptsDir/rsyncInclude.list
         ;;
-
+        Deutsch)
+            echo "#German" >> $rachelScriptsDir/rsyncInclude.list
+            echo "de-*" >> $rachelScriptsDir/rsyncInclude.list
+        ;;
         English)
-        echo; printQuestion "What content you would like to install:"
-        echo "  - [English-KA] - English content based on KA"
-        echo "  - [English-Kaos] - English content based on Kaos"
-        echo "  - [English-Justice] - English content for Justice"
-        echo "  - Exit to [Content-Menu]"
-        echo
-        select submenu in "English-KALite" "English-KAOS" "English-Justice" "Kiwix-Wikipedia-ALL" "Kiwix-Wikipedia-Schools" "Return"; do
-            case $submenu in
-            English-KALite)
-            printStatus "Installing content for English (KA Lite)."
-            $DOWNLOADCONTENTSCRIPT/en_all_kalite.lst .
-            while read p; do
-                echo; printStatus "Downloading $p"
-                rsync -avz $RSYNCDIR/rachelmods/$p $rachelWWW/modules/
-                commandStatus
-                printGood "Done."
-            done <en_all_kalite.lst
-            break
-            ;;
-
-            English-KAOS)
-            printStatus "Installing content for English (KA Lite)."
-            $DOWNLOADCONTENTSCRIPT/en_all_kaos.lst .
-            while read p; do
-                echo; printStatus "Downloading $p"
-                rsync -avz $RSYNCDIR/rachelmods/$p $rachelWWW/modules/
-                commandStatus
-                printGood "Done."
-            done <en_all_kaos.lst
-            break
-            ;;
-
-            English-Justice)
-            printStatus "Installing content for English (Justice)."
-            $DOWNLOADCONTENTSCRIPT/en_justice.lst .
-            while read p; do
-                echo; printStatus "Downloading $p"
-                rsync -avz $RSYNCDIR/rachelmods/$p $rachelWWW/modules/
-                commandStatus
-                printGood "Done."
-            done <en_justice.lst
-            break
-            ;;
-
-            Kiwix-Wikipedia-ALL)
-            FILENAME="kiwix-0.9+wikipedia_en_all_2015-05.zip"
-            FILES=$(ls $rachelPartition/kiwix/data/content/wikipedia_en_all_2015-05.zim* 2> /dev/null | wc -l)
-            if [[ $FILES != "0" ]]; then
-                echo; printError "The full Wikipedia is already installed."
-                if [[ ! -f $rachelPartition/kiwix/data/library/library.xml ]]; then
-                    echo; printError "The database seems to be corrupt, repairing."
-                    echo; /var/kiwix/bin/kiwix-manage $rachelPartition/kiwix/data/library/library.xml add $rachelPartition/kiwix/data/content/wikipedia_en_all_2015-05.zim --indexPath=$rachelPartition/kiwix/data/index/wikipedia_en_all_2015-05.zim.idx
-                    echo; killall /var/kiwix/bin/kiwix-serve
-                    echo; /var/kiwix/bin/kiwix-serve --daemon --port=81 --library /media/RACHEL/kiwix/data/library/library.xml
-                    if [[ ! -f $rachelPartition/kiwix/data/library/library.xml ]]; then
-                        printError "Repair failed.  Please review the log file for additional details."
-                    fi
-                fi
-            else
-                echo; printStatus "Installing Kiwix content - Wikipedia ALL."
-                $CONTENTWIKI
-                commandStatus
-                unzip -o $FILENAME "data/*" -d "$rachelPartition/kiwix/"
-                if [[ $errorCode == 1 ]]; then
-                    echo; printError "The zip file did not download correctly; if you want to try again, click 'yes' when it asks"
-                    echo "  if there were errors. The download will then continue where it left off."
-                    echo "  For more information, check the log file ($rachelLog)."
-                else
-                    /var/kiwix/bin/kiwix-manage $rachelPartition/kiwix/data/library/library.xml add $rachelPartition/kiwix/data/content/wikipedia_en_all_2015-05.zim --indexPath=$rachelPartition/kiwix/data/index/wikipedia_en_all_2015-05.zim.idx
-                    killall /var/kiwix/bin/kiwix-serve
-                    /var/kiwix/bin/kiwix-serve --daemon --port=81 --library /media/RACHEL/kiwix/data/library/library.xml
-                fi
-            fi
-            echo; printGood "View your module by clicking on Wikipedia from the RACHEL homepage."
-            printGood "Done."
-            break
-            ;;
-
-            Kiwix-Wikipedia-Schools)
-            FILENAME="kiwix-0.9+wikipedia_en_for-schools_2013-01.zip"
-            FILES=$(ls $rachelPartition/kiwix/data/content/wikipedia_en_for_schools_opt_2013.zim* 2> /dev/null | wc -l)
-            if [[ $FILES != "0" ]]; then
-                echo; printError "Wikipedia for Schools is already installed."                
-                if [[ ! -f $rachelPartition/kiwix/data/library/library.xml ]]; then
-                    echo; printError "The database seems to be corrupt, repairing."
-                    echo; /var/kiwix/bin/kiwix-manage $rachelPartition/kiwix/data/library/library.xml add $rachelPartition/kiwix/data/content/wikipedia_en_for_schools_opt_2013.zim --indexPath=$rachelPartition/kiwix/data/index/wikipedia_en_for_schools_opt_2013.zim.idx
-                    echo; killall /var/kiwix/bin/kiwix-serve
-                    echo; /var/kiwix/bin/kiwix-serve --daemon --port=81 --library /media/RACHEL/kiwix/data/library/library.xml
-                    if [[ ! -f $rachelPartition/kiwix/data/library/library.xml ]]; then
-                        printError "Repair failed.  Please review the log file for additional details."
-                    fi
-                fi
-            else
-                echo; printStatus "Installing Kiwix content - Wikipedia for Schools."
-                $CONTENTWIKI
-                commandStatus
-                unzip -o $FILENAME "data/*" -d "$rachelPartition/kiwix/"
-                if [[ $errorCode == 1 ]]; then
-                    echo; printError "The zip file did not download correctly; if you want to try again, click 'yes' when it asks"
-                    echo "  if there were errors. The download will then continue where it left off."
-                    echo "  For more information, check the log file ($rachelLog)."
-                else
-                    echo; /var/kiwix/bin/kiwix-manage $rachelPartition/kiwix/data/library/library.xml add $rachelPartition/kiwix/data/content/wikipedia_en_for_schools_opt_2013.zim --indexPath=$rachelPartition/kiwix/data/index/wikipedia_en_for_schools_opt_2013.zim.idx
-                    echo; killall /var/kiwix/bin/kiwix-serve
-                    echo; /var/kiwix/bin/kiwix-serve --daemon --port=81 --library /media/RACHEL/kiwix/data/library/library.xml
-                fi
-            fi
-            printGood "View your module by clicking on Wikipedia from the RACHEL homepage."
-            printGood "Done."
-            break
-            ;;
-
-            Return)
-            break
-            ;;
-            esac
-        done
-        break
+            echo "#English" >> $rachelScriptsDir/rsyncInclude.list
+            echo "en-*" >> $rachelScriptsDir/rsyncInclude.list
         ;;
-
         Español)
-        printStatus "Installing content for Español."
-        $DOWNLOADCONTENTSCRIPT/es_all_kaos.lst .
-        while read p; do
-            echo; printStatus "Downloading $p"
-            rsync -avz $RSYNCDIR/rachelmods/$p $rachelWWW/modules/
-            commandStatus
-            printGood "Done."
-        done <es_all_kaos.lst
-        break
+            echo "#Spanish" >> $rachelScriptsDir/rsyncInclude.list
+            echo "es-*" >> $rachelScriptsDir/rsyncInclude.list
         ;;
-
         Français)
-        printStatus "Installing content for Français."
-        $DOWNLOADCONTENTSCRIPT/fr_all_kaos.lst .
-        while read p; do
-            echo; printStatus "Downloading $p"
-            rsync -avz $RSYNCDIR/rachelmods/$p $rachelWWW/modules/
-            commandStatus
-            printGood "Done."
-        done <fr_all_kaos.lst
-        break
+            echo "#French" >> $rachelScriptsDir/rsyncInclude.list
+            echo "fr-*" >> $rachelScriptsDir/rsyncInclude.list
         ;;
-
         Português)
-        printStatus "Installing content for Português."
-        $DOWNLOADCONTENTSCRIPT/pt_all_kaos.lst .
-        while read p; do
-            echo; printStatus "Downloading $p"
-            rsync -avz $RSYNCDIR/rachelmods/$p $rachelWWW/modules/
-            commandStatus
-            printGood "Done."
-        done <pt_all_kaos.lst
-        break
+            echo "#Portuguese" >> $rachelScriptsDir/rsyncInclude.list
+            echo "pt-*" >> $rachelScriptsDir/rsyncInclude.list
         ;;
-
         Hindi)
-        printStatus "Installing content for Hindi."
-        $DOWNLOADCONTENTSCRIPT/hi_all.lst .
-        while read p; do
-            echo; printStatus "Downloading $p"
-            rsync -avz $RSYNCDIR/rachelmods/$p $rachelWWW/modules/
-            commandStatus
-            printGood "Done."
-        done <hi_all.lst
-        break
-        ;;
-
-        Main-Menu)
-        break
+            echo "#Hindi" >> $rachelScriptsDir/rsyncInclude.list
+            echo "hi-*" >> $rachelScriptsDir/rsyncInclude.list
         ;;
         esac
+        echo; printStatus "Language modules included:"
+        sed -i '/^\x*$/d' $rachelScriptsDir/rsyncInclude.list
+        sort -u $rachelScriptsDir/rsyncInclude.list > $rachelScriptsDir/rsyncInclude.list.tmp; mv $rachelScriptsDir/rsyncInclude.list.tmp $rachelScriptsDir/rsyncInclude.list
+        echo "$(cat $rachelScriptsDir/rsyncInclude.list | grep \# | cut -d"#" -f2)"
+        echo; printQuestion "Do you wish to select another language? (Y/n)"; read REPLY
+        if [[ $REPLY =~ ^[Nn]$ ]]; then
+            break   
+        else
+            languageMenu
+        fi
     done
-
-    # Check for errors is downloads
-    if [[ $errorCode == 1 ]]; then
-        echo; printError "One or more of the updates did not download correctly; for more information, check the log file ($rachelLog)."
-    fi
-
-    # Check that all files are owned by root
-    echo; printStatus "Verifying proper permissions on modules."
-    chown -R root:root $rachelWWW/modules
-    printGood "Done."
+    buildRsyncModuleExcludeList
+    buildRsyncLangExcludeList
+    MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" --exclude-from "$rachelScriptsDir/rsyncLangExclude.list" --include-from "$rachelScriptsDir/rsyncInclude.list" --exclude '*' $RSYNCDIR/rachelmods/ | awk '{print $5}' | tail -n +2)
+    echo; printStatus "Rsyncing core RACHEL content from $RSYNCDIR"
+    while IFS= read -r module; do
+        echo; printStatus "Downloading $module"
+        rsync -avz --update --delete $RSYNCDIR/rachelmods/$module $rachelWWW/modules/
+        commandStatus
+        printGood "Done."
+    done <<< "$MODULELIST"
 }
 
 kaliteRemove(){
@@ -1625,59 +1488,38 @@ kaliteSetup(){
 }
 
 downloadKAContent(){
-    errorCode=0
-    # Setup KA Lite content
-    echo; printStatus "KA Lite Content Installer"
-    echo; printQuestion "Do you want to install KA Lite video content located on a local USB or folder?"
-    read -p "    Enter (y/N) " REPLY
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        if [[ $internet == 1 ]]; then
-            while :; do
-                echo; printQuestion "What is the full path to the file location for KA Lite content (i.e. /path/to/your-usb-drive-or-folder)?"; read KACONTENTFOLDER || return
-                if [[ ! -d $KACONTENTFOLDER ]]; then
-                    echo; printError "FOLDER NOT FOUND - You must provide a full path to a location accessible from the CAP."
-                else
-                    break
-                fi
-            done
-        fi
-        echo; printStatus "Copying KA Lite content files from $KACONTENTFOLDER to $kaliteContentDir"
-        rsync -avhP $KACONTENTFOLDER/ $kaliteContentDir/
-    elif [[ $internet == 1 ]]; then
-        echo; printQuestion "Do you want to download or check for updates to your KA Lite video content?"
-        read -p "    Enter (y/N) " REPLY
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            mkdir -p kaliteContentDir
-            echo; printStatus "Downloading from primary repository."
-            echo "WEBSITE:  $contentOnline/kacontent"
-            $KALITECONTENTINSTALL
-            commandStatus
-            if [[ $errorCode == 1 ]]; then
-                echo; printError "Primary repo unavailable, do you want to download the entire zip from the backup repo?"
-                read -p "    Enter (y/N) " REPLY
-                if [[ $REPLY =~ ^[Yy]$ ]]; then
-                    echo; printStatus "Attempting to download from the backup repository."
-                    echo "WEBSITE:  $wgetOnline/downloads/public_ftp/z-holding/ka-lite_content.zip"
-                    wget -c $wgetOnline/downloads/public_ftp/z-holding/ka-lite_content.zip -O $rachelTmpDir/ka-lite_content.zip
-                    # Checking user provided file MD5 against known good version
-                    checkMD5 $rachelTmpDir/ka-lite_content.zip
-                    if [[ $MD5STATUS == 1 ]]; then
-                        echo; printGood "Installing the KA Lite Content."
-                    fi
-                    unzip -o $rachelTmpDir/ka-lite_content.zip "kacontent/*" -d "$kaliteContentDir/"
-                    commandStatus
-                    if [[ $errorCode == 1 ]]; then printError "Something went wrong; check $rachelLog for errors."; fi
-                fi
-            fi
-        else
-            echo; printStatus "Skipping content download/check."
-        fi
-    fi
+    # Downloading KA Lite content
+    echo "" > $rachelScriptsDir/rsyncInclude.list
+    ## Add user input to languages they want to support
+    echo; printQuestion "What language content you would like to download for KA Lite:"
+    echo "  - [English] - English content"
+    echo "  - [Español] - Spanish content"
+    echo "  - [Français] - French content"
+    echo
+    select menu in "English" "Español" "Français"; do
+        case $menu in
+        English)
+            kalang="en-kalite"
+            break
+        ;;
+        Español)
+            kalang="es-kalite"
+            break
+        ;;
+        Français)
+            kalang="fr-kalite"
+            break
+        ;;
+        esac
+    done
+    echo; printStatus "Downloading KA Lite content from $RSYNCDIR"
+    rsync -Pavz --include *.mp4 --exclude assessment --exclude locale $RSYNCDIR/rachelmods/$kalang/content/ $kaliteContentDir
+    commandStatus
+    printGood "Done."
 }
 
 checkCaptivePortal(){
     errorCode=0
-
     # Download RACHEL Captive Portal files
     echo; printStatus "Checking Captive Portal files."
 
@@ -2073,7 +1915,7 @@ updateRachelFolders(){
 # Loop to redisplay main menu
 whatToDo(){
     echo; printQuestion "What would you like to do next?"
-    echo "1)Initial Install  2)Install/Upgrade KALite  3)Install Kiwix  4)Install Default Weaved Services  5)Install Weaved Service  6)Add/Update Module  7)Add/Update Module List  8)Download-KA-Content  9)Utilities  10)Exit"
+    echo "1)Initial Install  2)Install/Upgrade KALite  3)Install Kiwix  4)Install Default Weaved Services  5)Install Weaved Service  6)Add/Update Module  7)Add/Update Language  8)Download-KA-Content  9)Utilities  10)Exit"
 }
 
 # Interactive mode menu
@@ -2085,7 +1927,7 @@ interactiveMode(){
     echo "  - [Install-Default-Weaved-Services] installs the default CAP Weaved services for ports 22, 80, 8080"
     echo "  - [Install-Weaved-Service] adds a Weaved service to an online account you provide during install"
     echo "  - [Add-Update-Module] lists current available modules; installs one at a time"
-    echo "  - [Add-Update-Module-List] installs modules from a pre-configured list of modules"
+    echo "  - [Add-Update-Language] installs all modules of a language (does not install KA Lite or full Wikipedia)"
     echo "  - [Download-KA-Content] checks for updated KA Lite video content"
     echo "  - Other [Utilities]"
     echo "    - Install a battery monitor that cleanly shuts down this device with less than 3% battery"
@@ -2100,7 +1942,7 @@ interactiveMode(){
     echo "    - Testing script"
     echo "  - [Exit] the installation script"
     echo
-    select menu in "Initial-Install" "Install-Upgrade-KALite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Update-Module" "Add-Update-Module-List" "Download-KA-Content" "Utilities" "Exit"; do
+    select menu in "Initial-Install" "Install-Upgrade-KALite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Update-Module" "Add-Update-Language" "Download-KA-Content" "Utilities" "Exit"; do
             case $menu in
             Initial-Install)
             newInstall
@@ -2146,11 +1988,10 @@ interactiveMode(){
             whatToDo
             ;;
 
-            Add-Update-Module-List)
-            echo; printError "This option is currently unavailable."
-#            updateModuleNames
-#            contentListInstall
-#            repairKiwixLibrary
+            Add-Update-Language)
+            updateModuleNames
+            contentLanguageInstall
+            repairKiwixLibrary
             whatToDo
             ;;
 
