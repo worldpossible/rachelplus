@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160509.2208 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160513.2207 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -37,6 +37,7 @@ kaliteSettings="$kaliteDir/settings.py"
 installTmpDir="/root/cap-rachel-install.tmp"
 rachelTmpDir="/media/RACHEL/cap-rachel-install.tmp"
 rachelRecoveryDir="/media/RACHEL/recovery"
+stemPkg="stem-1.5.1.tgz"
 errorCode="0"
 
 # MD5 hash list
@@ -56,12 +57,16 @@ EOF
 # Rsync Module Exclude List
 buildRsyncModuleExcludeList(){
     cat > $rachelScriptsDir/rsyncExclude.list << 'EOF'
+en-kalite/content
 *.zip
 en-afristory.old
 KALite0.14_content
 KALite0.15_content
 rsync.sh
 extra-build-files
+.gitignore
+README.txt
+peewee.db
 EOF
 }
 
@@ -537,6 +542,7 @@ repairKiwixLibrary(){
 
     # Find all the zim files in the modules directoy
     ls $rachelWWW/modules/*/data/content/*.zim*|sed 's/ /\n/g' > $tmp
+    ls $rachelPartition/kiwix/data/content/*.zim*|sed 's/ /\n/g' >> $tmp
 
     # Check for sqlite3 install
     checkForHiddenModules(){
@@ -565,6 +571,8 @@ repairKiwixLibrary(){
         zim="$(echo $i | cut -d'/' -f9)"
         if [[ -d "$moddir/data/index/$zim.idx" ]]; then
             cmd="$cmd --indexPath=$moddir/data/index/$zim.idx"
+        elif [[ -d "$rachelPartition/kiwix/data/index/$zim.idx" ]]; then
+            cmd="$cmd --indexPath=$rachelPartition/kiwix/data/index/$zim.idx"
         fi
         $cmd 2>/dev/null
         if [[ $? -ge 1 ]]; then echo "Couldn't add $zim to library"; fi
@@ -600,7 +608,8 @@ library="/media/RACHEL/kiwix/data/library/library.xml"
 rm -f $library; touch $library
 
 # Find all the zim files in the modules directoy
-ls /media/RACHEL/rachel/modules/*/data/content/*.zim|sed 's/ /\n/g' > $tmp
+ls /media/RACHEL/rachel/modules/*/data/content/*.zim*|sed 's/ /\n/g' > $tmp
+ls /media/RACHEL/kiwix/data/content/*.zim*|sed 's/ /\n/g' >> $tmp
 
 # Remove modules that are marked hidden on main menu
 for d in $(sqlite3 /media/RACHEL/rachel/admin.sqlite 'select moddir from modules where hidden = 1'); do
@@ -614,6 +623,8 @@ for i in $(cat $tmp); do
     zim="$(echo $i | cut -d'/' -f9)"
     if [[ -d "$moddir/data/index/$zim.idx" ]]; then
         cmd="$cmd --indexPath=$moddir/data/index/$zim.idx"
+    elif [[ -d "/media/RACHEL/kiwix/data/index/$zim.idx" ]]; then
+        cmd="$cmd --indexPath=/media/RACHEL/kiwix/data/index/$zim.idx"
     fi
     $cmd
     if [[ $? -ge 1 ]]; then echo "Couldn't add $zim to library"; fi
@@ -1199,7 +1210,8 @@ contentModuleInstall(){
         if [[ $REPLY =~ ^[Nn]$ ]]; then rm -f /tmp/module.lst; fi
     fi
     SELECTMODULE=1
-    MODULELIST=$(rsync --list-only $RSYNCDIR/rachelmods/ | egrep '^d' | awk '{print $5}' | tail -n +2)
+#    MODULELIST=$(rsync --list-only $RSYNCDIR/rachelmods/ | egrep '^d' | awk '{print $5}' | tail -n +2)
+    MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" --include-from "$rachelScriptsDir/rsyncInclude.list" --exclude '*' $RSYNCDIR/rachelmods/ | awk '{print $5}' | tail -n +2)
     while [[ $SELECTMODULE == 1 ]]; do
         echo; printStatus "What RACHEL module would you like to select for download or update?"
         echo "(Ctrl-C to cancel module install)"
@@ -1240,7 +1252,7 @@ contentLanguageInstall(){
     echo; printStatus "The language install will install all modules from the language(s) you choose."
     echo "The installer WILL NOT install very large modules (i.e. modules for radiolab, TED, GCF,"
     echo "KA Lite, KAOS, Oregon Law Library, or the full version of Wikipedia).  These modules must be"
-    echo "installed individually using the Add-Update-Module option."
+    echo "installed individually using the Add-Module option."
     echo; printQuestion "What language content you would like to download for OFFLINE install:"
     echo "  - [Arabic] - Arabic content"
     echo "  - [Deutsch] - German content"
@@ -1299,6 +1311,19 @@ contentLanguageInstall(){
     while IFS= read -r module; do
         echo; printStatus "Downloading $module"
         rsync -avz --update --delete $RSYNCDIR/rachelmods/$module $rachelWWW/modules/
+        commandStatus
+        printGood "Done."
+    done <<< "$MODULELIST"
+}
+
+contentUpdate(){
+    buildRsyncModuleExcludeList
+    buildRsyncLangExcludeList
+    SELECTMODULE=1
+    MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" $rachelWWW/modules/ | awk '{print $5}' | tail -n +2)
+    while IFS= read -r module; do
+        echo; printStatus "Downloading $module"
+        rsync -avz --update --delete --exclude-from "$rachelScriptsDir/rsyncExclude.list" $RSYNCDIR/rachelmods/$module $rachelWWW/modules/
         commandStatus
         printGood "Done."
     done <<< "$MODULELIST"
@@ -1575,6 +1600,7 @@ checkCaptivePortal(){
 }
 
 updateModuleNames(){
+    # Checking for old RACHEL file/folder structures
     cd $rachelWWW/modules
     mv ap_didact_es es-ap_didact 2>/dev/null
     mv ebooks-en en-ebooks 2>/dev/null
@@ -1636,6 +1662,47 @@ updateModuleNames(){
     else
         mv wikipedia_for_schools en-wikipedia_for_schools 2>/dev/null
     fi
+    # Check for previous zim installs
+    cd $rachelPartition/kiwix/data/content/
+    ## No module to move these to
+    #bouquineux_07_2013.zimaa
+    #bouquineux_07_2013.zimab
+    #bouquineux_07_2013.zimac
+    #gutenberg_fr_all_10_2014.zimaa
+    #gutenberg_fr_all_10_2014.zimab
+    #tedxgeneva-2014_fr_all_2015-03.zim
+    #tedxlausanne-2012_fr_all_2015-03.zim
+    #tedxlausanne-2014_fr_all_2015-03.zim
+    #tedxlausannechange-2013_fr_all_2015-03.zim
+    #wikipedia_en_ray_charles_2015-06.zim
+    ## Move these
+    mv wikipedia_en_all_* $rachelWWW/rachelmods/en-wikipedia/data/content/ 2>/dev/null
+    mv wikipedia_en_for_schools_* $rachelWWW/rachelmods/en-wikipedia_for_schools/data/content/ 2>/dev/null
+    mv wikibooks_fr_all_* $rachelWWW/rachelmods/fr-wikibooks/data/content/ 2>/dev/null
+    mv wikipedia_fr_all_* $rachelWWW/rachelmods/fr-wikipedia/data/content/ 2>/dev/null
+    mv wikisource_fr_all_* $rachelWWW/rachelmods/fr-wikisource/data/content/ 2>/dev/null
+    mv wikiversity_fr_all_* $rachelWWW/rachelmods/fr-wikiversity/data/content/ 2>/dev/null
+    mv wikivoyage_fr_all_* $rachelWWW/rachelmods/fr-wikivoyage/data/content/ 2>/dev/null
+    mv wiktionary_fr_all_* $rachelWWW/rachelmods/fr-wiktionary/data/content/ 2>/dev/null
+
+    cd $rachelPartition/kiwix/data/index/
+    ## No module to move these to
+    #bouquineux_07_2013.zim.idx 
+    #gutenberg_fr_all_10_2014.zim.idx
+    #tedxgeneva-2014_fr_all_2015-03.zim.idx
+    #tedxlausanne-2012_fr_all_2015-03.zim.idx
+    #tedxlausanne-2014_fr_all_2015-03.zim.idx
+    #tedxlausannechange-2013_fr_all_2015-03.zim.idx
+    #wikipedia_en_ray_charles_2015-06.zim.idx
+    ## Move these
+    mv wikipedia_en_all_* $rachelWWW/rachelmods/en-wikipedia/data/index/ 2>/dev/null
+    mv wikipedia_en_for_schools_* $rachelWWW/rachelmods/en-wikipedia_for_schools/data/index/ 2>/dev/null
+    mv wikibooks_fr_all_* $rachelWWW/rachelmods/fr-wikibooks/data/index/ 2>/dev/null
+    mv wikipedia_fr_all_* $rachelWWW/rachelmods/fr-wikipedia/data/index/ 2>/dev/null
+    mv wikisource_fr_all_* $rachelWWW/rachelmods/fr-wikisource/data/index/ 2>/dev/null
+    mv wikiversity_fr_all_* $rachelWWW/rachelmods/fr-wikiversity/data/index/ 2>/dev/null
+    mv wikivoyage_fr_all_* $rachelWWW/rachelmods/fr-wikivoyage/data/index/ 2>/dev/null
+    mv wiktionary_fr_all_* $rachelWWW/rachelmods/fr-wiktionary/data/index/ 2>/dev/null
 }
 
 repairRachelScripts(){
@@ -1802,20 +1869,29 @@ repairKalite(){
 }
 
 repairBugs(){
-    # Update modules names to new structure
-    updateModuleNames
-
     # Update rachel folder structure
     updateRachelFolders
 
+    # Update modules names to new structure
+    updateModuleNames
+
     # Update to the latest contentshell
     mv /etc/init/procps.conf /etc/init/procps.conf.old 2>/dev/null # otherwise quite a pkgs won't install
-    apt-get update
-    apt-get -y install php5-sqlite php-pear make gcc-multilib sqlite3
+    if [[ $internet == "1" ]]; then
+        apt-get update
+        apt-get -y install php5-sqlite php-pear make gcc-multilib sqlite3
+    else
+        cd $dirContentOffline/offlinepkgs
+        dpkg -i *.deb
+    fi
     pecl info stem > /dev/null
     if [[ $? -ge 1 ]]; then 
         echo; printStatus "Installing the stem module."
-        echo "\n" | pecl install stem
+        if [[ $internet == "1" ]]; then
+            echo "\n" | pecl install stem
+        else
+            echo "\n" | pecl install $dirContentOffline/offlinepkgs/$stemPkg
+        fi
         # Add support for stem extension
         echo '; configuration for php stem module' > /etc/php5/conf.d/stem.ini
         echo 'extension=stem.so' >> /etc/php5/conf.d/stem.ini
@@ -1915,7 +1991,7 @@ updateRachelFolders(){
 # Loop to redisplay main menu
 whatToDo(){
     echo; printQuestion "What would you like to do next?"
-    echo "1)Initial Install  2)Install/Upgrade KALite  3)Install Kiwix  4)Install Default Weaved Services  5)Install Weaved Service  6)Add/Update Module  7)Add/Update Language  8)Download-KA-Content  9)Utilities  10)Exit"
+    echo "1)Initial Install  2)Install/Upgrade KALite  3)Install Kiwix  4)Install Default Weaved Services  5)Install Weaved Service  6)Add Module  7)Add Language  8)Update Modules  9)Download-KA-Content  10)Utilities  11)Exit"
 }
 
 # Interactive mode menu
@@ -1926,8 +2002,9 @@ interactiveMode(){
     echo "  - [Install-Kiwix]"
     echo "  - [Install-Default-Weaved-Services] installs the default CAP Weaved services for ports 22, 80, 8080"
     echo "  - [Install-Weaved-Service] adds a Weaved service to an online account you provide during install"
-    echo "  - [Add-Update-Module] lists current available modules; installs one at a time"
-    echo "  - [Add-Update-Language] installs all modules of a language (does not install KA Lite or full Wikipedia)"
+    echo "  - [Add-Module] lists current available modules; installs one at a time"
+    echo "  - [Add-Language] installs all modules of a language (does not install KA Lite or full Wikipedia)"
+    echo "  - [Update-Modules] updates the currently installed modules"
     echo "  - [Download-KA-Content] checks for updated KA Lite video content"
     echo "  - Other [Utilities]"
     echo "    - Install a battery monitor that cleanly shuts down this device with less than 3% battery"
@@ -1942,7 +2019,7 @@ interactiveMode(){
     echo "    - Testing script"
     echo "  - [Exit] the installation script"
     echo
-    select menu in "Initial-Install" "Install-Upgrade-KALite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Update-Module" "Add-Update-Language" "Download-KA-Content" "Utilities" "Exit"; do
+    select menu in "Initial-Install" "Install-Upgrade-KALite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Module" "Add-Language" "Update-Modules" "Download-KA-Content" "Utilities" "Exit"; do
             case $menu in
             Initial-Install)
             newInstall
@@ -1981,16 +2058,23 @@ interactiveMode(){
             whatToDo
             ;;
 
-            Add-Update-Module)
+            Add-Module)
             updateModuleNames
             contentModuleInstall
             repairKiwixLibrary
             whatToDo
             ;;
 
-            Add-Update-Language)
+            Add-Language)
             updateModuleNames
             contentLanguageInstall
+            repairKiwixLibrary
+            whatToDo
+            ;;
+
+            Update-Modules)
+            updateModuleNames
+            contentUpdate
             repairKiwixLibrary
             whatToDo
             ;;
@@ -2166,7 +2250,7 @@ if [[ -f /root/rachel-scripts.sh ]]; then
     echo; sleep 10
     echo; printStatus "Beginning RACHEL update..."
     mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir
-    opMode; updateRachelFolders; repairBugs
+    opMode; repairBugs
     echo; printGood "Your RACHEL install was successfully updated."
     exit 1
 fi
