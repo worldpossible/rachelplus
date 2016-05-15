@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160514.2134 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160514.2311 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -1666,7 +1666,7 @@ updateModuleNames(){
     else
         mv wikipedia_for_schools en-wikipedia_for_schools 2>/dev/null
     fi
-    # Check for previous zim installs
+    # Check for previous Kiwix zim installs
     cd $rachelPartition/kiwix/data/content/
     ## No module to move these to
     #bouquineux_07_2013.zimaa
@@ -1678,7 +1678,6 @@ updateModuleNames(){
     #tedxlausanne-2012_fr_all_2015-03.zim
     #tedxlausanne-2014_fr_all_2015-03.zim
     #tedxlausannechange-2013_fr_all_2015-03.zim
-    #wikipedia_en_ray_charles_2015-06.zim
     ## Move these
     mkdir -p $rachelWWW/modules/en-wikipedia/data/content/
     mv wikipedia_en_all_* $rachelWWW/modules/en-wikipedia/data/content/ 2>/dev/null
@@ -1696,7 +1695,9 @@ updateModuleNames(){
     mv wikivoyage_fr_all_* $rachelWWW/modules/fr-wikivoyage/data/content/ 2>/dev/null
     mkdir -p $rachelWWW/modules/fr-wiktionary/data/content/
     mv wiktionary_fr_all_* $rachelWWW/modules/fr-wiktionary/data/content/ 2>/dev/null
-
+    ## Remove these
+    rm -f wikipedia_en_ray_charles_2015-06.zim
+    # Kiwix index files
     cd $rachelPartition/kiwix/data/index/
     ## No module to move these to
     #bouquineux_07_2013.zim.idx 
@@ -1705,7 +1706,6 @@ updateModuleNames(){
     #tedxlausanne-2012_fr_all_2015-03.zim.idx
     #tedxlausanne-2014_fr_all_2015-03.zim.idx
     #tedxlausannechange-2013_fr_all_2015-03.zim.idx
-    #wikipedia_en_ray_charles_2015-06.zim.idx
     ## Move these
     mkdir -p $rachelWWW/modules/en-wikipedia/data/index/
     mv wikipedia_en_all_* $rachelWWW/modules/en-wikipedia/data/index/ 2>/dev/null
@@ -1723,6 +1723,8 @@ updateModuleNames(){
     mv wikivoyage_fr_all_* $rachelWWW/modules/fr-wikivoyage/data/index/ 2>/dev/null
     mkdir -p $rachelWWW/modules/fr-wiktionary/data/index/
     mv wiktionary_fr_all_* $rachelWWW/modules/fr-wiktionary/data/index/ 2>/dev/null
+    ## Remove these
+    rm -rf wikipedia_en_ray_charles_2015-06.zim.idx
 }
 
 repairRachelScripts(){
