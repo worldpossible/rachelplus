@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160514.2117 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160514.2134 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -159,7 +159,7 @@ cleanup(){
 testingScript(){
     set -x
 
-    downloadOfflineContent
+    updateModuleNames
 
     set +x
     exit 1
@@ -1655,6 +1655,7 @@ updateModuleNames(){
     mv oya en-oya 2>/dev/null
     mv PhET en-PhET 2>/dev/null
     mv TED en-TED 2>/dev/null
+    mv radiolab en-radiolab 2>/dev/null
     if [[ -d wikipedia_for_schools-es/wp ]]; then
         mv wikipedia_for_schools-es es-wikipedia_for_schools-nonzim 2>/dev/null
     else
@@ -1679,14 +1680,22 @@ updateModuleNames(){
     #tedxlausannechange-2013_fr_all_2015-03.zim
     #wikipedia_en_ray_charles_2015-06.zim
     ## Move these
-    mv wikipedia_en_all_* $rachelWWW/rachelmods/en-wikipedia/data/content/ 2>/dev/null
-    mv wikipedia_en_for_schools_* $rachelWWW/rachelmods/en-wikipedia_for_schools/data/content/ 2>/dev/null
-    mv wikibooks_fr_all_* $rachelWWW/rachelmods/fr-wikibooks/data/content/ 2>/dev/null
-    mv wikipedia_fr_all_* $rachelWWW/rachelmods/fr-wikipedia/data/content/ 2>/dev/null
-    mv wikisource_fr_all_* $rachelWWW/rachelmods/fr-wikisource/data/content/ 2>/dev/null
-    mv wikiversity_fr_all_* $rachelWWW/rachelmods/fr-wikiversity/data/content/ 2>/dev/null
-    mv wikivoyage_fr_all_* $rachelWWW/rachelmods/fr-wikivoyage/data/content/ 2>/dev/null
-    mv wiktionary_fr_all_* $rachelWWW/rachelmods/fr-wiktionary/data/content/ 2>/dev/null
+    mkdir -p $rachelWWW/modules/en-wikipedia/data/content/
+    mv wikipedia_en_all_* $rachelWWW/modules/en-wikipedia/data/content/ 2>/dev/null
+    mkdir -p $rachelWWW/modules/en-wikipedia_for_schools/data/content/
+    mv wikipedia_en_for_schools_* $rachelWWW/modules/en-wikipedia_for_schools/data/content/ 2>/dev/null
+    mkdir -p $rachelWWW/modules/fr-wikibooks/data/content/
+    mv wikibooks_fr_all_* $rachelWWW/modules/fr-wikibooks/data/content/ 2>/dev/null
+    mkdir -p $rachelWWW/modules/fr-wikipedia/data/content/
+    mv wikipedia_fr_all_* $rachelWWW/modules/fr-wikipedia/data/content/ 2>/dev/null
+    mkdir -p $rachelWWW/modules/fr-wikisource/data/content/
+    mv wikisource_fr_all_* $rachelWWW/modules/fr-wikisource/data/content/ 2>/dev/null
+    mkdir -p $rachelWWW/modules/fr-wikiversity/data/content/
+    mv wikiversity_fr_all_* $rachelWWW/modules/fr-wikiversity/data/content/ 2>/dev/null
+    mkdir -p $rachelWWW/modules/fr-wikivoyage/data/content/
+    mv wikivoyage_fr_all_* $rachelWWW/modules/fr-wikivoyage/data/content/ 2>/dev/null
+    mkdir -p $rachelWWW/modules/fr-wiktionary/data/content/
+    mv wiktionary_fr_all_* $rachelWWW/modules/fr-wiktionary/data/content/ 2>/dev/null
 
     cd $rachelPartition/kiwix/data/index/
     ## No module to move these to
@@ -1698,14 +1707,22 @@ updateModuleNames(){
     #tedxlausannechange-2013_fr_all_2015-03.zim.idx
     #wikipedia_en_ray_charles_2015-06.zim.idx
     ## Move these
-    mv wikipedia_en_all_* $rachelWWW/rachelmods/en-wikipedia/data/index/ 2>/dev/null
-    mv wikipedia_en_for_schools_* $rachelWWW/rachelmods/en-wikipedia_for_schools/data/index/ 2>/dev/null
-    mv wikibooks_fr_all_* $rachelWWW/rachelmods/fr-wikibooks/data/index/ 2>/dev/null
-    mv wikipedia_fr_all_* $rachelWWW/rachelmods/fr-wikipedia/data/index/ 2>/dev/null
-    mv wikisource_fr_all_* $rachelWWW/rachelmods/fr-wikisource/data/index/ 2>/dev/null
-    mv wikiversity_fr_all_* $rachelWWW/rachelmods/fr-wikiversity/data/index/ 2>/dev/null
-    mv wikivoyage_fr_all_* $rachelWWW/rachelmods/fr-wikivoyage/data/index/ 2>/dev/null
-    mv wiktionary_fr_all_* $rachelWWW/rachelmods/fr-wiktionary/data/index/ 2>/dev/null
+    mkdir -p $rachelWWW/modules/en-wikipedia/data/index/
+    mv wikipedia_en_all_* $rachelWWW/modules/en-wikipedia/data/index/ 2>/dev/null
+    mkdir -p $rachelWWW/modules/en-wikipedia_for_schools/data/index/
+    mv wikipedia_en_for_schools_* $rachelWWW/modules/en-wikipedia_for_schools/data/index/ 2>/dev/null
+    mkdir -p $rachelWWW/modules/fr-wikibooks/data/index/
+    mv wikibooks_fr_all_* $rachelWWW/modules/fr-wikibooks/data/index/ 2>/dev/null
+    mkdir -p $rachelWWW/modules/fr-wikipedia/data/index/
+    mv wikipedia_fr_all_* $rachelWWW/modules/fr-wikipedia/data/index/ 2>/dev/null
+    mkdir -p $rachelWWW/modules/fr-wikisource/data/index/
+    mv wikisource_fr_all_* $rachelWWW/modules/fr-wikisource/data/index/ 2>/dev/null
+    mkdir -p $rachelWWW/modules/fr-wikiversity/data/index/
+    mv wikiversity_fr_all_* $rachelWWW/modules/fr-wikiversity/data/index/ 2>/dev/null
+    mkdir -p $rachelWWW/modules/fr-wikivoyage/data/index/
+    mv wikivoyage_fr_all_* $rachelWWW/modules/fr-wikivoyage/data/index/ 2>/dev/null
+    mkdir -p $rachelWWW/modules/fr-wiktionary/data/index/
+    mv wiktionary_fr_all_* $rachelWWW/modules/fr-wiktionary/data/index/ 2>/dev/null
 }
 
 repairRachelScripts(){
