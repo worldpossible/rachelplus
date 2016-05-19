@@ -2284,6 +2284,8 @@ printGood "Temporary file directory:  $installTmpDir"
 
 if [[ $1 == "" || $1 == "--help" || $1 == "-h" ]]; then
     printHelp
+elif [[ $1 == "--version" ]]; then
+    echo $scriptVersion
 else
     IAM=${0##*/} # Short basename
     while getopts ":irtu" opt
