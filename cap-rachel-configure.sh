@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160518.1249 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160519.1618 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -39,6 +39,12 @@ rachelTmpDir="/media/RACHEL/cap-rachel-install.tmp"
 rachelRecoveryDir="/media/RACHEL/recovery"
 stemPkg="stem-1.5.1.tgz"
 errorCode="0"
+
+# Print version only, if requested
+if [[ $1 == "--version" ]]; then
+    echo $scriptVersion
+    exit 0
+fi
 
 # MD5 hash list
 buildHashList(){
@@ -2258,7 +2264,6 @@ printHelp(){
 }
 
 #### MAIN MENU ####
-
 # Logging
 loggingStart
 
@@ -2284,8 +2289,6 @@ printGood "Temporary file directory:  $installTmpDir"
 
 if [[ $1 == "" || $1 == "--help" || $1 == "-h" ]]; then
     printHelp
-elif [[ $1 == "--version" ]]; then
-    echo $scriptVersion
 else
     IAM=${0##*/} # Short basename
     while getopts ":irtu" opt
