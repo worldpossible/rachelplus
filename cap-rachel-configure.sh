@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160519.1618 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160520.0732 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -1662,106 +1662,61 @@ updateModuleNames(){
     mv TED en-TED 2>/dev/null
     mv radiolab en-radiolab 2>/dev/null
     if [[ -d wikipedia_for_schools-es/wp ]]; then
-        mv wikipedia_for_schools-es es-wikipedia_for_schools-nonzim 2>/dev/null
+        mv wikipedia_for_schools-es es-wikipedia_for_schools-nonzim
     else
         mv wikipedia_for_schools-es es-wikipedia_for_schools 2>/dev/null
     fi
     if [[ -d wikipedia_for_schools/wp ]]; then
-        mv wikipedia_for_schools en-wikipedia_for_schools-nonzim 2>/dev/null
+        mv wikipedia_for_schools en-wikipedia_for_schools-nonzim
     else
         mv wikipedia_for_schools en-wikipedia_for_schools 2>/dev/null
     fi
+
     # Check for previous Kiwix zim installs
     cd $rachelPartition/kiwix/data/content/
-    ## No module to move these to
-    #bouquineux_07_2013.zimaa
-    #bouquineux_07_2013.zimab
-    #bouquineux_07_2013.zimac
-    #gutenberg_fr_all_10_2014.zimaa
-    #gutenberg_fr_all_10_2014.zimab
-    #tedxgeneva-2014_fr_all_2015-03.zim
-    #tedxlausanne-2012_fr_all_2015-03.zim
-    #tedxlausanne-2014_fr_all_2015-03.zim
-    #tedxlausannechange-2013_fr_all_2015-03.zim
-    ## Move these
-    if [ -f wikipedia_en_all_* ]; then
-        mkdir -p $rachelWWW/modules/en-wikipedia/data/content/
-        mv wikipedia_en_all_* $rachelWWW/modules/en-wikipedia/data/content/ 2>/dev/null
-    fi
-    if [ -f wikipedia_en_for_schools_* ]; then
-        mkdir -p $rachelWWW/modules/en-wikipedia_for_schools/data/content/
-        mv wikipedia_en_for_schools_* $rachelWWW/modules/en-wikipedia_for_schools/data/content/ 2>/dev/null
-    fi
-    if [ -f wikibooks_fr_all_* ]; then
-        mkdir -p $rachelWWW/modules/fr-wikibooks/data/content/
-        mv wikibooks_fr_all_* $rachelWWW/modules/fr-wikibooks/data/content/ 2>/dev/null
-    fi
-    if [ -f wikipedia_fr_all_* ]; then
-        mkdir -p $rachelWWW/modules/fr-wikipedia/data/content/
-        mv wikipedia_fr_all_* $rachelWWW/modules/fr-wikipedia/data/content/ 2>/dev/null
-    fi
-    if [ -f wikisource_fr_all_* ]; then
-        mkdir -p $rachelWWW/modules/fr-wikisource/data/content/
-        mv wikisource_fr_all_* $rachelWWW/modules/fr-wikisource/data/content/ 2>/dev/null
-    fi
-    if [ -f wikiversity_fr_all_* ]; then
-        mkdir -p $rachelWWW/modules/fr-wikiversity/data/content/
-        mv wikiversity_fr_all_* $rachelWWW/modules/fr-wikiversity/data/content/ 2>/dev/null
-    fi
-    if [ -f wikivoyage_fr_all_* ]; then
-        mkdir -p $rachelWWW/modules/fr-wikivoyage/data/content/
-        mv wikivoyage_fr_all_* $rachelWWW/modules/fr-wikivoyage/data/content/ 2>/dev/null
-    fi
-    if [ -f wiktionary_fr_all_* ]; then
-        mkdir -p $rachelWWW/modules/fr-wiktionary/data/content/
-        mv wiktionary_fr_all_* $rachelWWW/modules/fr-wiktionary/data/content/ 2>/dev/null
-    fi
+    ## Move these zim files
+    for f in wikipedia_en_all_*; do
+        [ -e "$f" ] && mkdir -p $rachelWWW/modules/en-wikipedia/data/content/ && mv wikipedia_en_all_* $rachelWWW/modules/en-wikipedia/data/content/
+        [ -e "$f" ] && mkdir -p $rachelWWW/modules/en-wikipedia/data/index/ && mv $rachelPartition/kiwix/data/index/wikipedia_en_all_* $rachelWWW/modules/en-wikipedia/data/index/
+        break
+    done
+    for f in wikipedia_en_for_schools_*; do
+        [ -e "$f" ] && mkdir -p $rachelWWW/modules/en-wikipedia_for_schools/data/content/ && mv wikipedia_en_for_schools_* $rachelWWW/modules/en-wikipedia_for_schools/data/content/
+        [ -e "$f" ] && mkdir -p $rachelWWW/modules/en-wikipedia_for_schools/data/index/ && mv $rachelPartition/kiwix/data/index/wikipedia_en_for_schools_* $rachelWWW/modules/en-wikipedia_for_schools/data/index/
+        break
+    done
+    for f in wikibooks_fr_all_*; do
+        [ -e "$f" ] && mkdir -p $rachelWWW/modules/fr-wikibooks/data/content/ && mv wikibooks_fr_all_* $rachelWWW/modules/fr-wikibooks/data/content/
+        [ -e "$f" ] && mkdir -p $rachelWWW/modules/fr-wikibooks/data/index/ && mv $rachelPartition/kiwix/data/index/wikibooks_fr_all_* $rachelWWW/modules/fr-wikibooks/data/index/
+        break
+    done
+    for f in wikipedia_fr_all_*; do
+        [ -e "$f" ] && mkdir -p $rachelWWW/modules/fr-wikipedia/data/content/ && mv wikipedia_fr_all_* $rachelWWW/modules/fr-wikipedia/data/content/
+        [ -e "$f" ] && mkdir -p $rachelWWW/modules/fr-wikipedia/data/index/ && mv $rachelPartition/kiwix/data/index/wikipedia_fr_all_* $rachelWWW/modules/fr-wikipedia/data/index/
+        break
+    done
+    for f in wikisource_fr_all_*; do
+        [ -e "$f" ] && mkdir -p $rachelWWW/modules/fr-wikisource/data/content/ && mv wikisource_fr_all_* $rachelWWW/modules/fr-wikisource/data/content/
+        [ -e "$f" ] && mkdir -p $rachelWWW/modules/fr-wikisource/data/index/ && mv $rachelPartition/kiwix/data/index/wikisource_fr_all_* $rachelWWW/modules/fr-wikisource/data/index/
+        break
+    done
+    for f in wikiversity_fr_all_*; do
+        [ -e "$f" ] && mkdir -p $rachelWWW/modules/fr-wikiversity/data/content/ && mv wikiversity_fr_all_* $rachelWWW/modules/fr-wikiversity/data/content/
+        [ -e "$f" ] && mkdir -p $rachelWWW/modules/fr-wikiversity/data/index/ && mv $rachelPartition/kiwix/data/index/wikiversity_fr_all_* $rachelWWW/modules/fr-wikiversity/data/index/
+        break
+    done
+    for f in wikivoyage_fr_all_*; do
+        [ -e "$f" ] && mkdir -p $rachelWWW/modules/fr-wikivoyage/data/content/ && mv wikivoyage_fr_all_* $rachelWWW/modules/fr-wikivoyage/data/content/
+        [ -e "$f" ] && mkdir -p $rachelWWW/modules/fr-wikivoyage/data/index/ && mv $rachelPartition/kiwix/data/index/wikivoyage_fr_all_* $rachelWWW/modules/fr-wikivoyage/data/index/
+        break
+    done
+    for f in wiktionary_fr_all_*; do
+        [ -e "$f" ] && mkdir -p $rachelWWW/modules/fr-wiktionary/data/content/ && mv wiktionary_fr_all_* $rachelWWW/modules/fr-wiktionary/data/content/
+        [ -e "$f" ] && mkdir -p $rachelWWW/modules/fr-wiktionary/data/index/ && mv $rachelPartition/kiwix/data/index/wiktionary_fr_all_* $rachelWWW/modules/fr-wiktionary/data/index/
+        break
+    done
     ## Remove these
-    rm -f wikipedia_en_ray_charles_2015-06.zim
-    # Kiwix index files
-    cd $rachelPartition/kiwix/data/index/
-    ## No module to move these to
-    #bouquineux_07_2013.zim.idx 
-    #gutenberg_fr_all_10_2014.zim.idx
-    #tedxgeneva-2014_fr_all_2015-03.zim.idx
-    #tedxlausanne-2012_fr_all_2015-03.zim.idx
-    #tedxlausanne-2014_fr_all_2015-03.zim.idx
-    #tedxlausannechange-2013_fr_all_2015-03.zim.idx
-    ## Move these
-    if [ -f wikipedia_en_all_* ]; then
-        mkdir -p $rachelWWW/modules/en-wikipedia/data/index/
-        mv wikipedia_en_all_* $rachelWWW/modules/en-wikipedia/data/index/ 2>/dev/null
-    fi
-    if [ -f wikipedia_en_for_schools_* ]; then
-        mkdir -p $rachelWWW/modules/en-wikipedia_for_schools/data/index/
-        mv wikipedia_en_for_schools_* $rachelWWW/modules/en-wikipedia_for_schools/data/index/ 2>/dev/null
-    fi
-    if [ -f wikibooks_fr_all_* ]; then
-        mkdir -p $rachelWWW/modules/fr-wikibooks/data/index/
-        mv wikibooks_fr_all_* $rachelWWW/modules/fr-wikibooks/data/index/ 2>/dev/null
-    fi
-    if [ -f wikipedia_fr_all_* ]; then
-        mkdir -p $rachelWWW/modules/fr-wikipedia/data/index/
-        mv wikipedia_fr_all_* $rachelWWW/modules/fr-wikipedia/data/index/ 2>/dev/null
-    fi
-    if [ -f wikisource_fr_all_* ]; then
-        mkdir -p $rachelWWW/modules/fr-wikisource/data/index/
-        mv wikisource_fr_all_* $rachelWWW/modules/fr-wikisource/data/index/ 2>/dev/null
-    fi
-    if [ -f wikiversity_fr_all_* ]; then
-        mkdir -p $rachelWWW/modules/fr-wikiversity/data/index/
-        mv wikiversity_fr_all_* $rachelWWW/modules/fr-wikiversity/data/index/ 2>/dev/null
-    fi
-    if [ -f wikivoyage_fr_all_* ]; then
-        mkdir -p $rachelWWW/modules/fr-wikivoyage/data/index/
-        mv wikivoyage_fr_all_* $rachelWWW/modules/fr-wikivoyage/data/index/ 2>/dev/null
-    fi
-    if [ -f wiktionary_fr_all_* ]; then
-        mkdir -p $rachelWWW/modules/fr-wiktionary/data/index/
-        mv wiktionary_fr_all_* $rachelWWW/modules/fr-wiktionary/data/index/ 2>/dev/null
-    fi
-    ## Remove these
-    rm -rf wikipedia_en_ray_charles_2015-06.zim.idx
+    rm -f $rachelPartition/kiwix/data/content/wikipedia_en_ray_charles_2015-06.zim $rachelPartition/kiwix/data/index/wikipedia_en_ray_charles_2015-06.zim.idx
 }
 
 repairRachelScripts(){
