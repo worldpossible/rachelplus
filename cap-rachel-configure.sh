@@ -1684,22 +1684,38 @@ updateModuleNames(){
     #tedxlausanne-2014_fr_all_2015-03.zim
     #tedxlausannechange-2013_fr_all_2015-03.zim
     ## Move these
-    mkdir -p $rachelWWW/modules/en-wikipedia/data/content/
-    mv wikipedia_en_all_* $rachelWWW/modules/en-wikipedia/data/content/ 2>/dev/null
-    mkdir -p $rachelWWW/modules/en-wikipedia_for_schools/data/content/
-    mv wikipedia_en_for_schools_* $rachelWWW/modules/en-wikipedia_for_schools/data/content/ 2>/dev/null
-    mkdir -p $rachelWWW/modules/fr-wikibooks/data/content/
-    mv wikibooks_fr_all_* $rachelWWW/modules/fr-wikibooks/data/content/ 2>/dev/null
-    mkdir -p $rachelWWW/modules/fr-wikipedia/data/content/
-    mv wikipedia_fr_all_* $rachelWWW/modules/fr-wikipedia/data/content/ 2>/dev/null
-    mkdir -p $rachelWWW/modules/fr-wikisource/data/content/
-    mv wikisource_fr_all_* $rachelWWW/modules/fr-wikisource/data/content/ 2>/dev/null
-    mkdir -p $rachelWWW/modules/fr-wikiversity/data/content/
-    mv wikiversity_fr_all_* $rachelWWW/modules/fr-wikiversity/data/content/ 2>/dev/null
-    mkdir -p $rachelWWW/modules/fr-wikivoyage/data/content/
-    mv wikivoyage_fr_all_* $rachelWWW/modules/fr-wikivoyage/data/content/ 2>/dev/null
-    mkdir -p $rachelWWW/modules/fr-wiktionary/data/content/
-    mv wiktionary_fr_all_* $rachelWWW/modules/fr-wiktionary/data/content/ 2>/dev/null
+    if [ -f wikipedia_en_all_* ]; then
+        mkdir -p $rachelWWW/modules/en-wikipedia/data/content/
+        mv wikipedia_en_all_* $rachelWWW/modules/en-wikipedia/data/content/ 2>/dev/null
+    fi
+    if [ -f wikipedia_en_for_schools_* ]; then
+        mkdir -p $rachelWWW/modules/en-wikipedia_for_schools/data/content/
+        mv wikipedia_en_for_schools_* $rachelWWW/modules/en-wikipedia_for_schools/data/content/ 2>/dev/null
+    fi
+    if [ -f wikibooks_fr_all_* ]; then
+        mkdir -p $rachelWWW/modules/fr-wikibooks/data/content/
+        mv wikibooks_fr_all_* $rachelWWW/modules/fr-wikibooks/data/content/ 2>/dev/null
+    fi
+    if [ -f wikipedia_fr_all_* ]; then
+        mkdir -p $rachelWWW/modules/fr-wikipedia/data/content/
+        mv wikipedia_fr_all_* $rachelWWW/modules/fr-wikipedia/data/content/ 2>/dev/null
+    fi
+    if [ -f wikisource_fr_all_* ]; then
+        mkdir -p $rachelWWW/modules/fr-wikisource/data/content/
+        mv wikisource_fr_all_* $rachelWWW/modules/fr-wikisource/data/content/ 2>/dev/null
+    fi
+    if [ -f wikiversity_fr_all_* ]; then
+        mkdir -p $rachelWWW/modules/fr-wikiversity/data/content/
+        mv wikiversity_fr_all_* $rachelWWW/modules/fr-wikiversity/data/content/ 2>/dev/null
+    fi
+    if [ -f wikivoyage_fr_all_* ]; then
+        mkdir -p $rachelWWW/modules/fr-wikivoyage/data/content/
+        mv wikivoyage_fr_all_* $rachelWWW/modules/fr-wikivoyage/data/content/ 2>/dev/null
+    fi
+    if [ -f wiktionary_fr_all_* ]; then
+        mkdir -p $rachelWWW/modules/fr-wiktionary/data/content/
+        mv wiktionary_fr_all_* $rachelWWW/modules/fr-wiktionary/data/content/ 2>/dev/null
+    fi
     ## Remove these
     rm -f wikipedia_en_ray_charles_2015-06.zim
     # Kiwix index files
@@ -1712,22 +1728,38 @@ updateModuleNames(){
     #tedxlausanne-2014_fr_all_2015-03.zim.idx
     #tedxlausannechange-2013_fr_all_2015-03.zim.idx
     ## Move these
-    mkdir -p $rachelWWW/modules/en-wikipedia/data/index/
-    mv wikipedia_en_all_* $rachelWWW/modules/en-wikipedia/data/index/ 2>/dev/null
-    mkdir -p $rachelWWW/modules/en-wikipedia_for_schools/data/index/
-    mv wikipedia_en_for_schools_* $rachelWWW/modules/en-wikipedia_for_schools/data/index/ 2>/dev/null
-    mkdir -p $rachelWWW/modules/fr-wikibooks/data/index/
-    mv wikibooks_fr_all_* $rachelWWW/modules/fr-wikibooks/data/index/ 2>/dev/null
-    mkdir -p $rachelWWW/modules/fr-wikipedia/data/index/
-    mv wikipedia_fr_all_* $rachelWWW/modules/fr-wikipedia/data/index/ 2>/dev/null
-    mkdir -p $rachelWWW/modules/fr-wikisource/data/index/
-    mv wikisource_fr_all_* $rachelWWW/modules/fr-wikisource/data/index/ 2>/dev/null
-    mkdir -p $rachelWWW/modules/fr-wikiversity/data/index/
-    mv wikiversity_fr_all_* $rachelWWW/modules/fr-wikiversity/data/index/ 2>/dev/null
-    mkdir -p $rachelWWW/modules/fr-wikivoyage/data/index/
-    mv wikivoyage_fr_all_* $rachelWWW/modules/fr-wikivoyage/data/index/ 2>/dev/null
-    mkdir -p $rachelWWW/modules/fr-wiktionary/data/index/
-    mv wiktionary_fr_all_* $rachelWWW/modules/fr-wiktionary/data/index/ 2>/dev/null
+    if [ -f wikipedia_en_all_* ]; then
+        mkdir -p $rachelWWW/modules/en-wikipedia/data/index/
+        mv wikipedia_en_all_* $rachelWWW/modules/en-wikipedia/data/index/ 2>/dev/null
+    fi
+    if [ -f wikipedia_en_for_schools_* ]; then
+        mkdir -p $rachelWWW/modules/en-wikipedia_for_schools/data/index/
+        mv wikipedia_en_for_schools_* $rachelWWW/modules/en-wikipedia_for_schools/data/index/ 2>/dev/null
+    fi
+    if [ -f wikibooks_fr_all_* ]; then
+        mkdir -p $rachelWWW/modules/fr-wikibooks/data/index/
+        mv wikibooks_fr_all_* $rachelWWW/modules/fr-wikibooks/data/index/ 2>/dev/null
+    fi
+    if [ -f wikipedia_fr_all_* ]; then
+        mkdir -p $rachelWWW/modules/fr-wikipedia/data/index/
+        mv wikipedia_fr_all_* $rachelWWW/modules/fr-wikipedia/data/index/ 2>/dev/null
+    fi
+    if [ -f wikisource_fr_all_* ]; then
+        mkdir -p $rachelWWW/modules/fr-wikisource/data/index/
+        mv wikisource_fr_all_* $rachelWWW/modules/fr-wikisource/data/index/ 2>/dev/null
+    fi
+    if [ -f wikiversity_fr_all_* ]; then
+        mkdir -p $rachelWWW/modules/fr-wikiversity/data/index/
+        mv wikiversity_fr_all_* $rachelWWW/modules/fr-wikiversity/data/index/ 2>/dev/null
+    fi
+    if [ -f wikivoyage_fr_all_* ]; then
+        mkdir -p $rachelWWW/modules/fr-wikivoyage/data/index/
+        mv wikivoyage_fr_all_* $rachelWWW/modules/fr-wikivoyage/data/index/ 2>/dev/null
+    fi
+    if [ -f wiktionary_fr_all_* ]; then
+        mkdir -p $rachelWWW/modules/fr-wiktionary/data/index/
+        mv wiktionary_fr_all_* $rachelWWW/modules/fr-wiktionary/data/index/ 2>/dev/null
+    fi
     ## Remove these
     rm -rf wikipedia_en_ray_charles_2015-06.zim.idx
 }
