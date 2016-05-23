@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160520.0732 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160523.1500 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -1890,26 +1890,7 @@ repairBugs(){
     updateModuleNames
 
     # Update to the latest contentshell
-    mv /etc/init/procps.conf /etc/init/procps.conf.old 2>/dev/null # otherwise quite a pkgs won't install
-    if [[ $internet == "1" ]]; then
-        apt-get update
-        apt-get -y install php5-sqlite php-pear make gcc-multilib sqlite3
-    else
-        cd $dirContentOffline/offlinepkgs
-        dpkg -i *.deb
-    fi
-    pecl info stem > /dev/null
-    if [[ $? -ge 1 ]]; then 
-        echo; printStatus "Installing the stem module."
-        if [[ $internet == "1" ]]; then
-            echo "\n" | pecl install stem
-        else
-            echo "\n" | pecl install $dirContentOffline/offlinepkgs/$stemPkg
-        fi
-        # Add support for stem extension
-        echo '; configuration for php stem module' > /etc/php5/conf.d/stem.ini
-        echo 'extension=stem.so' >> /etc/php5/conf.d/stem.ini
-    fi
+    updateContentShell
     checkContentShell
 
     # Add local content module
@@ -1939,6 +1920,43 @@ repairBugs(){
         sed -i 's/job.html/jobsearch.html/g' /media/RACHEL/rachel/modules/GCF2015/index.htmlf
         printGood "Done."
     fi
+}
+
+updateContentShell(){
+    # Update to the latest contentshell
+    mv /etc/init/procps.conf /etc/init/procps.conf.old 2>/dev/null # otherwise quite a pkgs won't install
+    if [[ $internet == "1" ]]; then
+        apt-get update
+        apt-get -y install php5-sqlite php-pear make gcc-multilib sqlite3
+    else
+        cd $dirContentOffline/offlinepkgs
+        dpkg -i *.deb
+    fi
+    pecl info stem > /dev/null
+    if [[ $? -ge 1 ]]; then 
+        echo; printStatus "Installing the stem module."
+        if [[ $internet == "1" ]]; then
+            echo "\n" | pecl install stem
+        else
+            echo "\n" | pecl install $dirContentOffline/offlinepkgs/$stemPkg
+        fi
+        # Add support for stem extension
+        echo '; configuration for php stem module' > /etc/php5/conf.d/stem.ini
+        echo 'extension=stem.so' >> /etc/php5/conf.d/stem.ini
+    fi
+}
+
+recoverCAP(){
+    echo; printGood "Script set for 'OFFLINE' mode."
+    internet="0"
+    dirContentOffline="/media/RACHEL"
+    offlineVariables
+    # Update rachel folder structure
+    updateRachelFolders
+    # Update modules names to new structure
+    updateModuleNames
+    # Update to the latest contentshell
+    updateContentShell
 }
 
 installBatteryWatch(){
