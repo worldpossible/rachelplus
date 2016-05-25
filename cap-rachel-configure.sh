@@ -1975,11 +1975,41 @@ recoverCAP(){
     updateRachelFolders
     # Update modules names to new structure
     updateModuleNames
-    ## Echo the following to runonce for update once the system reboots
-    # Install OS updates (some needed for the new contentshell)
-    installOSUpdates
-    # Update to the latest contentshell
-    updateContentShell
+    # Add runonce.sh script that will run on reboot
+    cat > $rachelScriptsDir/runonce.sh << 'EOF'
+#!/bin/bash
+dirContentOffline="/media/RACHEL"
+rachelWWW="/media/RACHEL/rachel"
+stemPkg="stem-1.5.1.tgz"
+gitContentShellCommit="b5770d0"
+# Everything below will go to this log directory
+rachelLogDir="/var/log/rachel"
+rachelLogFile="rachel-usbrecovery.tmp"
+rachelLog="$rachelLogDir/$rachelLogFile"
+exec 1>> $rachelLog 2>&1
+# Install OS updates (some needed for the new contentshell)
+cd $dirContentOffline/offlinepkgs
+dpkg -i *.deb
+# Update to the latest contentshell
+cd $dirContentOffline/contentshell
+cp -rf ./* $rachelWWW/ # overwrite current content with contentshell
+cp -rf ./.git $rachelWWW/ # copy over GitHub files
+mv /etc/init/procps.conf /etc/init/procps.conf.old 2>/dev/null # otherwise quite a pkgs won't install
+pecl info stem > /dev/null
+if [[ $? -ge 1 ]]; then 
+    echo; printStatus "Installing the stem module."
+    echo "\n" | pecl install $dirContentOffline/offlinepkgs/$stemPkg
+    # Add support for stem extension
+    echo '; configuration for php stem module' > /etc/php5/conf.d/stem.ini
+    echo 'extension=stem.so' >> /etc/php5/conf.d/stem.ini
+else
+    cd $rachelWWW
+    git checkout $gitContentShellCommit
+fi
+# Add header/date/time to install log file
+timestamp=$(date +"%b-%d-%Y-%H%M%Z")
+sudo mv $rachelLog $rachelLogDir/rachel-usbrecovery-$timestamp.log
+EOF
 }
 
 installBatteryWatch(){
@@ -2317,6 +2347,8 @@ printGood "Temporary file directory:  $installTmpDir"
 
 if [[ $1 == "" || $1 == "--help" || $1 == "-h" ]]; then
     printHelp
+elif [[ $1 =="--usbrecovery" ]]; then
+    recoverCAP
 else
     IAM=${0##*/} # Short basename
     while getopts ":irtu" opt
