@@ -1724,12 +1724,17 @@ repairRachelScripts(){
     echo; printStatus "Updating $rachelScriptsFile"
 
     # Add rachel-scripts.sh script
-    sed "s,%rachelScriptsLog%,$rachelScriptsLog,g" > $rachelScriptsFile << 'EOF'
+    sed "s,%rachelScriptsLog%,$rachelScriptsLog,g;s,%rachelScriptsDir%,$rachelScriptsDir,g" > $rachelScriptsFile << 'EOF'
 #!/bin/bash
 # Send output to log file
 rm -f %rachelScriptsLog%
 exec 1>> %rachelScriptsLog% 2>&1
 echo $(date) - Starting RACHEL script
+# Run once
+if -f %rachelScriptsDir%/runonce.sh; then
+    echo $(date) - Running "runonce" script
+    bash %rachelScriptsDir%/runonce.sh
+fi
 exit 0
 EOF
 
@@ -1774,15 +1779,15 @@ EOF
     # Clean rachel-scripts.sh
     sed -i '/Weaved/d' $rachelScriptsFile
     # Write restore commands to rachel-scripts.sh
-    sudo sed -i '5 a # Restore Weaved configs, if needed' $rachelScriptsFile
-    sudo sed -i '6 a echo \$(date) - Checking Weaved install' $rachelScriptsFile
-    sudo sed -i '7 a if [[ -d '$rachelRecoveryDir'/Weaved ]] && [[ `ls /usr/bin/Weaved*.sh 2>/dev/null | wc -l` == 0 ]]; then' $rachelScriptsFile
-    sudo sed -i '8 a echo \$(date) - Weaved backup files found but not installed, recovering now' $rachelScriptsFile
-    sudo sed -i '9 a mkdir -p /etc/weaved/services #Weaved' $rachelScriptsFile
-    sudo sed -i '10 a cp '$rachelRecoveryDir'/Weaved/Weaved*.conf /etc/weaved/services/' $rachelScriptsFile
-    sudo sed -i '11 a cp '$rachelRecoveryDir'/Weaved/*.sh /usr/bin/' $rachelScriptsFile
-    sudo sed -i '12 a reboot #Weaved' $rachelScriptsFile
-    sudo sed -i '13 a fi #Weaved' $rachelScriptsFile
+    sudo sed -i '10 a # Restore Weaved configs, if needed' $rachelScriptsFile
+    sudo sed -i '11 a echo \$(date) - Checking Weaved install' $rachelScriptsFile
+    sudo sed -i '12 a if [[ -d '$rachelRecoveryDir'/Weaved ]] && [[ `ls /usr/bin/Weaved*.sh 2>/dev/null | wc -l` == 0 ]]; then' $rachelScriptsFile
+    sudo sed -i '13 a echo \$(date) - Weaved backup files found but not installed, recovering now' $rachelScriptsFile
+    sudo sed -i '14 a mkdir -p /etc/weaved/services #Weaved' $rachelScriptsFile
+    sudo sed -i '15 a cp '$rachelRecoveryDir'/Weaved/Weaved*.conf /etc/weaved/services/' $rachelScriptsFile
+    sudo sed -i '16 a cp '$rachelRecoveryDir'/Weaved/*.sh /usr/bin/' $rachelScriptsFile
+    sudo sed -i '17 a reboot #Weaved' $rachelScriptsFile
+    sudo sed -i '18 a fi #Weaved' $rachelScriptsFile
 
     # Add battery monitoring start line 
     if [[ -f $rachelScriptsDir/batteryWatcher.sh ]]; then
@@ -1946,6 +1951,11 @@ updateContentShell(){
     fi
 }
 
+installOSUpdates(){
+    cd $dirContentOffline/offlinepkgs
+    dpkg -i *.deb
+}
+
 recoverCAP(){
     echo; printGood "Script set for 'OFFLINE' mode."
     internet="0"
@@ -1955,6 +1965,8 @@ recoverCAP(){
     updateRachelFolders
     # Update modules names to new structure
     updateModuleNames
+    # Install OS updates (some needed for the new contentshell)
+    installOSUpdates
     # Update to the latest contentshell
     updateContentShell
 }
