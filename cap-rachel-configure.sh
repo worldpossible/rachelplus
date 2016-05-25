@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160523.1500 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160524.2155 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -31,8 +31,9 @@ rachelScriptsLog="/var/log/rachel/rachel-scripts.log"
 kaliteUser="root"
 kaliteDir="/root/.kalite" # Installed as user 'root'
 kaliteContentDir="/media/RACHEL/kacontent"
-kaliteCurrentVersion="0.16.1"
-kaliteInstaller="ka-lite-bundle-$kaliteCurrentVersion.deb"
+kaliteCurrentVersion="0.16.5"
+kaliteInstaller="ka-lite-bundle_$kaliteCurrentVersion.deb"
+kalitePrimaryDownload="http://pantry.learningequality.org/downloads/ka-lite/0.16/installers/debian/ka-lite-bundle_0.16.5.deb"
 kaliteSettings="$kaliteDir/settings.py" 
 installTmpDir="/root/cap-rachel-install.tmp"
 rachelTmpDir="/media/RACHEL/cap-rachel-install.tmp"
@@ -52,10 +53,11 @@ buildHashList(){
 97ed60c5cdb905e016983b19a94b408a khan_assessment.zip
 15b6aa51d8292b7b0cbfe36927b8e714 khan_assessment_0.15.zip
 65fe77df27169637f20198901591dff0 ka-lite_content.zip
-bd905efe7046423c1f736717a59ef82c ka-lite-bundle-0.15.0.deb
-18998e1253ca720adb2b54159119ce80 ka-lite-bundle-0.15.1.deb
-996f610686da40ffd85ffbcb129c0c91 ka-lite-bundle-0.16.0.deb
-dbe9f1384988c00e409553f80edb49da ka-lite-bundle-0.16.1.deb
+bd905efe7046423c1f736717a59ef82c ka-lite-bundle_0.15.0.deb
+18998e1253ca720adb2b54159119ce80 ka-lite-bundle_0.15.1.deb
+996f610686da40ffd85ffbcb129c0c91 ka-lite-bundle_0.16.0.deb
+dbe9f1384988c00e409553f80edb49da ka-lite-bundle_0.16.1.deb
+4388fe0a84683a5f8561e29ee1749162 ka-lite-bundle_0.16.5.deb
 b61fdc3937aa226f34f685ba0bc29db1 kiwix-0.9-linux-i686.tar.bz2
 EOF
 }
@@ -245,7 +247,8 @@ onlineVariables(){
     RSYNCDIR="$rsyncOnline"
     ASSESSMENTITEMSJSON="wget -c $gitRachelPlus/assessmentitems.json -O /var/ka-lite/data/khan/assessmentitems.json"
     KACONTENTFOLDER=""
-    KALITEINSTALL="rsync -avhz --progress $contentOnline/$kaliteInstaller $installTmpDir/$kaliteInstaller"
+    KALITEINSTALL="wget -c $kalitePrimaryDownload -O $installTmpDir/$kaliteInstaller"
+#    KALITEINSTALL="rsync -avhz --progress $contentOnline/$kaliteInstaller $installTmpDir/$kaliteInstaller"
     KALITECONTENTINSTALL="rsync -avhz --progress $contentOnline/kacontent/ /media/RACHEL/kacontent/"
     KIWIXINSTALL="wget -c $wgetOnline/downloads/public_ftp/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $rachelTmpDir/kiwix-0.9-linux-i686.tar.bz2"
     WEAVEDINSTALL="wget -c https://github.com/weaved/installer/raw/master/Intel_CAP/weaved_IntelCAP.tar -O $rachelScriptsDir/weaved_IntelCAP.tar"
@@ -1525,8 +1528,9 @@ downloadKAContent(){
     echo "  - [English] - English content"
     echo "  - [Español] - Spanish content"
     echo "  - [Français] - French content"
+    echo "  - [Skip] downloading language content"
     echo
-    select menu in "English" "Español" "Français"; do
+    select menu in "English" "Español" "Français" "Skip"; do
         case $menu in
         English)
             kalang="en-kalite"
@@ -1540,10 +1544,16 @@ downloadKAContent(){
             kalang="fr-kalite"
             break
         ;;
+        Skip)
+            kalang=""
+            break
+        ;;
         esac
     done
-    echo; printStatus "Downloading KA Lite content from $RSYNCDIR"
-    rsync -Pavz --include *.mp4 --exclude assessment --exclude locale $RSYNCDIR/rachelmods/$kalang/content/ $kaliteContentDir
+    if [[ ! -z $kalang ]]; then
+        echo; printStatus "Downloading KA Lite content from $RSYNCDIR"
+        rsync -Pavz --include *.mp4 --exclude assessment --exclude locale $RSYNCDIR/rachelmods/$kalang/content/ $kaliteContentDir
+    fi
     commandStatus
     printGood "Done."
 }
@@ -1965,6 +1975,7 @@ recoverCAP(){
     updateRachelFolders
     # Update modules names to new structure
     updateModuleNames
+    ## Echo the following to runonce for update once the system reboots
     # Install OS updates (some needed for the new contentshell)
     installOSUpdates
     # Update to the latest contentshell
