@@ -1966,7 +1966,7 @@ installOSUpdates(){
     dpkg -i *.deb
 }
 
-recoverCAP(){
+usbRecovery(){
     echo; printGood "Script set for 'OFFLINE' mode."
     internet="0"
     dirContentOffline="/media/RACHEL"
@@ -2348,7 +2348,7 @@ printGood "Temporary file directory:  $installTmpDir"
 if [[ $1 == "" || $1 == "--help" || $1 == "-h" ]]; then
     printHelp
 elif [[ $1 =="--usbrecovery" ]]; then
-    recoverCAP
+    usbRecovery
 else
     IAM=${0##*/} # Short basename
     while getopts ":irtu" opt
