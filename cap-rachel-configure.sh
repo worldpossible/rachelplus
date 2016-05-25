@@ -2347,7 +2347,7 @@ printGood "Temporary file directory:  $installTmpDir"
 
 if [[ $1 == "" || $1 == "--help" || $1 == "-h" ]]; then
     printHelp
-elif [[ $1 =="--usbrecovery" ]]; then
+elif [[ $1 == "--usbrecovery" ]]; then
     usbRecovery
 else
     IAM=${0##*/} # Short basename
