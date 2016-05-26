@@ -27,5 +27,5 @@ Use script (above) option to download all content for a specific language.
 
 - - - - -
 
-The "shell" (mostly CSS, HTML, rsphider, and _h5ai) for RACHEL content is available at https://github.com/rachelproject/contentshell
+The "shell" (HTML, _h5ai, and a few tools) for RACHEL content is available at https://github.com/rachelproject/contentshell
 
