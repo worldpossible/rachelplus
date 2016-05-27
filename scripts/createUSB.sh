@@ -19,7 +19,7 @@ printQuestion(){
     echo -e "\x1B[01;33m[?]\x1B[0m $1"
 }
 
-version=4
+version=5
 timestamp=$(date +"%Y%m%d.%H%M")
 usbDate=$(date +"%Y%m%d")
 imageSavePath="$HOME"
@@ -231,12 +231,12 @@ removeOSXJunk(){
 
 setUSBVersion(){
 	echo; printStatus "Setting the RACHEL Recovery USB version."
-	awk 'BEGIN{OFS=FS="\""} $1~/VERSION=/ {$2="'$usbVersion'";}1' $mountName/update.sh > update.tmp; mv update.tmp update.sh
+	awk 'BEGIN{OFS=FS="\""} $1~/version=/ {$2="'$usbVersion'";}1' $mountName/update.sh > update.tmp; mv update.tmp update.sh
 }
 
 setRecoveryMETHOD(){
 	echo; printStatus "Setting the recovery method to '1' for the default recovery method."
-	awk 'BEGIN{OFS=FS="\""} $1~/METHOD=/ {$2="1";}1' $mountName/update.sh > update.tmp; mv update.tmp update.sh
+	awk 'BEGIN{OFS=FS="\""} $1~/method=/ {$2="1";}1' $mountName/update.sh > update.tmp; mv update.tmp update.sh
 }
 
 addDefaultModules(){
