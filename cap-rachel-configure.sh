@@ -1977,7 +1977,7 @@ usbRecovery(){
     # Update modules names to new structure
     updateModuleNames
     # Add runonce.sh script that will run on reboot
-    cat > $rachelScriptsDir/runonce.sh << 'EOF'
+    cat > $rachelPartition/runonce.sh << 'EOF'
 #!/bin/bash
 dirContentOffline="/media/RACHEL"
 rachelWWW="/media/RACHEL/rachel"
@@ -2007,15 +2007,15 @@ else
     cd $rachelWWW
     git checkout $gitContentShellCommit
 fi
-# Restart kalite
-kalite restart
 # Add header/date/time to install log file
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 sudo mv $rachelLog $rachelLogDir/rachel-usbrecovery-$timestamp.log
+echo "Executed runonce.sh at $(date)" > $rachelLogDir/runonce.log
 # Reboot
 rm -- "$0"
-echo "runonce ran" > /root/run.log
-reboot
+# Restart kalite
+kalite stop; kalite start
+#reboot
 EOF
 }
 
