@@ -58,23 +58,28 @@ echo "/dev/sda1        20G   44M   19G   1% /media/preloaded"
 echo "/dev/sda2        99G   60M   94G   1% /media/uploaded"
 echo "/dev/sda3       339G   67M  321G   1% /media/RACHEL"
 
-# Fixing '$rachelScriptsFile'
-echo; printStatus "Fixing $rachelScriptsFile"
+# Fixing $rachelScriptsFile
+echo; printStatus "Updating $rachelScriptsFile"
 
 # Add rachel-scripts.sh script
-sed "s,%rachelScriptsLog%,$rachelScriptsLog,g" > $rachelScriptsFile << 'EOF'
+sed "s,%rachelScriptsLog%,$rachelScriptsLog,g;s,%rachelScriptsDir%,$rachelScriptsDir,g" > $rachelScriptsFile << 'EOF'
 #!/bin/bash
 # Send output to log file
 rm -f %rachelScriptsLog%
 exec 1>> %rachelScriptsLog% 2>&1
 echo $(date) - Starting RACHEL script
+# Run once
+if [[ -f %rachelScriptsDir%/runonce.sh ]]; then
+    echo $(date) - Running "runonce" script
+    bash %rachelScriptsDir%/runonce.sh
+fi
 exit 0
 EOF
 
-
 # Add rachel-scripts.sh startup in /etc/rc.local
-sed -i '/scripts/d' /etc/rc.local
-sudo sed -i '$e echo "# Add RACHEL startup scripts"' /etc/rc.local
+sed -i '/RACHEL/d' /etc/rc.local
+sed -i '/rachel/d' /etc/rc.local
+sudo sed -i '$e echo "# Add rachel startup scripts"' /etc/rc.local
 sudo sed -i '$e echo "bash '$rachelScriptsFile'&"' /etc/rc.local
 
 # Check/re-add Kiwix
@@ -107,6 +112,53 @@ if [[ -d $kaliteDir ]]; then
     sudo sed -i '$e echo "sudo /usr/bin/kalite start"' $rachelScriptsFile
     printGood "Done."
 fi
+
+# Add Weaved restore back into rachel-scripts.sh
+# Clean rachel-scripts.sh
+sed -i '/Weaved/d' $rachelScriptsFile
+# Write restore commands to rachel-scripts.sh
+sudo sed -i '10 a # Restore Weaved configs, if needed' $rachelScriptsFile
+sudo sed -i '11 a echo \$(date) - Checking Weaved install' $rachelScriptsFile
+sudo sed -i '12 a if [[ -d '$rachelRecoveryDir'/Weaved ]] && [[ `ls /usr/bin/Weaved*.sh 2>/dev/null | wc -l` == 0 ]]; then' $rachelScriptsFile
+sudo sed -i '13 a echo \$(date) - Weaved backup files found but not installed, recovering now' $rachelScriptsFile
+sudo sed -i '14 a mkdir -p /etc/weaved/services #Weaved' $rachelScriptsFile
+sudo sed -i '15 a cp '$rachelRecoveryDir'/Weaved/Weaved*.conf /etc/weaved/services/' $rachelScriptsFile
+sudo sed -i '16 a cp '$rachelRecoveryDir'/Weaved/*.sh /usr/bin/' $rachelScriptsFile
+sudo sed -i '17 a reboot #Weaved' $rachelScriptsFile
+sudo sed -i '18 a fi #Weaved' $rachelScriptsFile
+
+# Add battery monitoring start line 
+if [[ -f $rachelScriptsDir/batteryWatcher.sh ]]; then
+    # Clean rachel-scripts.sh
+    sed -i '/battery/d' $rachelScriptsFile
+    sed -i '$e echo "# Start battery monitoring"' $rachelScriptsFile
+    sed -i '$e echo "echo \\$(date) - Starting battery monitor"' $rachelScriptsFile
+    sed -i '$e echo "bash '$rachelScriptsDir'/batteryWatcher.sh&"' $rachelScriptsFile
+fi
+
+# Check for disable reset button flag
+echo; printStatus "Added check to disable the reset button"
+sed -i '$e echo "\# Check if we should disable reset button"' $rachelScriptsFile
+sed -i '$e echo "echo \\$(date) - Checking if we should disable reset button"' $rachelScriptsFile
+sed -i '$e echo "if [[ -f '$rachelScriptsDir'/disable_reset ]]; then killall reset_button; echo \\"Reset button disabled\\"; fi"' $rachelScriptsFile
+printGood "Done."
+
+# Check/enable/disable Kiwix library modules
+if [[ -f $rachelScriptsDir/rachelKiwixStart.sh ]]; then
+    echo; printStatus "Updating the Kiwix library"
+    sed -i '$e echo "\# Updating the Kiwix library"' $rachelScriptsFile
+    sed -i '$e echo "echo \\$(date) - Updating the Kiwix Library"' $rachelScriptsFile
+    sed -i '$e echo "bash '$rachelScriptsDir'/rachelKiwixStart.sh"' $rachelScriptsFile
+    printGood "Done."
+fi
+
+# Add RACHEL script complete line
+sed -i '$e echo "echo \\$(date) - RACHEL startup completed"' $rachelScriptsFile
+echo; printGood "Rachel start script update complete."
+
+
+
+
 
 # Remove outdated startup script
 rm -f /root/iptables-rachel.sh
@@ -152,15 +204,6 @@ $rachelScriptsDir/batteryWatcher.sh&
 printGood "Script started...monitoring battery."
 echo "Logging shutdowns to $rachelLogDir/shutdown.log"
 
-# Add battery monitoring start line 
-if [[ -f $rachelScriptsDir/batteryWatcher.sh ]]; then
-    # Clean rachel-scripts.sh
-    sed -i '/battery/d' $rachelScriptsFile
-    sed -i '$e echo "# Start battery monitoring"' $rachelScriptsFile
-    sed -i '$e echo "echo \\$(date) - Starting battery monitor"' $rachelScriptsFile
-    sed -i '$e echo "bash '$rachelScriptsDir'/batteryWatcher.sh&"' $rachelScriptsFile
-fi
-
 # Add Kiwix library update script
 echo; printStatus "Creating the Kiwix library rebuild/repair script."
 # Create rachelKiwixStart script
@@ -184,7 +227,8 @@ library="/media/RACHEL/kiwix/data/library/library.xml"
 rm -f $library; touch $library
 
 # Find all the zim files in the modules directoy
-ls /media/RACHEL/rachel/modules/*/data/content/*.zim|sed 's/ /\n/g' > $tmp
+ls /media/RACHEL/rachel/modules/*/data/content/*.zim* 2>/dev/null|sed 's/ /\n/g' > $tmp
+ls /media/RACHEL/kiwix/data/content/*.zim* 2>/dev/null|sed 's/ /\n/g' >> $tmp
 
 # Remove modules that are marked hidden on main menu
 for d in $(sqlite3 /media/RACHEL/rachel/admin.sqlite 'select moddir from modules where hidden = 1'); do
@@ -198,8 +242,10 @@ for i in $(cat $tmp); do
     zim="$(echo $i | cut -d'/' -f9)"
     if [[ -d "$moddir/data/index/$zim.idx" ]]; then
         cmd="$cmd --indexPath=$moddir/data/index/$zim.idx"
+    elif [[ -d "/media/RACHEL/kiwix/data/index/$zim.idx" ]]; then
+        cmd="$cmd --indexPath=/media/RACHEL/kiwix/data/index/$zim.idx"
     fi
-    $cmd
+    $cmd 2>/dev/null
     if [[ $? -ge 1 ]]; then echo "Couldn't add $zim to library"; fi
 done
 
@@ -210,13 +256,6 @@ rm -f $tmp
 EOF
 chmod +x $rachelScriptsDir/rachelKiwixStart.sh
 printGood "Done."
-
-# Check for disable reset button flag
-echo; printStatus "Added check to disable the reset button"
-sed -i '$e echo "\# Check if we should disable reset button"' $rachelScriptsFile
-sed -i '$e echo "echo \\$(date) - Checking if we should disable reset button"' $rachelScriptsFile
-sed -i '$e echo "if [[ -f '$rachelScriptsDir'/disable_reset ]]; then killall reset_button; echo \\"Reset button disabled\\"; fi"' $rachelScriptsFile
-printGood "Done."         
 
 # Add RACHEL script complete line
 sed -i '$e echo "echo \\$(date) - RACHEL startup completed"' $rachelScriptsFile

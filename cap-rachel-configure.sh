@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160524.2155 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160526.2029 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -148,12 +148,12 @@ cleanup(){
     # Store log file
     mv $rachelLog $rachelLogDir/cap-rachel-configure-$timestamp.log
     echo; printGood "Log file saved to: $rachelLogDir/cap-rachel-configure-$timestamp.log"
+    # If requested, do not ask to cleanup
+    if [[ $noCleanup == "1" ]]; then exit 1; fi
     # Provide option to NOT clean up tmp files
     echo; printQuestion "Were there errors?"
     read -p "Enter 'y' to exit without cleaning up temporary folders/files. (y/N) " REPLY
-    if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
-        exit 1
-    fi
+    if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then exit 1; fi
     # Ensure the start script are executable
     chmod +x /etc/rc.local $rachelScriptsFile
     # Deleting the install script commands
@@ -519,7 +519,7 @@ EOF
     printGood "Done."
 }
 
-kiwix(){
+installKiwix(){
     echo; printStatus "Installing kiwix."
     $KIWIXINSTALL
     if [[ $internet == "0" ]]; then cd $dirContentOffline; else cd $rachelTmpDir; fi
@@ -531,8 +531,8 @@ kiwix(){
     echo; printStatus "Starting Kiwix server."
     /var/kiwix/bin/kiwix-serve --daemon --port=81 --library /media/RACHEL/kiwix/data/library/library.xml
     echo; printStatus "Setting Kiwix to start on boot."
-    # Remove old kiwix boot lines from $rachelScriptsFile
-    sed -i '/kiwix/d' $rachelScriptsFile
+    # Remove old kiwix boot lines from /etc/rc.local
+    sed -i '/kiwix/d' /etc/rc.local
     # Clean up current rachel-scripts.sh file
     sed -i '/kiwix/d' $rachelScriptsFile
     # Add lines to $rachelScriptsFile that will start kiwix on boot
@@ -617,8 +617,8 @@ library="/media/RACHEL/kiwix/data/library/library.xml"
 rm -f $library; touch $library
 
 # Find all the zim files in the modules directoy
-ls /media/RACHEL/rachel/modules/*/data/content/*.zim*|sed 's/ /\n/g' > $tmp
-ls /media/RACHEL/kiwix/data/content/*.zim*|sed 's/ /\n/g' >> $tmp
+ls /media/RACHEL/rachel/modules/*/data/content/*.zim* 2>/dev/null|sed 's/ /\n/g' > $tmp
+ls /media/RACHEL/kiwix/data/content/*.zim* 2>/dev/null|sed 's/ /\n/g' >> $tmp
 
 # Remove modules that are marked hidden on main menu
 for d in $(sqlite3 /media/RACHEL/rachel/admin.sqlite 'select moddir from modules where hidden = 1'); do
@@ -635,7 +635,7 @@ for i in $(cat $tmp); do
     elif [[ -d "/media/RACHEL/kiwix/data/index/$zim.idx" ]]; then
         cmd="$cmd --indexPath=/media/RACHEL/kiwix/data/index/$zim.idx"
     fi
-    $cmd
+    $cmd 2>/dev/null
     if [[ $? -ge 1 ]]; then echo "Couldn't add $zim to library"; fi
 done
 
@@ -1741,7 +1741,7 @@ rm -f %rachelScriptsLog%
 exec 1>> %rachelScriptsLog% 2>&1
 echo $(date) - Starting RACHEL script
 # Run once
-if -f %rachelScriptsDir%/runonce.sh; then
+if [[ -f %rachelScriptsDir%/runonce.sh ]]; then
     echo $(date) - Running "runonce" script
     bash %rachelScriptsDir%/runonce.sh
 fi
@@ -1969,6 +1969,7 @@ installOSUpdates(){
 usbRecovery(){
     echo; printGood "Script set for 'OFFLINE' mode."
     internet="0"
+    noCleanup="1"
     dirContentOffline="/media/RACHEL"
     offlineVariables
     # Update rachel folder structure
@@ -2006,9 +2007,15 @@ else
     cd $rachelWWW
     git checkout $gitContentShellCommit
 fi
+# Restart kalite
+kalite restart
 # Add header/date/time to install log file
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 sudo mv $rachelLog $rachelLogDir/rachel-usbrecovery-$timestamp.log
+# Reboot
+rm -- "$0"
+echo "runonce ran" > /root/run.log
+reboot
 EOF
 }
 
@@ -2124,7 +2131,7 @@ interactiveMode(){
             ;;
 
             Install-Kiwix)
-            kiwix
+            installKiwix
             repairKiwixLibrary
             repairRachelScripts
             whatToDo
