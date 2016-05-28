@@ -550,8 +550,8 @@ repairKiwixLibrary(){
     rm -f $library; touch $library
 
     # Find all the zim files in the modules directoy
-    ls $rachelWWW/modules/*/data/content/*.zim*|sed 's/ /\n/g' > $tmp
-    ls $rachelPartition/kiwix/data/content/*.zim*|sed 's/ /\n/g' >> $tmp
+    ls $rachelWWW/modules/*/data/content/*.zim* 2>/dev/null |sed 's/ /\n/g' > $tmp
+    ls $rachelPartition/kiwix/data/content/*.zim* 2>/dev/null |sed 's/ /\n/g' >> $tmp
 
     # Check for sqlite3 install
     checkForHiddenModules(){
@@ -1220,7 +1220,8 @@ contentModuleInstall(){
     fi
     SELECTMODULE=1
 #    MODULELIST=$(rsync --list-only $RSYNCDIR/rachelmods/ | egrep '^d' | awk '{print $5}' | tail -n +2)
-    MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" --include-from "$rachelScriptsDir/rsyncInclude.list" --exclude '*' $RSYNCDIR/rachelmods/ | awk '{print $5}' | tail -n +2)
+#    MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" --include-from "$rachelScriptsDir/rsyncInclude.list" --exclude '*' $RSYNCDIR/rachelmods/ | awk '{print $5}' | tail -n +2)
+    MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" --include-from "$rachelScriptsDir/rsyncInclude.list" $RSYNCDIR/rachelmods/ | awk '{print $5}' | tail -n +2)
     while [[ $SELECTMODULE == 1 ]]; do
         echo; printStatus "What RACHEL module would you like to select for download or update?"
         echo "(Ctrl-C to cancel module install)"
