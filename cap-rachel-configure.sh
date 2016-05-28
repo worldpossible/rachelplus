@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160527.0901 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160527.2337 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -529,6 +529,7 @@ installKiwix(){
     mkdir -p /media/RACHEL/kiwix
     # Start up Kiwix
     echo; printStatus "Starting Kiwix server."
+    touch /media/RACHEL/kiwix/data/library/library.xml
     /var/kiwix/bin/kiwix-serve --daemon --port=81 --library /media/RACHEL/kiwix/data/library/library.xml
     echo; printStatus "Setting Kiwix to start on boot."
     # Remove old kiwix boot lines from /etc/rc.local
@@ -617,8 +618,8 @@ library="/media/RACHEL/kiwix/data/library/library.xml"
 rm -f $library; touch $library
 
 # Find all the zim files in the modules directoy
-ls /media/RACHEL/rachel/modules/*/data/content/*.zim* 2>/dev/null|sed 's/ /\n/g' > $tmp
-ls /media/RACHEL/kiwix/data/content/*.zim* 2>/dev/null|sed 's/ /\n/g' >> $tmp
+ls /media/RACHEL/rachel/modules/*/data/content/*.zim* 2>/dev/null | sed 's/ /\n/g' > $tmp
+ls /media/RACHEL/kiwix/data/content/*.zim* 2>/dev/null | sed 's/ /\n/g' >> $tmp
 
 # Remove modules that are marked hidden on main menu
 for d in $(sqlite3 /media/RACHEL/rachel/admin.sqlite 'select moddir from modules where hidden = 1'); do
@@ -664,6 +665,11 @@ installDefaultWeavedServices(){
         # Run installer
         cd $rachelScriptsDir/weaved_software
         bash install.sh
+        # Remove port 80 service
+        echo; printStatus "Removing unecessary Port 80 service."
+        pid=$(ps aux | grep -v grep | grep "/usr/bin/weavedConnectd.linux -f /etc/weaved/services/Weavedhttp80.conf -d /var/run/Weavedhttp80.pid" | awk '{print $2}')
+        if [[ ! -z $pid ]]; then kill $pid; fi
+        rm -f /etc/weaved/services/Weavedhttp80.conf /var/run/Weavedhttp80.pid /usr/bin/Weavedhttp80.sh /var/log/Weavedhttp80.log 2>/dev/null
         echo; printGood "Weaved service install complete."
         printGood "NOTE: An Weaved service uninstaller is available from the Utilities menu of this script."
     else
@@ -1727,7 +1733,7 @@ updateModuleNames(){
         break
     done
     ## Remove these
-    rm -f $rachelPartition/kiwix/data/content/wikipedia_en_ray_charles_2015-06.zim $rachelPartition/kiwix/data/index/wikipedia_en_ray_charles_2015-06.zim.idx
+    rm -rf $rachelPartition/kiwix/data/content/wikipedia_en_ray_charles_2015-06.zim $rachelPartition/kiwix/data/index/wikipedia_en_ray_charles_2015-06.zim.idx
 }
 
 repairRachelScripts(){
@@ -1984,15 +1990,20 @@ dirContentOffline="/media/RACHEL"
 rachelWWW="/media/RACHEL/rachel"
 stemPkg="stem-1.5.1.tgz"
 gitContentShellCommit="b5770d0"
-# Everything below will go to this log directory
 rachelLogDir="/var/log/rachel"
 rachelLogFile="rachel-usbrecovery.tmp"
 rachelLog="$rachelLogDir/$rachelLogFile"
 exec 1>> $rachelLog 2>&1
+echo "[+] Starting USB Recovery runonce script - $(date)"
+# Copy latest cap-rachel-configure.sh script to /root
+echo; echo "[*] Copying USB version of cap-rachel-configure.sh to /root"
+cp $rachelPartition/cap-rachel-configure.sh /root/
 # Install OS updates (some needed for the new contentshell)
+echo; echo "[*] Installing OS updates."
 cd $dirContentOffline/offlinepkgs
 dpkg -i *.deb
 # Update to the latest contentshell
+echo; echo "[*] Updating to latest contentshell."
 cd $dirContentOffline/contentshell
 cp -rf ./* $rachelWWW/ # overwrite current content with contentshell
 cp -rf ./.git $rachelWWW/ # copy over GitHub files
@@ -2008,6 +2019,7 @@ else
     cd $rachelWWW
     git checkout $gitContentShellCommit
 fi
+echo "[+] Completed USB Recovery runonce script - $(date)"
 # Add header/date/time to install log file
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 sudo mv $rachelLog $rachelLogDir/rachel-usbrecovery-$timestamp.log
