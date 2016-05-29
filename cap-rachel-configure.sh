@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160527.2337 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160528.2053 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -94,6 +94,59 @@ buildRsyncLangExcludeList(){
 *afristory-za
 *khan_academy
 *khan_health
+EOF
+}
+
+buildENplusLocalList(){
+    cat > $rachelScriptsDir/EN_plus_local.list << 'EOF'
+en-afristory
+en-ck12
+en-file_share
+en-GCF2015
+en-ebooks
+en-hesperian_health
+en-infonet
+en-math_expression
+en-asst_medical
+en-medline_plus
+en-scratch
+en-musictheory
+en-olpc
+en-practical_action
+en-understanding_algebra
+en-PhET
+en-radiolab
+en-powertyping
+en-iicba
+en-wikibooks
+en-wikipedia_for_schools
+en-wikisource
+en-wikiversity
+en-wikivoyage
+en-wiktionary
+en-windows_apps
+en-worldmap
+en-wikipedia
+en-oya
+en-law_library
+en-fantastic_phonics
+en-wikipedia
+en-TED
+EOF
+}
+
+buildFRplusLocalList(){
+    cat > $rachelScriptsDir/FR_plus_local.list << 'EOF'
+fr-ebooksgratuits
+fr-haitifutur
+fr-phet-haiti
+fr-wikipedia
+fr-wikibooks
+fr-wikipedia
+fr-wikisource
+fr-wikiversity
+fr-wikivoyage
+fr-wiktionary
 EOF
 }
 
@@ -528,9 +581,10 @@ installKiwix(){
     # Make content directory
     mkdir -p /media/RACHEL/kiwix
     # Start up Kiwix
-    echo; printStatus "Starting Kiwix server."
-    touch /media/RACHEL/kiwix/data/library/library.xml
-    /var/kiwix/bin/kiwix-serve --daemon --port=81 --library /media/RACHEL/kiwix/data/library/library.xml
+## Commented out as there are no zim files populating the library.xml file until the repairKiwixLibrary function runs (happens after the install)
+#    echo; printStatus "Starting Kiwix server."
+#    touch /media/RACHEL/kiwix/data/library/library.xml
+#    /var/kiwix/bin/kiwix-serve --daemon --port=81 --library /media/RACHEL/kiwix/data/library/library.xml
     echo; printStatus "Setting Kiwix to start on boot."
     # Remove old kiwix boot lines from /etc/rc.local
     sed -i '/kiwix/d' /etc/rc.local
@@ -1257,6 +1311,48 @@ contentModuleInstall(){
     rm -f /tmp/module.lst
 }
 
+contentModuleListInstall(){
+    if [[ -f /tmp/module.lst ]]; then
+        echo; printStatus "Your selected module list:"
+        # Sort/unique the module list
+        cat /tmp/module.lst
+        echo; printQuestion "Do you want to use this module list?"
+        read -p "    Enter (Y/n) " REPLY
+        if [[ $REPLY =~ ^[Nn]$ ]]; then rm -f /tmp/module.lst; fi
+    fi
+    SELECTMODULE=1
+#    MODULELIST=$(rsync --list-only $RSYNCDIR/rachelmods/ | egrep '^d' | awk '{print $5}' | tail -n +2)
+#    MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" --include-from "$rachelScriptsDir/rsyncInclude.list" --exclude '*' $RSYNCDIR/rachelmods/ | awk '{print $5}' | tail -n +2)
+    MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" --include-from "$rachelScriptsDir/rsyncInclude.list" $RSYNCDIR/rachelmods/ | awk '{print $5}' | tail -n +2)
+    while [[ $SELECTMODULE == 1 ]]; do
+        echo; printStatus "What RACHEL module would you like to select for download or update?"
+        echo "(Ctrl-C to cancel module install)"
+        echo
+        select module in $MODULELIST; do 
+            echo "$module" >> /tmp/module.lst
+            echo; printStatus "Added module $module to the install/update cue."
+            break
+        done
+        echo; printStatus "Your selected module list:"
+        sort -u /tmp/module.lst > /tmp/module.tmp; mv /tmp/module.tmp /tmp/module.lst
+        cat /tmp/module.lst
+        echo; printQuestion "Do you want to select another module?"
+        read -p "    Enter (y/N) " REPLY
+        if [[ $REPLY =~ ^[Yy]$ ]]; then SELECTMODULE=1; else SELECTMODULE=0; fi
+    done
+    echo; printQuestion "Are you ready to install your selected modules?"
+    read -p "    Enter (y/N) " REPLY
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        while read m; do
+            echo; printStatus "Downloading $m"
+            rsync -avz --delete $RSYNCDIR/rachelmods/$m $rachelWWW/modules/
+            commandStatus
+            printGood "Done."
+        done < /tmp/module.lst
+    fi
+    rm -f /tmp/module.lst
+}
+
 contentLanguageInstall(){
     languageMenu(){
         echo; printQuestion "What additional language would like to download/update?"
@@ -1741,16 +1837,16 @@ repairRachelScripts(){
     echo; printStatus "Updating $rachelScriptsFile"
 
     # Add rachel-scripts.sh script
-    sed "s,%rachelScriptsLog%,$rachelScriptsLog,g;s,%rachelScriptsDir%,$rachelScriptsDir,g" > $rachelScriptsFile << 'EOF'
+    sed "s,%rachelScriptsLog%,$rachelScriptsLog,g;s,%rachelPartition%,$rachelPartition,g" > $rachelScriptsFile << 'EOF'
 #!/bin/bash
 # Send output to log file
 rm -f %rachelScriptsLog%
 exec 1>> %rachelScriptsLog% 2>&1
 echo $(date) - Starting RACHEL script
 # Run once
-if [[ -f %rachelScriptsDir%/runonce.sh ]]; then
+if [[ -f %rachelPartition%/runonce.sh ]]; then
     echo $(date) - Running "runonce" script
-    bash %rachelScriptsDir%/runonce.sh
+    bash %rachelPartition%/runonce.sh
 fi
 exit 0
 EOF
@@ -1993,6 +2089,7 @@ gitContentShellCommit="b5770d0"
 rachelLogDir="/var/log/rachel"
 rachelLogFile="rachel-usbrecovery.tmp"
 rachelLog="$rachelLogDir/$rachelLogFile"
+rachelPartition="/media/RACHEL"
 exec 1>> $rachelLog 2>&1
 echo "[+] Starting USB Recovery runonce script - $(date)"
 # Copy latest cap-rachel-configure.sh script to /root
