@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160528.2053 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160529.2153 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -97,59 +97,6 @@ buildRsyncLangExcludeList(){
 EOF
 }
 
-buildENplusLocalList(){
-    cat > $rachelScriptsDir/EN_plus_local.list << 'EOF'
-en-afristory
-en-ck12
-en-file_share
-en-GCF2015
-en-ebooks
-en-hesperian_health
-en-infonet
-en-math_expression
-en-asst_medical
-en-medline_plus
-en-scratch
-en-musictheory
-en-olpc
-en-practical_action
-en-understanding_algebra
-en-PhET
-en-radiolab
-en-powertyping
-en-iicba
-en-wikibooks
-en-wikipedia_for_schools
-en-wikisource
-en-wikiversity
-en-wikivoyage
-en-wiktionary
-en-windows_apps
-en-worldmap
-en-wikipedia
-en-oya
-en-law_library
-en-fantastic_phonics
-en-wikipedia
-en-TED
-EOF
-}
-
-buildFRplusLocalList(){
-    cat > $rachelScriptsDir/FR_plus_local.list << 'EOF'
-fr-ebooksgratuits
-fr-haitifutur
-fr-phet-haiti
-fr-wikipedia
-fr-wikibooks
-fr-wikipedia
-fr-wikisource
-fr-wikiversity
-fr-wikivoyage
-fr-wiktionary
-EOF
-}
-
 printGood(){
     echo -e "\x1B[01;32m[+]\x1B[0m $1"
 }
@@ -197,7 +144,6 @@ loggingStart(){
 cleanup(){
     kill $!; trap 'kill $1' SIGTERM
 #    echo; printError "Cancelled by user."
-
     # Store log file
     mv $rachelLog $rachelLogDir/cap-rachel-configure-$timestamp.log
     echo; printGood "Log file saved to: $rachelLogDir/cap-rachel-configure-$timestamp.log"
@@ -220,7 +166,7 @@ cleanup(){
 testingScript(){
     set -x
 
-    updateModuleNames
+    contentModuleListInstall
 
     set +x
     exit 1
@@ -1312,45 +1258,26 @@ contentModuleInstall(){
 }
 
 contentModuleListInstall(){
-    if [[ -f /tmp/module.lst ]]; then
-        echo; printStatus "Your selected module list:"
-        # Sort/unique the module list
-        cat /tmp/module.lst
-        echo; printQuestion "Do you want to use this module list?"
-        read -p "    Enter (Y/n) " REPLY
-        if [[ $REPLY =~ ^[Nn]$ ]]; then rm -f /tmp/module.lst; fi
-    fi
-    SELECTMODULE=1
-#    MODULELIST=$(rsync --list-only $RSYNCDIR/rachelmods/ | egrep '^d' | awk '{print $5}' | tail -n +2)
-#    MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" --include-from "$rachelScriptsDir/rsyncInclude.list" --exclude '*' $RSYNCDIR/rachelmods/ | awk '{print $5}' | tail -n +2)
-    MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" --include-from "$rachelScriptsDir/rsyncInclude.list" $RSYNCDIR/rachelmods/ | awk '{print $5}' | tail -n +2)
-    while [[ $SELECTMODULE == 1 ]]; do
-        echo; printStatus "What RACHEL module would you like to select for download or update?"
-        echo "(Ctrl-C to cancel module install)"
-        echo
-        select module in $MODULELIST; do 
-            echo "$module" >> /tmp/module.lst
-            echo; printStatus "Added module $module to the install/update cue."
+    echo; printQuestion "What is the full path to the line-seperated module list you would like to install (i.e. /root/<module.list>)?"; read userModuleList || return
+    while :; do
+        if [[ ! -f $userModuleList ]]; then
+            echo; printError "FILE NOT FOUND - You must provide a file path of a location accessible from the CAP."
+            echo; printQuestion "What is the full path to the file location for the module list you would like to install?"; read userModuleList
+        else
             break
-        done
-        echo; printStatus "Your selected module list:"
-        sort -u /tmp/module.lst > /tmp/module.tmp; mv /tmp/module.tmp /tmp/module.lst
-        cat /tmp/module.lst
-        echo; printQuestion "Do you want to select another module?"
-        read -p "    Enter (y/N) " REPLY
-        if [[ $REPLY =~ ^[Yy]$ ]]; then SELECTMODULE=1; else SELECTMODULE=0; fi
+        fi
     done
-    echo; printQuestion "Are you ready to install your selected modules?"
-    read -p "    Enter (y/N) " REPLY
+    echo; printStatus "Here is your list of modules:"
+    cat $userModuleList
+    echo; printQuestion "Are you ready to install your selected modules? (y/N) "; read REPLY
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         while read m; do
             echo; printStatus "Downloading $m"
             rsync -avz --delete $RSYNCDIR/rachelmods/$m $rachelWWW/modules/
             commandStatus
             printGood "Done."
-        done < /tmp/module.lst
+        done < $userModuleList
     fi
-    rm -f /tmp/module.lst
 }
 
 contentLanguageInstall(){
@@ -2095,6 +2022,7 @@ echo "[+] Starting USB Recovery runonce script - $(date)"
 # Copy latest cap-rachel-configure.sh script to /root
 echo; echo "[*] Copying USB version of cap-rachel-configure.sh to /root"
 cp $rachelPartition/cap-rachel-configure.sh /root/
+chmod +x $rachelPartition/cap-rachel-configure.sh
 # Install OS updates (some needed for the new contentshell)
 echo; echo "[*] Installing OS updates."
 cd $dirContentOffline/offlinepkgs
@@ -2124,7 +2052,7 @@ echo "Executed runonce.sh at $(date)" > $rachelLogDir/runonce.log
 # Reboot
 rm -- "$0"
 # Restart kalite
-kalite stop; kalite start
+#kalite stop; kalite start
 #reboot
 EOF
 }
@@ -2193,7 +2121,7 @@ updateRachelFolders(){
 # Loop to redisplay main menu
 whatToDo(){
     echo; printQuestion "What would you like to do next?"
-    echo "1)Initial Install  2)Install/Upgrade KALite  3)Install Kiwix  4)Install Default Weaved Services  5)Install Weaved Service  6)Add Module  7)Add Language  8)Update Modules  9)Download-KA-Content  10)Utilities  11)Exit"
+    echo "1)Initial Install  2)Install/Upgrade KALite  3)Install Kiwix  4)Install Default Weaved Services  5)Install Weaved Service  6)Add Module  7)Add Module List  8)Add Language  9)Update Modules  10)Download-KA-Content  11)Utilities  12)Exit"
 }
 
 # Interactive mode menu
@@ -2205,6 +2133,7 @@ interactiveMode(){
     echo "  - [Install-Default-Weaved-Services] installs the default CAP Weaved services for ports 22, 80, 8080"
     echo "  - [Install-Weaved-Service] adds a Weaved service to an online account you provide during install"
     echo "  - [Add-Module] lists current available modules; installs one at a time"
+    echo "  - [Add-Module-List] installs the list of modules that your provide"
     echo "  - [Add-Language] installs all modules of a language (does not install KA Lite or full Wikipedia)"
     echo "  - [Update-Modules] updates the currently installed modules"
     echo "  - [Download-KA-Content] checks for updated KA Lite video content"
@@ -2221,7 +2150,7 @@ interactiveMode(){
     echo "    - Testing script"
     echo "  - [Exit] the installation script"
     echo
-    select menu in "Initial-Install" "Install-Upgrade-KALite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Module" "Add-Language" "Update-Modules" "Download-KA-Content" "Utilities" "Exit"; do
+    select menu in "Initial-Install" "Install-Upgrade-KALite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Module" "Add-Module-List" "Add-Language" "Update-Modules" "Download-KA-Content" "Utilities" "Exit"; do
             case $menu in
             Initial-Install)
             newInstall
@@ -2263,6 +2192,13 @@ interactiveMode(){
             Add-Module)
             updateModuleNames
             contentModuleInstall
+            repairKiwixLibrary
+            whatToDo
+            ;;
+
+            Add-Module-List)
+            updateModuleNames
+            contentModuleListInstall
             repairKiwixLibrary
             whatToDo
             ;;
