@@ -143,7 +143,7 @@ sanitize(){
 	# Clean off ka-lite_content.zip (if exists)
 	rm -f /media/RACHEL/ka-lite_content.zip
 	# Clean previous files from running the generate_recovery.sh script 
-	rm -rf /recovery/20* $rachelRecoveryDir/20* $rachelRecoveryDir/create*
+	rm -rf /recovery/20* $rachelRecoveryDir/20*
 	# Clean bash history
 	echo "" > /root/.bash_history
 	echo; printQuestion "Do you want to remove any currently activated Weaved services and run the default Weaved setup? (y/N)"
