@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160529.2153 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160530.2154 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -143,12 +143,11 @@ loggingStart(){
 
 cleanup(){
     kill $!; trap 'kill $1' SIGTERM
-#    echo; printError "Cancelled by user."
+    # If requested, do not ask to cleanup
+    if [[ $noCleanup == "1" ]]; then exit 1; fi
     # Store log file
     mv $rachelLog $rachelLogDir/cap-rachel-configure-$timestamp.log
     echo; printGood "Log file saved to: $rachelLogDir/cap-rachel-configure-$timestamp.log"
-    # If requested, do not ask to cleanup
-    if [[ $noCleanup == "1" ]]; then exit 1; fi
     # Provide option to NOT clean up tmp files
     echo; printQuestion "Were there errors?"
     read -p "Enter 'y' to exit without cleaning up temporary folders/files. (y/N) " REPLY
