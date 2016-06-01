@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160530.2154 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160601.0749 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -2021,7 +2021,7 @@ echo "[+] Starting USB Recovery runonce script - $(date)"
 # Copy latest cap-rachel-configure.sh script to /root
 echo; echo "[*] Copying USB version of cap-rachel-configure.sh to /root"
 cp $rachelPartition/cap-rachel-configure.sh /root/
-chmod +x $rachelPartition/cap-rachel-configure.sh
+chmod +x /root/cap-rachel-configure.sh
 # Install OS updates (some needed for the new contentshell)
 echo; echo "[*] Installing OS updates."
 cd $dirContentOffline/offlinepkgs
@@ -2050,9 +2050,9 @@ sudo mv $rachelLog $rachelLogDir/rachel-usbrecovery-$timestamp.log
 echo "Executed runonce.sh at $(date)" > $rachelLogDir/runonce.log
 # Reboot
 rm -- "$0"
+reboot
 # Restart kalite
 #kalite stop; kalite start
-#reboot
 EOF
 }
 
