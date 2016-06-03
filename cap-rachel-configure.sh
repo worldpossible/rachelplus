@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160601.0749 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160601.1922 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -2006,16 +2006,16 @@ usbRecovery(){
     # Update modules names to new structure
     updateModuleNames
     # Add runonce.sh script that will run on reboot
-    cat > $rachelPartition/runonce.sh << 'EOF'
+    sed "s,%dirContentOffline%,$dirContentOffline,g;s,%rachelWWW%,$rachelWWW,g;s,%stemPkg%,$stemPkg,g;s,%gitContentShellCommit%,$gitContentShellCommit,g;s,%rachelLogDir%,$rachelLogDir,g;s,%rachelLogFile%,$rachelLogFile,g;s,%rachelPartition%,$rachelPartition,g" > $rachelPartition/runonce.sh << 'EOF'
 #!/bin/bash
-dirContentOffline="/media/RACHEL"
-rachelWWW="/media/RACHEL/rachel"
-stemPkg="stem-1.5.1.tgz"
-gitContentShellCommit="b5770d0"
-rachelLogDir="/var/log/rachel"
-rachelLogFile="rachel-usbrecovery.tmp"
+rachelPartition="%rachelPartition%"
+dirContentOffline="%rachelPartition%"
+rachelWWW="%rachelWWW%"
+stemPkg="%stemPkg%"
+gitContentShellCommit="%gitContentShellCommit%"
+rachelLogDir="%rachelLogDir%"
+rachelLogFile="%rachelLogFile%"
 rachelLog="$rachelLogDir/$rachelLogFile"
-rachelPartition="/media/RACHEL"
 exec 1>> $rachelLog 2>&1
 echo "[+] Starting USB Recovery runonce script - $(date)"
 # Copy latest cap-rachel-configure.sh script to /root
@@ -2026,6 +2026,11 @@ chmod +x /root/cap-rachel-configure.sh
 echo; echo "[*] Installing OS updates."
 cd $dirContentOffline/offlinepkgs
 dpkg -i *.deb
+# Install kalite sqlite database(s)
+echo; echo "[*] If available, installing kalite sqlite databases."
+if [[ -f $dirContentOffline/kalitedb/content_khan_en.sqlite ]]; then cp $dirContentOffline/kalitedb/content_khan_en.sqlite /root/.kalite/database/; fi
+if [[ -f $dirContentOffline/kalitedb/content_khan_es.sqlite ]]; then cp $dirContentOffline/kalitedb/content_khan_es.sqlite /root/.kalite/database/; fi
+if [[ -f $dirContentOffline/kalitedb/content_khan_fr.sqlite ]]; then cp $dirContentOffline/kalitedb/content_khan_fr.sqlite /root/.kalite/database/; fi
 # Update to the latest contentshell
 echo; echo "[*] Updating to latest contentshell."
 cd $dirContentOffline/contentshell
