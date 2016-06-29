@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160601.1922 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160628.2216 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -31,9 +31,9 @@ rachelScriptsLog="/var/log/rachel/rachel-scripts.log"
 kaliteUser="root"
 kaliteDir="/root/.kalite" # Installed as user 'root'
 kaliteContentDir="/media/RACHEL/kacontent"
-kaliteCurrentVersion="0.16.5"
+kaliteCurrentVersion="0.16.6"
 kaliteInstaller="ka-lite-bundle_$kaliteCurrentVersion.deb"
-kalitePrimaryDownload="http://pantry.learningequality.org/downloads/ka-lite/0.16/installers/debian/ka-lite-bundle_0.16.5.deb"
+kalitePrimaryDownload="http://pantry.learningequality.org/downloads/ka-lite/0.16/installers/debian/ka-lite-bundle_0.16.6~post1-0ubuntu1_all.deb"
 kaliteSettings="$kaliteDir/settings.py" 
 installTmpDir="/root/cap-rachel-install.tmp"
 rachelTmpDir="/media/RACHEL/cap-rachel-install.tmp"
@@ -58,6 +58,7 @@ bd905efe7046423c1f736717a59ef82c ka-lite-bundle_0.15.0.deb
 996f610686da40ffd85ffbcb129c0c91 ka-lite-bundle_0.16.0.deb
 dbe9f1384988c00e409553f80edb49da ka-lite-bundle_0.16.1.deb
 4388fe0a84683a5f8561e29ee1749162 ka-lite-bundle_0.16.5.deb
+4522f65e3c266e1de1d0f7a21469f484 ka-lite-bundle_0.16.6.deb
 b61fdc3937aa226f34f685ba0bc29db1 kiwix-0.9-linux-i686.tar.bz2
 EOF
 }
@@ -254,6 +255,7 @@ onlineVariables(){
     WEAVEDUNINSTALLER="wget -c https://github.com/weaved/installer/raw/master/weaved_software/uninstaller.sh -O $rachelScriptsDir/weaved_software/uninstaller.sh"
     DOWNLOADCONTENTSCRIPT="wget -c $gitRachelPlus/scripts"
     CONTENTWIKI="wget -c http://download.kiwix.org/portable/wikipedia/$FILENAME -O $rachelTmpDir/$FILENAME"
+    RACHELSCRIPTSDOWNLOADLINK="wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/cap-rachel-configure.sh -O $installTmpDir/cap-rachel-configure.sh"
 }
 
 offlineVariables(){
@@ -284,6 +286,7 @@ offlineVariables(){
     WEAVEDUNINSTALLER=""
     DOWNLOADCONTENTSCRIPT="rsync -avhz --progress $dirContentOffline/rachelplus/scripts"
     CONTENTWIKIALL=""
+    RACHELSCRIPTSDOWNLOADLINK="rsync -avhz --progress $dirContentOffline/cap-rachel-configure.sh /root/cap-rachel-configure.sh"
 }
 
 printHeader(){
@@ -330,13 +333,13 @@ commandStatus(){
 }
 
 checkSHA1(){
-    CALCULATEDHASH=$(openssl sha1 $1)
-    KNOWNHASH=$(cat $installTmpDir/rachelplus/hashes.txt | grep $1 | cut -f1 -d" ")
-    if [[ "SHA1(${1})= $2" == "${CALCULATEDHASH}" ]]; then printGood "Good hash!" && export GOODHASH=1; else printError "Bad hash!"  && export GOODHASH=0; fi
+    calculatedHash=$(openssl sha1 $1)
+    knownHash=$(cat $installTmpDir/rachelplus/hashes.txt | grep $1 | cut -f1 -d" ") 
+    if [[ "SHA1(${1})= $2" == "${calculatedHash}" ]]; then printGood "Good hash!" && export goodHash=1; else printError "Bad hash!"  && export goodHash=0; fi
 }
 
 checkMD5(){
-    echo; printStatus "Checking MD5 of: $MD5CHKFILE"
+    echo; printStatus "Checking MD5 of: $1"
     MD5_1=$(cat $installTmpDir/hashes.md5 | grep $(basename $1) | awk '{print $1}')
     if [[ -z $MD5_1 ]]; then 
         printError "Sorry, we do not have a hash for that file in our database."
@@ -345,10 +348,10 @@ checkMD5(){
         MD5_2=$(md5sum $1 | awk '{print $1}')
         if [[ $MD5_1 != $MD5_2 ]]; then
           printError "MD5 check failed.  Please check your file and the RACHEL log ($rachelLog) for errors."
-          MD5STATUS=0
+          md5Status=0
         else
           printGood "Yeah...MD5's match; your file is okay."
-          MD5STATUS=1
+          md5Status=1
         fi
     fi
 }
@@ -665,10 +668,10 @@ installDefaultWeavedServices(){
         cd $rachelScriptsDir/weaved_software
         bash install.sh
         # Remove port 80 service
-        echo; printStatus "Removing unecessary Port 80 service."
-        pid=$(ps aux | grep -v grep | grep "/usr/bin/weavedConnectd.linux -f /etc/weaved/services/Weavedhttp80.conf -d /var/run/Weavedhttp80.pid" | awk '{print $2}')
+        echo; printStatus "Removing unecessary Port 8080 service."
+        pid=$(ps aux | grep -v grep | grep "/usr/bin/weavedConnectd.linux -f /etc/weaved/services/Weavedhttp8080.conf -d /var/run/Weavedhttp8080.pid" | awk '{print $2}')
         if [[ ! -z $pid ]]; then kill $pid; fi
-        rm -f /etc/weaved/services/Weavedhttp80.conf /var/run/Weavedhttp80.pid /usr/bin/Weavedhttp80.sh /var/log/Weavedhttp80.log 2>/dev/null
+        rm -f /etc/weaved/services/Weavedhttp8080.conf /var/run/Weavedhttp8080.pid /usr/bin/Weavedhttp8080.sh /var/log/Weavedhttp8080.log 2>/dev/null
         echo; printGood "Weaved service install complete."
         printGood "NOTE: An Weaved service uninstaller is available from the Utilities menu of this script."
     else
@@ -823,7 +826,20 @@ downloadOfflineContent(){
         fi
     done
 
-    # Downloading RACHEL modules
+    # Download RACHEL script 
+    $RACHELSCRIPTSDOWNLOADLINK >&2
+    commandStatus
+    if [[ -s $installTmpDir/cap-rachel-configure.sh ]]; then
+        mv $installTmpDir/cap-rachel-configure.sh $dirContentOffline/cap-rachel-configure.sh
+        chmod +x $dirContentOffline/cap-rachel-configure.sh
+        versionNum=$(cat $dirContentOffline/cap-rachel-configure.sh |grep ^scriptVersion|head -n 1|cut -d"=" -f2|cut -d" " -f1)
+        printGood "Success! Your script was updated to $versionNum; RE-RUN the script to use the new version."
+    else
+        printStatus "Fail! Check the log file for more info on what happened:  $rachelLog"
+        echo
+    fi
+
+    # Download RACHEL modules
     echo "" > $rachelScriptsDir/rsyncInclude.list
     ## Add user input to languages they want to support
     echo; printQuestion "What language content you would like to download for OFFLINE install:"
@@ -880,7 +896,7 @@ downloadOfflineContent(){
     echo; printStatus "Rsyncing core RACHEL content from $RSYNCDIR"
     while IFS= read -r module; do
         echo; printStatus "Downloading $module"
-        rsync -avz --update --delete $RSYNCDIR/rachelmods/$module $dirContentOffline/rachelmods
+        rsync -avz --update --delete-after $RSYNCDIR/rachelmods/$module $dirContentOffline/rachelmods
         commandStatus
         printGood "Done."
     done <<< "$MODULELIST"
@@ -910,7 +926,7 @@ downloadOfflineContent(){
     if [[ -f $dirContentOffline/$kaliteInstaller ]]; then
         # Checking user provided file MD5 against known good version
         checkMD5 $dirContentOffline/$kaliteInstaller
-        if [[ $MD5STATUS == 0 ]]; then
+        if [[ $md5Status == 0 ]]; then
             # Downloading current version of KA Lite
             echo; printStatus "Downloading KA Lite Version $kaliteCurrentVersion"
             $KALITEINSTALL
@@ -1248,7 +1264,7 @@ contentModuleInstall(){
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         while read m; do
             echo; printStatus "Downloading $m"
-            rsync -avz --delete $RSYNCDIR/rachelmods/$m $rachelWWW/modules/
+            rsync -avz --delete-after $RSYNCDIR/rachelmods/$m $rachelWWW/modules/
             commandStatus
             printGood "Done."
         done < /tmp/module.lst
@@ -1272,7 +1288,7 @@ contentModuleListInstall(){
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         while read m; do
             echo; printStatus "Downloading $m"
-            rsync -avz --delete $RSYNCDIR/rachelmods/$m $rachelWWW/modules/
+            rsync -avz --delete-after $RSYNCDIR/rachelmods/$m $rachelWWW/modules/
             commandStatus
             printGood "Done."
         done < $userModuleList
@@ -1360,7 +1376,7 @@ contentUpdate(){
     MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" $rachelWWW/modules/ | awk '{print $5}' | tail -n +2)
     while IFS= read -r module; do
         echo; printStatus "Downloading $module"
-        rsync -avzP --update --delete --exclude-from "$rachelScriptsDir/rsyncExclude.list" $RSYNCDIR/rachelmods/$module $rachelWWW/modules/
+        rsync -avzP --update --delete-after --exclude-from "$rachelScriptsDir/rsyncExclude.list" $RSYNCDIR/rachelmods/$module $rachelWWW/modules/
         commandStatus
         printGood "Done."
     done <<< "$MODULELIST"
@@ -1400,7 +1416,7 @@ kaliteInstall(){
     $KALITEINSTALL
     # Checking user provided file MD5 against known good version
     checkMD5 $installTmpDir/$kaliteInstaller
-    if [[ $MD5STATUS == 1 ]]; then
+    if [[ $md5Status == 1 ]]; then
         echo; printStatus "Installing KA Lite Version $kaliteCurrentVersion"
         echo; printError "CAUTION:  When prompted, enter 'yes' for start on boot and change the user to 'root'."
         echo; mkdir -p /etc/ka-lite
@@ -1497,7 +1513,7 @@ kaliteSetup(){
             done
             # Checking user provided file MD5 against known good version
             checkMD5 $ASSESSMENTFILE
-            if [[ $MD5STATUS == 1 ]]; then
+            if [[ $md5Status == 1 ]]; then
                 echo; printGood "Installing the assessment items."
                 kalite manage unpack_assessment_zip $ASSESSMENTFILE -f
             fi
@@ -1515,7 +1531,7 @@ kaliteSetup(){
                 fi
                 # Checking user provided file MD5 against known good version
                 checkMD5 $installTmpDir/khan_assessment.zip
-                if [[ $MD5STATUS == 1 ]]; then
+                if [[ $md5Status == 1 ]]; then
                     echo; printGood "Installing the assessment items."
                     kalite manage unpack_assessment_zip $ASSESSMENTFILE -f
                 fi
@@ -1530,7 +1546,7 @@ kaliteSetup(){
 
     # Install module for RACHEL index.php
     echo; printStatus "Syncing RACHEL web interface 'KA Lite module'."
-    rsync -avz --ignore-existing --exclude="en-kalite/content" --delete $RSYNCDIR/rachelmods/en-kalite $rachelWWW/modules/
+    rsync -avz --ignore-existing --exclude="en-kalite/content" --delete-after $RSYNCDIR/rachelmods/en-kalite $rachelWWW/modules/
 
     # Delete previous setup commands from /etc/rc.local (not used anymore)
     sudo sed -i '/ka-lite/d' /etc/rc.local
@@ -1954,6 +1970,17 @@ repairBugs(){
     # Fixing issue with 10.10.10.10 redirect and sleep times
     repairRachelScripts
 
+    # There is one miconfigured index.htmlf that needs to be fixed on the harddrive
+    sed -i 's/\-03/\-11/g' /media/RACHEL/rachel/modules/fr_wiki/index.htmlf
+
+    # Misconfiguration in "Soluciones Prácticas" module
+    if [[ -d $rachelWWW/modules/es-soluciones ]]; then
+        echo; printStatus "Fixing links in module:  Soluciones Prácticas"
+        sed -i 's/soluciones\/index.html/index.html/g' /media/RACHEL/rachel/modules/es-soluciones/index.htmlf
+        sed -i 's/soluciones\/index.html/index.html/g' /media/RACHEL/rachel/modules/es-soluciones/index.html
+        printGood "Done."
+    fi
+
     # Fix the multiple cgi.fix lines in php.ini
     grep -q '^cgi.fix_pathinfo = 1' /etc/php5/cgi/php.ini && sed -i '/^cgi.fix_pathinfo = 1/d' /etc/php5/cgi/php.ini; echo 'cgi.fix_pathinfo = 1' >> /etc/php5/cgi/php.ini
 
@@ -2038,9 +2065,9 @@ cp -rf ./* $rachelWWW/ # overwrite current content with contentshell
 cp -rf ./.git $rachelWWW/ # copy over GitHub files
 mv /etc/init/procps.conf /etc/init/procps.conf.old 2>/dev/null # otherwise quite a pkgs won't install
 pecl info stem > /dev/null
-if [[ $? -ge 1 ]]; then 
+if [[ $? == 1 ]]; then 
     echo; printStatus "Installing the stem module."
-    echo "\n" | pecl install $dirContentOffline/offlinepkgs/$stemPkg
+    printf "\n" | pecl install $dirContentOffline/offlinepkgs/$stemPkg
     # Add support for stem extension
     echo '; configuration for php stem module' > /etc/php5/conf.d/stem.ini
     echo 'extension=stem.so' >> /etc/php5/conf.d/stem.ini
@@ -2051,8 +2078,7 @@ fi
 echo "[+] Completed USB Recovery runonce script - $(date)"
 # Add header/date/time to install log file
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
-sudo mv $rachelLog $rachelLogDir/rachel-usbrecovery-$timestamp.log
-echo "Executed runonce.sh at $(date)" > $rachelLogDir/runonce.log
+sudo mv $rachelLog $rachelLogDir/rachel-runonce-$timestamp.log
 # Reboot
 rm -- "$0"
 reboot
@@ -2452,8 +2478,7 @@ else
             # Determine the operational mode - ONLINE or OFFLINE
             opMode
             if [[ $internet == "1" ]]; then
-                scriptDownloadLink="wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/cap-rachel-configure.sh -O $installTmpDir/cap-rachel-configure.sh"
-                $scriptDownloadLink >&2
+                $RACHELSCRIPTSDOWNLOADLINK >&2
                 commandStatus
                 if [[ -s $installTmpDir/cap-rachel-configure.sh ]]; then
                     mv $installTmpDir/cap-rachel-configure.sh /root/cap-rachel-configure.sh
@@ -2465,7 +2490,16 @@ else
                     echo
                 fi
             else
-                echo; printError "You need to be connected to the internet to update this script."
+                if [[ ! -f $dirContentOffline/cap-rachel-configure.sh ]]; then
+                    echo; printError "You don't have a copy of the rachel script in your offline content location."
+                    echo; exit 1
+                fi
+                $RACHELSCRIPTSDOWNLOADLINK >&2
+                commandStatus
+                chmod +x /root/cap-rachel-configure.sh
+                versionNum=$(cat /root/cap-rachel-configure.sh |grep ^scriptVersion|head -n 1|cut -d"=" -f2|cut -d" " -f1)
+                printGood "Success! Your script was updated to $versionNum; RE-RUN the script to use the new version."
+#                    echo; printError "You need to be connected to the internet to update this script."
             fi
             exit 1
             ;;
