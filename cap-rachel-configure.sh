@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160628.2216 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160629.0015 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -2064,9 +2064,10 @@ cd $dirContentOffline/contentshell
 cp -rf ./* $rachelWWW/ # overwrite current content with contentshell
 cp -rf ./.git $rachelWWW/ # copy over GitHub files
 mv /etc/init/procps.conf /etc/init/procps.conf.old 2>/dev/null # otherwise quite a pkgs won't install
-pecl info stem > /dev/null
-if [[ $? == 1 ]]; then 
-    echo; printStatus "Installing the stem module."
+rm -f $rachelWWw/en_all.sh $rachelWWw/en_justice.sh # clean up old files
+pecl info stem
+if [[ $? == 0 ]]; then 
+    echo; "[*] Installing the stem module."
     printf "\n" | pecl install $dirContentOffline/offlinepkgs/$stemPkg
     # Add support for stem extension
     echo '; configuration for php stem module' > /etc/php5/conf.d/stem.ini
