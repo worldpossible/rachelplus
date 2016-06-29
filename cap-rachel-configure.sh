@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160629.0015 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160629.0103 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -375,7 +375,7 @@ sanitize(){
     # Remove history, clean logs
     echo; printStatus "Sanitizing log files."
     # Clean log files and possible test scripts
-    rm -rf /var/log/rachel-install* /var/log/RACHEL/* /root/test.sh
+    rm -rf /var/log/rachel-install* /var/log/rachel/* /root/test.sh
     # Clean previous cached logins from ssh
     rm -f /root/.ssh/known_hosts
     # Clean off ka-lite_content.zip (if exists)
@@ -550,7 +550,7 @@ repairKiwixLibrary(){
     library="$rachelPartition/kiwix/data/library/library.xml"
     db="$rachelWWW/admin.sqlite"
     # Remove/recreate existing library
-    rm -f $library; touch $library
+    rm -f $library; mkdir -p $rachelPartition/kiwix/data/library; touch $library
 
     # Find all the zim files in the modules directoy
     ls $rachelWWW/modules/*/data/content/*.zim* 2>/dev/null |sed 's/ /\n/g' > $tmp
