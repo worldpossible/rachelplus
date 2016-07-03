@@ -623,6 +623,9 @@ rm -f $library; touch $library
 ls /media/RACHEL/rachel/modules/*/data/content/*.zim* 2>/dev/null | sed 's/ /\n/g' > $tmp
 ls /media/RACHEL/kiwix/data/content/*.zim* 2>/dev/null | sed 's/ /\n/g' >> $tmp
 
+# Remove extra files - we only need the first (.zim or .zimaa)
+sed -i '/zima[^a]/d' $tmp
+
 # Remove modules that are marked hidden on main menu
 for d in $(sqlite3 /media/RACHEL/rachel/admin.sqlite 'select moddir from modules where hidden = 1'); do
     sed -i '/'$d'/d' $tmp
@@ -632,11 +635,12 @@ for i in $(cat $tmp); do
     if [[ $? -ge 1 ]]; then echo "No zims found."; fi
     cmd="/var/kiwix/bin/kiwix-manage $library add $i"
     moddir="$(echo $i | cut -d'/' -f1-6)"
-    zim="$(echo $i | cut -d'/' -f9)"
-    if [[ -d "$moddir/data/index/$zim.idx" ]]; then
-        cmd="$cmd --indexPath=$moddir/data/index/$zim.idx"
-    elif [[ -d "/media/RACHEL/kiwix/data/index/$zim.idx" ]]; then
-        cmd="$cmd --indexPath=/media/RACHEL/kiwix/data/index/$zim.idx"
+    # we have to remove the extension because we need .zim but it might be .zimaa
+    noext="$(echo ${i##*/} | cut -d'.' -f1)"
+    if [[ -d "$moddir/data/index/$noext.zim.idx" ]]; then
+        cmd="$cmd --indexPath=$moddir/data/index/$noext.zim.idx"
+    elif [[ -d "/media/RACHEL/kiwix/data/index/$noext.zim.idx" ]]; then
+        cmd="$cmd --indexPath=/media/RACHEL/kiwix/data/index/$noext.zim.idx"
     fi
     $cmd 2>/dev/null
     if [[ $? -ge 1 ]]; then echo "Couldn't add $zim to library"; fi
