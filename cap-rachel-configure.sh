@@ -675,7 +675,7 @@ installDefaultWeavedServices(){
         echo; printStatus "Removing unecessary Port 8080 service."
         pid=$(ps aux | grep -v grep | grep "/usr/bin/weavedConnectd.linux -f /etc/weaved/services/Weavedhttp8080.conf -d /var/run/Weavedhttp8080.pid" | awk '{print $2}')
         if [[ ! -z $pid ]]; then kill $pid; fi
-        rm -f /etc/weaved/services/Weavedhttp8080.conf /var/run/Weavedhttp8080.pid /usr/bin/Weavedhttp8080.sh /var/log/Weavedhttp8080.log 2>/dev/null
+        rm -f /etc/weaved/services/Weavedhttp8080.conf /var/run/Weavedhttp8080.pid /usr/bin/Weavedhttp8080.sh /var/log/Weavedhttp8080.log /media/RACHEL/recovery/Weaved/Weavedhttp8080-port.conf 2>/dev/null
         echo; printGood "Weaved service install complete."
         printGood "NOTE: An Weaved service uninstaller is available from the Utilities menu of this script."
     else

@@ -4,19 +4,19 @@
 # Usage:  ./createUSB.sh
 
 printGood(){
-    echo -e "\x1B[01;32m[+]\x1B[0m $1"
+	echo -e "\x1B[01;32m[+]\x1B[0m $1"
 }
 
 printError(){
-    echo -e "\x1B[01;31m[-]\x1B[0m $1"
+	echo -e "\x1B[01;31m[-]\x1B[0m $1"
 }
 
 printStatus(){
-    echo -e "\x1B[01;35m[*]\x1B[0m $1"
+	echo -e "\x1B[01;35m[*]\x1B[0m $1"
 }
 
 printQuestion(){
-    echo -e "\x1B[01;33m[?]\x1B[0m $1"
+	echo -e "\x1B[01;33m[?]\x1B[0m $1"
 }
 
 version=6
@@ -125,12 +125,12 @@ installDefaultWeavedServices(){
 		# Run installer
 		cd $rachelScriptsDir/weaved_software
 		bash install.sh
-        # Remove port 8080 service
-        echo; printStatus "Removing unecessary Port 8080 service."
-        pid=$(ps aux | grep -v grep | grep "/usr/bin/weavedConnectd.linux -f /etc/weaved/services/Weavedhttp8080.conf -d /var/run/Weavedhttp8080.pid" | awk '{print $2}')
-        if [[ ! -z $pid ]]; then kill $pid; fi
-        rm -f /etc/weaved/services/Weavedhttp8080.conf /var/run/Weavedhttp8080.pid /usr/bin/Weavedhttp8080.sh /var/log/Weavedhttp8080.log 2>/dev/null
-        # Finished
+		# Remove port 8080 service
+		echo; printStatus "Removing unecessary Port 8080 service."
+		pid=$(ps aux | grep -v grep | grep "/usr/bin/weavedConnectd.linux -f /etc/weaved/services/Weavedhttp8080.conf -d /var/run/Weavedhttp8080.pid" | awk '{print $2}')
+		if [[ ! -z $pid ]]; then kill $pid; fi
+		rm -f /etc/weaved/services/Weavedhttp8080.conf /var/run/Weavedhttp8080.pid /usr/bin/Weavedhttp8080.sh /var/log/Weavedhttp8080.log /media/RACHEL/recovery/Weaved/Weavedhttp8080-port.conf 2>/dev/null
+		# Finished
 		echo; printGood "Weaved service install complete."
 		printGood "NOTE: An Weaved service uninstaller is available from the Utilities menu of this script."
 	else
@@ -176,7 +176,7 @@ buildUSBImage(){
 			# Sanitize?
 			echo; printQuestion "Do you want to sanitize this device prior to building the *.tar.xz files? (y/N) "; read REPLY
 			if [[ $REPLY =~ ^[Yy]$ ]]; then
-			    sanitize
+				sanitize
 			fi
 			# Stop script from defaulting the SSID
 			sed -i 's/^redis-cli del WlanSsidT0_ssid/#redis-cli del WlanSsidT0_ssid/g' /root/generate_recovery.sh
@@ -200,14 +200,14 @@ buildUSBImage(){
 			else
 				printError "User requested to exit, exiting."
 				exit 1
-		    fi
+			fi
 		fi
 		buildSaveDir=$(ls $rachelRecoveryDir | grep ^2)
 		echo; printStatus "Checking $rachelRecoveryDir/$buildSaveDir for the three .tar.xz files."
 		if [[ $createdNewImages == 1 ]]; then
 			if [[ ! -f $rachelRecoveryDir/$buildSaveDir/boot.tar.xz ]] || [[ ! -f $rachelRecoveryDir/$buildSaveDir/efi.tar.xz ]] || [[ ! -f $rachelRecoveryDir/$buildSaveDir/rootfs.tar.xz ]]; then
 				printError "One or more of the .tar.xz were not created, check log file:  $createLog"
-				echo "    You may also want to check the directory where the .tar.xz files are created:  $rachelRecoveryDir/$buildSaveDir"
+				echo "	You may also want to check the directory where the .tar.xz files are created:  $rachelRecoveryDir/$buildSaveDir"
 				echo; exit 1
 			else
 				printGood "Found the files; copying the .tar.xz files to the USB drive."
@@ -217,9 +217,9 @@ buildUSBImage(){
 	fi
 	if [[ ! -f $mountName/boot.tar.xz ]] || [[ ! -f $mountName/efi.tar.xz ]] || [[ ! -f $mountName/rootfs.tar.xz ]]; then
 		echo; printError "I could not find all three of the following files on the USB:"
-		echo "    boot.tar.xz"
-		echo "    efi.tar.xz"
-		echo "    rootfs.tar.xz"
+		echo "	boot.tar.xz"
+		echo "	efi.tar.xz"
+		echo "	rootfs.tar.xz"
 		echo; printStatus "Either copy the files to your USB or run this script again and create the files when prompted."
 		echo; exit 1
 	fi
