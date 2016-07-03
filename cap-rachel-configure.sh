@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160629.0103 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160702.2335 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -667,7 +667,7 @@ installDefaultWeavedServices(){
         # Run installer
         cd $rachelScriptsDir/weaved_software
         bash install.sh
-        # Remove port 80 service
+        # Remove port 8080 service
         echo; printStatus "Removing unecessary Port 8080 service."
         pid=$(ps aux | grep -v grep | grep "/usr/bin/weavedConnectd.linux -f /etc/weaved/services/Weavedhttp8080.conf -d /var/run/Weavedhttp8080.pid" | awk '{print $2}')
         if [[ ! -z $pid ]]; then kill $pid; fi
@@ -1546,7 +1546,7 @@ kaliteSetup(){
 
     # Install module for RACHEL index.php
     echo; printStatus "Syncing RACHEL web interface 'KA Lite module'."
-    rsync -avz --ignore-existing --exclude="en-kalite/content" --delete-after $RSYNCDIR/rachelmods/en-kalite $rachelWWW/modules/
+    rsync -avz --ignore-existing --exclude="en-kalite/content" --exclude="en-kalite/en-contentpack.zip" --delete-after $RSYNCDIR/rachelmods/en-kalite $rachelWWW/modules/
 
     # Delete previous setup commands from /etc/rc.local (not used anymore)
     sudo sed -i '/ka-lite/d' /etc/rc.local

@@ -19,7 +19,7 @@ printQuestion(){
     echo -e "\x1B[01;33m[?]\x1B[0m $1"
 }
 
-version=5
+version=6
 timestamp=$(date +"%Y%m%d.%H%M")
 usbDate=$(date +"%Y%m%d")
 imageSavePath="$HOME"
@@ -125,6 +125,12 @@ installDefaultWeavedServices(){
 		# Run installer
 		cd $rachelScriptsDir/weaved_software
 		bash install.sh
+        # Remove port 8080 service
+        echo; printStatus "Removing unecessary Port 8080 service."
+        pid=$(ps aux | grep -v grep | grep "/usr/bin/weavedConnectd.linux -f /etc/weaved/services/Weavedhttp8080.conf -d /var/run/Weavedhttp8080.pid" | awk '{print $2}')
+        if [[ ! -z $pid ]]; then kill $pid; fi
+        rm -f /etc/weaved/services/Weavedhttp8080.conf /var/run/Weavedhttp8080.pid /usr/bin/Weavedhttp8080.sh /var/log/Weavedhttp8080.log 2>/dev/null
+        # Finished
 		echo; printGood "Weaved service install complete."
 		printGood "NOTE: An Weaved service uninstaller is available from the Utilities menu of this script."
 	else
@@ -246,7 +252,8 @@ addDefaultModules(){
 	fi
 	if [[ -d /media/RACHEL/rachel/modules/ka-lite ]]; then
 		echo; printStatus "Adding the ka-lite module."
-		rsync -avz --no-perms --no-owner --no-group $rsyncDIR/rachelmods/en-kalite $mountName/rachel-files/contentshell/modules/
+#		rsync -avz --no-perms --no-owner --no-group $rsyncDIR/rachelmods/en-kalite $mountName/rachel-files/contentshell/modules/
+		rsync -avz --no-perms --no-owner --no-group --ignore-existing --exclude="en-kalite/content" --exclude="en-kalite/en-contentpack.zip" --delete-after $RSYNCDIR/rachelmods/en-kalite $mountName/rachel-files/contentshell/modules/
 	fi
 }
 
