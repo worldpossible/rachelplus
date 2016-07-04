@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160702.2335 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160704.0102 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -2062,14 +2062,15 @@ echo; echo "[*] If available, installing kalite sqlite databases."
 if [[ -f $dirContentOffline/kalitedb/content_khan_en.sqlite ]]; then cp $dirContentOffline/kalitedb/content_khan_en.sqlite /root/.kalite/database/; fi
 if [[ -f $dirContentOffline/kalitedb/content_khan_es.sqlite ]]; then cp $dirContentOffline/kalitedb/content_khan_es.sqlite /root/.kalite/database/; fi
 if [[ -f $dirContentOffline/kalitedb/content_khan_fr.sqlite ]]; then cp $dirContentOffline/kalitedb/content_khan_fr.sqlite /root/.kalite/database/; fi
+if [[ -f $dirContentOffline/kalitedb/data.sqlite ]]; then cp $dirContentOffline/kalitedb/data.sqlite /root/.kalite/database/; fi
 # Update to the latest contentshell
 echo; echo "[*] Updating to latest contentshell."
 cd $dirContentOffline/contentshell
 cp -rf ./* $rachelWWW/ # overwrite current content with contentshell
 cp -rf ./.git $rachelWWW/ # copy over GitHub files
 mv /etc/init/procps.conf /etc/init/procps.conf.old 2>/dev/null # otherwise quite a pkgs won't install
-rm -f $rachelWWw/en_all.sh $rachelWWw/en_justice.sh # clean up old files
-pecl info stem
+rm -f $rachelWWW/en_all.sh $rachelWWW/en_justice.sh $rachelWWW/modules/ka-lite $rachelWWW/modules/local_content # clean up old files
+pecl info stem 
 if [[ $? == 0 ]]; then 
     echo; "[*] Installing the stem module."
     printf "\n" | pecl install $dirContentOffline/offlinepkgs/$stemPkg
