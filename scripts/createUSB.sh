@@ -19,7 +19,7 @@ printQuestion(){
 	echo -e "\x1B[01;33m[?]\x1B[0m $1"
 }
 
-version=6
+version=7
 timestamp=$(date +"%Y%m%d.%H%M")
 usbDate=$(date +"%Y%m%d")
 imageSavePath="$HOME"
@@ -274,12 +274,15 @@ imageUSB(){
 	echo; printStatus "Creating image of USB drive (on USB 2.0 = ~55min; on USB 3.0 = ~2min20sec)."
 	echo "File location:  $imageSavePath/$imageName"
 	if [[ $os == "linux" ]] || [[ $os == "cap" ]]; then
-		usbDeviceName=$usbDeviceName
+#		usbDeviceName=$usbDeviceName
+		partCount=$(( $(fdisk -l $usbDeviceName | grep ${usbDeviceName}2 | awk '{ print $4 }') + 1 ))
 	elif [[ $os == "osx" ]]; then
 		usbDeviceName=/dev/rdisk$diskNum
+		partCount=$(( $(sudo fdisk $usbDeviceName | grep 2: | awk '{ print $13 }' | cut -d] -f1) + 1 ))
+		#partCount=7337984
 	fi
 	echo "Running cmd:  time sudo dd if=$usbDeviceName of=$imageSavePath/$imageName count=7337984 bs=512"
-	time sudo dd if=$usbDeviceName of=$imageSavePath/$imageName count=7337984 bs=512
+	time sudo dd if=$usbDeviceName of=$imageSavePath/$imageName count=$partCount bs=512
 }
 
 compressHashUSBImage(){

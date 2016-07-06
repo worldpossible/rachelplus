@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160704.0102 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160706.1343 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -66,7 +66,7 @@ EOF
 # Rsync Module Exclude List
 buildRsyncModuleExcludeList(){
     cat > $rachelScriptsDir/rsyncExclude.list << 'EOF'
-en-kalite/content
+*-kalite/content*
 *.zip
 en-afristory.old
 KALite0.14_content
