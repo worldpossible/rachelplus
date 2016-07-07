@@ -183,9 +183,9 @@ buildUSBImage(){
 			# Stop KA Lite
 			echo; printStatus "Stopping KA Lite."
 			kalite stop
-			# Delete the Device ID and crypto keys from the database (without affecting the admin user you have already set up)
-			echo; printStatus "Delete KA Lite Device ID and clearing crypto keys from the database"
-			kalite manage runcode "from django.conf import settings; settings.DEBUG_ALLOW_DELETIONS = True; from securesync.models import Device; Device.objects.all().delete(); from fle_utils.config.models import Settings; Settings.objects.all().delete()"
+#			# Delete the Device ID and crypto keys from the database (without affecting the admin user you have already set up)
+#			echo; printStatus "Delete KA Lite Device ID and clearing crypto keys from the database"
+#			kalite manage runcode "from django.conf import settings; settings.DEBUG_ALLOW_DELETIONS = True; from securesync.models import Device; Device.objects.all().delete(); from fle_utils.config.models import Settings; Settings.objects.all().delete()"
 			echo; printQuestion "Do you want to run the /root/generate_recovery.sh script?"
 			echo "The script will save the *.tar.xz files to /media/RACHEL/recovery"
 			echo
@@ -275,13 +275,13 @@ imageUSB(){
 	echo "File location:  $imageSavePath/$imageName"
 	if [[ $os == "linux" ]] || [[ $os == "cap" ]]; then
 #		usbDeviceName=$usbDeviceName
-		partCount=$(( $(fdisk -l $usbDeviceName | grep ${usbDeviceName}2 | awk '{ print $4 }') + 1 ))
+		partCount=$(( $(fdisk -l $usbDeviceName | grep ${usbDeviceName}2 | awk '{ print $3 }') + 1 ))
 	elif [[ $os == "osx" ]]; then
 		usbDeviceName=/dev/rdisk$diskNum
 		partCount=$(( $(sudo fdisk $usbDeviceName | grep 2: | awk '{ print $13 }' | cut -d] -f1) + 1 ))
 		#partCount=7337984
 	fi
-	echo "Running cmd:  time sudo dd if=$usbDeviceName of=$imageSavePath/$imageName count=7337984 bs=512"
+	echo "Running cmd:  time sudo dd if=$usbDeviceName of=$imageSavePath/$imageName count=$partCount bs=512"
 	time sudo dd if=$usbDeviceName of=$imageSavePath/$imageName count=$partCount bs=512
 }
 
