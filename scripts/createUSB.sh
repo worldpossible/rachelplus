@@ -271,7 +271,7 @@ unmountUSB(){
 
 imageUSB(){
 	# Image the USB - show the imaging time when complete; only copy our first 2 partitions to minimize space
-	echo; printStatus "Creating image of USB drive (on USB 2.0 = ~55min; on USB 3.0 = ~2min20sec)."
+	echo; printStatus "Creating image of USB drive (on USB 2.0 = ~60min; on USB 3.0 = ~3min)."
 	echo "File location:  $imageSavePath/$imageName"
 	if [[ $os == "linux" ]] || [[ $os == "cap" ]]; then
 #		usbDeviceName=$usbDeviceName
@@ -288,12 +288,12 @@ imageUSB(){
 compressHashUSBImage(){
 	cd $imageSavePath
 	# Compress the .img file (should reduce the image from 3.76GB to about 2.1GB)
-	echo; printStatus "Compressing .img file (on RACHEL-Plus CAP = ~11min)."
+	echo; printStatus "Compressing .img file (on RACHEL-Plus CAP = ~14min)."
 	echo "Running cmd:  zip -9 -o $imageName.zip $imageName"
 	time zip -9 -o $imageName.zip $imageName
 
 	# MD5 hash the files
-	echo; printStatus "Calculating MD5 hash of both the .img and .img.zip files (on RACHEL-Plus CAP = ~45s)."
+	echo; printStatus "Calculating MD5 hash of both the .img and .img.zip files (on RACHEL-Plus CAP = ~51s)."
 	if [[ $os == "linux" ]] || [[ $os == "cap" ]]; then
 		md5app=md5sum
 	elif [[ $os == "osx" ]]; then
