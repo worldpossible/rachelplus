@@ -31,7 +31,7 @@ rachelScriptsLog="/var/log/rachel/rachel-scripts.log"
 kaliteUser="root"
 kaliteDir="/root/.kalite" # Installed as user 'root'
 kaliteContentDir="/media/RACHEL/kacontent"
-kaliteCurrentVersion="0.16.6"
+kaliteCurrentVersion="0.16.6~post1"
 kaliteInstaller="ka-lite-bundle_$kaliteCurrentVersion.deb"
 kalitePrimaryDownload="http://pantry.learningequality.org/downloads/ka-lite/0.16/installers/debian/ka-lite-bundle_0.16.6~post1-0ubuntu1_all.deb"
 kaliteSettings="$kaliteDir/settings.py" 
@@ -59,6 +59,7 @@ bd905efe7046423c1f736717a59ef82c ka-lite-bundle_0.15.0.deb
 dbe9f1384988c00e409553f80edb49da ka-lite-bundle_0.16.1.deb
 4388fe0a84683a5f8561e29ee1749162 ka-lite-bundle_0.16.5.deb
 4522f65e3c266e1de1d0f7a21469f484 ka-lite-bundle_0.16.6.deb
+4522f65e3c266e1de1d0f7a21469f484 ka-lite-bundle_0.16.6~post1.deb
 b61fdc3937aa226f34f685ba0bc29db1 kiwix-0.9-linux-i686.tar.bz2
 EOF
 }
