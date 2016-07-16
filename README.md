@@ -2,7 +2,9 @@
 RACHEL Configuration on RACHEL-Plus
 
 [Demo Website](http://rachel.golearn.us)
+
 [Developer Wiki](http://rachel.golearn.us/wiki)
+
 [Manufacturers Data Sheet](http://www.intel.com/content/www/us/en/education/solutions/content-access-point.html)
 
 ## 1. Update your RACHEL-Plus with the latest firmware
