@@ -649,7 +649,7 @@ done
 
 # Restart Kiwix
 killall /var/kiwix/bin/kiwix-serve
-/var/kiwix/bin/kiwix-serve --daemon --port=81 --library $library
+/var/kiwix/bin/kiwix-serve --daemon --port=81 --library $library > /dev/null
 rm -f $tmp
 EOF
     chmod +x $rachelScriptsDir/rachelKiwixStart.sh
