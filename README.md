@@ -1,11 +1,8 @@
 # RACHEL-Plus
 RACHEL Configuration on RACHEL-Plus
-
-[Demo Website](http://rachel.golearn.us)
-
-[Developer Wiki](http://rachel.golearn.us/wiki)
-
-[Manufacturers Data Sheet](http://www.intel.com/content/www/us/en/education/solutions/content-access-point.html)
+ * [Demo Website](http://rachel.golearn.us)
+ * [Developer Wiki](http://rachel.golearn.us/wiki)
+ * [Manufacturers Data Sheet](http://www.intel.com/content/www/us/en/education/solutions/content-access-point.html)
 
 ## 1. Update your RACHEL-Plus with the latest firmware
 Running the latest RACHEL Recovery USB will update the CAPs firmware to the latest version while also updating RACHEL functionality
