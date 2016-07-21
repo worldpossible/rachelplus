@@ -629,7 +629,7 @@ sed -i '/zima[^a]/d' $tmp
 
 # Remove modules that are marked hidden on main menu
 for d in $(sqlite3 /media/RACHEL/rachel/admin.sqlite 'select moddir from modules where hidden = 1'); do
-    sed -i '/'$d'/d' $tmp
+    sed -i '/\/'$d'\//d' $tmp
 done
 
 for i in $(cat $tmp); do
