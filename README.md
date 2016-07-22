@@ -8,7 +8,7 @@ RACHEL Configuration on RACHEL-Plus
 Running the latest RACHEL Recovery USB will update the CAPs firmware to the latest version while also updating RACHEL functionality
 
 ## 2. PRIMARY and RECOMMENDED Install Method
-[Use the RACHEL Recovery USB, Method 1](http://192.168.100.101/wiki/mdwiki.html#!cap-usb-recovery.md)
+[Use the RACHEL Recovery USB, Method 1](http://rachel.golearn.us/wiki/mdwiki.html#!cap-usb-recovery.md)
 
 ## 3. Add RACHEL content
 Use the following script to download all content for a specific language.
