@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160706.1343 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160916.2111 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -31,9 +31,9 @@ rachelScriptsLog="/var/log/rachel/rachel-scripts.log"
 kaliteUser="root"
 kaliteDir="/root/.kalite" # Installed as user 'root'
 kaliteContentDir="/media/RACHEL/kacontent"
-kaliteCurrentVersion="0.16.6~post1"
+kaliteCurrentVersion="0.16.9"
 kaliteInstaller="ka-lite-bundle_$kaliteCurrentVersion.deb"
-kalitePrimaryDownload="http://pantry.learningequality.org/downloads/ka-lite/0.16/installers/debian/ka-lite-bundle_0.16.6~post1-0ubuntu1_all.deb"
+kalitePrimaryDownload="http://pantry.learningequality.org/downloads/ka-lite/0.16/installers/debian/ka-lite-bundle_$kaliteCurrentVersion-0ubuntu1_all.deb"
 kaliteSettings="$kaliteDir/settings.py" 
 installTmpDir="/root/cap-rachel-install.tmp"
 rachelTmpDir="/media/RACHEL/cap-rachel-install.tmp"
@@ -60,6 +60,8 @@ dbe9f1384988c00e409553f80edb49da ka-lite-bundle_0.16.1.deb
 4388fe0a84683a5f8561e29ee1749162 ka-lite-bundle_0.16.5.deb
 4522f65e3c266e1de1d0f7a21469f484 ka-lite-bundle_0.16.6.deb
 4522f65e3c266e1de1d0f7a21469f484 ka-lite-bundle_0.16.6~post1.deb
+378391b5a69adc93a021e40c0a6e0cdd ka-lite-bundle_0.16.8.deb
+9b3750f7391e5e38a9a637f6365554c9 ka-lite-bundle_0.16.9.deb
 b61fdc3937aa226f34f685ba0bc29db1 kiwix-0.9-linux-i686.tar.bz2
 EOF
 }
@@ -1117,6 +1119,7 @@ EOF
         echo; printStatus "Installing packages."
         apt-get -y install php5-cgi git-core python-m2crypto php5-sqlite sqlite3 php-pear make gcc-multilib
         # Add support for multi-language front page
+        pear clear-cache 2>/dev/null
         echo "\n" | pecl install stem
         # Add support for stem extension
         echo '; configuration for php stem module' > /etc/php5/conf.d/stem.ini
@@ -1224,6 +1227,7 @@ checkContentShell(){
         fi
     fi
     # Check for stem module
+    pear clear-cache 2>/dev/null
     pecl info stem > /dev/null
     if [[ $? -ge 1 ]]; then
         cd $rachelWWW
@@ -1421,9 +1425,15 @@ kaliteInstall(){
     $KALITEINSTALL
     # Checking user provided file MD5 against known good version
     checkMD5 $installTmpDir/$kaliteInstaller
+    # !!! Need to add offline method
+    # Fix for 0.6.8+ versions of KA Lite
+    apt-get install python-pip
+    pip install urllib3 --upgrade
+    pip install requests --upgrade
+    rm -rf /usr/share/kalite/dist-packages/requests 
     if [[ $md5Status == 1 ]]; then
         echo; printStatus "Installing KA Lite Version $kaliteCurrentVersion"
-        echo; printError "CAUTION:  When prompted, enter 'yes' for start on boot and change the user to 'root'."
+        echo; printError "CAUTION:  When prompted, enter 'Okay' for start on boot."
         echo; mkdir -p /etc/ka-lite
         echo "root" > /etc/ka-lite/username
         # Turn off logging b/c KA Lite using a couple graphical screens; if on, causes issues
@@ -1431,7 +1441,7 @@ kaliteInstall(){
         dpkg -i $installTmpDir/$kaliteInstaller
         commandStatus
         # Turn logging back on
-        loggingStart
+        exec &> >(tee -a "$rachelLog")
         if [[ $errorCode == 0 ]]; then
             echo; printGood "KA Lite $kaliteCurrentVersion installed."
         else
@@ -2008,6 +2018,7 @@ updateContentShell(){
         cd $dirContentOffline/offlinepkgs
         dpkg -i *.deb
     fi
+    pear clear-cache 2>/dev/null
     pecl info stem > /dev/null
     if [[ $? -ge 1 ]]; then 
         echo; printStatus "Installing the stem module."
@@ -2071,6 +2082,7 @@ cp -rf ./* $rachelWWW/ # overwrite current content with contentshell
 cp -rf ./.git $rachelWWW/ # copy over GitHub files
 mv /etc/init/procps.conf /etc/init/procps.conf.old 2>/dev/null # otherwise quite a pkgs won't install
 rm -f $rachelWWW/en_all.sh $rachelWWW/en_justice.sh $rachelWWW/modules/ka-lite $rachelWWW/modules/local_content # clean up old files
+pear clear-cache 2>/dev/null
 pecl info stem 
 if [[ $? == 0 ]]; then 
     echo; "[*] Installing the stem module."
