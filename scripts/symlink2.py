@@ -1,3 +1,6 @@
+
+# python symlink.py <name of directory to parse>
+# For all mp4 files, copy them to the path below, then create a symlink in the directory above to the new home for the files
 import os
 
 def dirs(MyDir):
@@ -11,7 +14,7 @@ def dirs(MyDir):
           ext = os.path.splitext(f)[1]
           if  ext == ".mp4":
             print kaosname
-            kalname = os.path.join("/media/RACHEL/kacontent",f)
+            kalname = os.path.join("/media/RACHEL/rachel/modules/en-kalite",f)
             if os.path.exists(kalname):
               if os.path.islink(kalname):
                 os.unlink(kalname)
@@ -31,4 +34,4 @@ if __name__ == "__main__":
   if len(sys.argv) > 1:
     dirs(sys.argv[1])
   else:
-    dirs("/media/RACHEL/rachel/modules/kaos-en")
+    dirs("/media/RACHEL/kacontent")
