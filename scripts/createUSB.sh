@@ -19,7 +19,7 @@ printQuestion(){
 	echo -e "\x1B[01;33m[?]\x1B[0m $1"
 }
 
-version=8
+version=7
 timestamp=$(date +"%Y%m%d.%H%M")
 usbDate=$(date +"%Y%m%d")
 imageSavePath="$HOME"
@@ -235,16 +235,6 @@ removeOSXJunk(){
 	ls -la $mountName
 }
 
-updateVersions(){
-	# Update RACHEL Installer version
-	echo $usbVersion > /etc/rachelinstaller-version
-	echo $usbVersion > $mountName/rachel-files/rachelinstaller-version
-	# Update KA Lite version
-	kalite --version > /etc/kalite-version
-	# Update Kiwix version
-	cat /var/kiwix/application.ini | grep ^Version | cut -d= -f2 > /etc/kiwix-version
-}
-
 setUSBVersion(){
 	echo; printStatus "Setting the RACHEL Recovery USB version."
 	awk 'BEGIN{OFS=FS="\""} $1~/version=/ {$2="'$usbVersion'";}1' $mountName/update.sh > update.tmp; mv update.tmp update.sh
@@ -260,11 +250,11 @@ addDefaultModules(){
 		echo; printStatus "Adding the local_content module."
 		rsync -avz --no-perms --no-owner --no-group $rsyncDIR/rachelmods/en-local_content $mountName/rachel-files/contentshell/modules/
 	fi
-#	if [[ -d /media/RACHEL/rachel/modules/ka-lite ]]; then
-#		echo; printStatus "Adding the ka-lite module."
+	if [[ -d /media/RACHEL/rachel/modules/ka-lite ]]; then
+		echo; printStatus "Adding the ka-lite module."
 #		rsync -avz --no-perms --no-owner --no-group $rsyncDIR/rachelmods/en-kalite $mountName/rachel-files/contentshell/modules/
-#		rsync -avz --no-perms --no-owner --no-group --ignore-existing --exclude="en-kalite/content" --exclude="en-kalite/en-contentpack.zip" --delete-after $RSYNCDIR/rachelmods/en-kalite $mountName/rachel-files/contentshell/modules/
-#	fi
+		rsync -avz --no-perms --no-owner --no-group --ignore-existing --exclude="en-kalite/content" --exclude="en-kalite/en-contentpack.zip" --delete-after $RSYNCDIR/rachelmods/en-kalite $mountName/rachel-files/contentshell/modules/
+	fi
 }
 
 unmountUSB(){
