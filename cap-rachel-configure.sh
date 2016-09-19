@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160916.2111 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160918.1808 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -69,7 +69,7 @@ EOF
 # Rsync Module Exclude List
 buildRsyncModuleExcludeList(){
     cat > $rachelScriptsDir/rsyncExclude.list << 'EOF'
-*-kalite/content*
+#*-kalite/content*
 *.zip
 en-afristory.old
 KALite0.14_content
@@ -1580,6 +1580,17 @@ kaliteSetup(){
     printGood "Done."
 }
 
+kaliteCheckFiles(){
+    # Creating symlinks of all KA Lite video files in the KA Lite content folder  
+    echo; printStatus "Creating symlinks of all KA Lite video files in the KA Lite content folder."
+    find $rachelWWW/modules/*kalite/content -name "*.mp4" -exec ln -s {} $kaliteContentDir 2>/dev/null \;
+    printGood "Done."
+    # Copying KA database file to KA Lite database folder
+    echo; printStatus "Copying KA database file to KA Lite database folder."
+    cp -f $rachelWWW/modules/*kalite/*.sqlite /root/.kalite/database/
+    printGood "Done."
+}
+
 downloadKAContent(){
     # Downloading KA Lite content
     echo "" > $rachelScriptsDir/rsyncInclude.list
@@ -1614,6 +1625,7 @@ downloadKAContent(){
         echo; printStatus "Downloading KA Lite content from $RSYNCDIR"
         rsync -Pavz --include *.mp4 --exclude assessment --exclude locale $RSYNCDIR/rachelmods/$kalang/content/ $kaliteContentDir
     fi
+    kaliteCheckFiles
     commandStatus
     printGood "Done."
 }
@@ -2070,11 +2082,11 @@ echo; echo "[*] Installing OS updates."
 cd $dirContentOffline/offlinepkgs
 dpkg -i *.deb
 # Install kalite sqlite database(s)
-echo; echo "[*] If available, installing kalite sqlite databases."
-if [[ -f $dirContentOffline/kalitedb/content_khan_en.sqlite ]]; then cp $dirContentOffline/kalitedb/content_khan_en.sqlite /root/.kalite/database/; fi
-if [[ -f $dirContentOffline/kalitedb/content_khan_es.sqlite ]]; then cp $dirContentOffline/kalitedb/content_khan_es.sqlite /root/.kalite/database/; fi
-if [[ -f $dirContentOffline/kalitedb/content_khan_fr.sqlite ]]; then cp $dirContentOffline/kalitedb/content_khan_fr.sqlite /root/.kalite/database/; fi
-if [[ -f $dirContentOffline/kalitedb/data.sqlite ]]; then cp $dirContentOffline/kalitedb/data.sqlite /root/.kalite/database/; fi
+#echo; echo "[*] If available, installing kalite sqlite databases."
+#if [[ -f $dirContentOffline/kalitedb/content_khan_en.sqlite ]]; then cp $dirContentOffline/kalitedb/content_khan_en.sqlite /root/.kalite/database/; fi
+#if [[ -f $dirContentOffline/kalitedb/content_khan_es.sqlite ]]; then cp $dirContentOffline/kalitedb/content_khan_es.sqlite /root/.kalite/database/; fi
+#if [[ -f $dirContentOffline/kalitedb/content_khan_fr.sqlite ]]; then cp $dirContentOffline/kalitedb/content_khan_fr.sqlite /root/.kalite/database/; fi
+#if [[ -f $dirContentOffline/kalitedb/data.sqlite ]]; then cp $dirContentOffline/kalitedb/data.sqlite /root/.kalite/database/; fi
 # Update to the latest contentshell
 echo; echo "[*] Updating to latest contentshell."
 cd $dirContentOffline/contentshell
@@ -2170,7 +2182,7 @@ updateRachelFolders(){
 # Loop to redisplay main menu
 whatToDo(){
     echo; printQuestion "What would you like to do next?"
-    echo "1)Initial Install  2)Install/Upgrade KALite  3)Install Kiwix  4)Install Default Weaved Services  5)Install Weaved Service  6)Add Module  7)Add Module List  8)Add Language  9)Update Modules  10)Download-KA-Content  11)Utilities  12)Exit"
+    echo "1)Initial Install  2)Install/Upgrade KALite  3)Install Kiwix  4)Install Default Weaved Services  5)Install Weaved Service  6)Add Module  7)Add Module List  8)Add Language  9)Update Modules  10)Utilities  11)Exit"
 }
 
 # Interactive mode menu
@@ -2185,7 +2197,7 @@ interactiveMode(){
     echo "  - [Add-Module-List] installs the list of modules that your provide"
     echo "  - [Add-Language] installs all modules of a language (does not install KA Lite or full Wikipedia)"
     echo "  - [Update-Modules] updates the currently installed modules"
-    echo "  - [Download-KA-Content] checks for updated KA Lite video content"
+#    echo "  - [Download-KA-Content] checks for updated KA Lite video content"
     echo "  - Other [Utilities]"
     echo "    - Install a battery monitor that cleanly shuts down this device with less than 3% battery"
     echo "    - Download RACHEL content to stage for OFFLINE installs"
@@ -2199,7 +2211,7 @@ interactiveMode(){
     echo "    - Testing script"
     echo "  - [Exit] the installation script"
     echo
-    select menu in "Initial-Install" "Install-Upgrade-KALite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Module" "Add-Module-List" "Add-Language" "Update-Modules" "Download-KA-Content" "Utilities" "Exit"; do
+    select menu in "Initial-Install" "Install-Upgrade-KALite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Module" "Add-Module-List" "Add-Language" "Update-Modules" "Utilities" "Exit"; do
             case $menu in
             Initial-Install)
             newInstall
@@ -2207,7 +2219,8 @@ interactiveMode(){
 
             Install-Upgrade-KALite)
             kaliteSetup
-            downloadKAContent
+#            downloadKAContent
+            kaliteCheckFiles
             # Re-scanning content folder and exercise data 
             echo; printStatus "Restarting KA Lite in order to re-scan the content folder."
             kalite restart
@@ -2241,6 +2254,7 @@ interactiveMode(){
             Add-Module)
             updateModuleNames
             contentModuleInstall
+            kaliteCheckFiles
             repairKiwixLibrary
             whatToDo
             ;;
@@ -2248,6 +2262,7 @@ interactiveMode(){
             Add-Module-List)
             updateModuleNames
             contentModuleListInstall
+            kaliteCheckFiles
             repairKiwixLibrary
             whatToDo
             ;;
@@ -2255,6 +2270,7 @@ interactiveMode(){
             Add-Language)
             updateModuleNames
             contentLanguageInstall
+            kaliteCheckFiles
             repairKiwixLibrary
             whatToDo
             ;;
@@ -2262,14 +2278,15 @@ interactiveMode(){
             Update-Modules)
             updateModuleNames
             contentUpdate
+            kaliteCheckFiles
             repairKiwixLibrary
             whatToDo
             ;;
 
-            Download-KA-Content)
-            downloadKAContent
-            whatToDo
-            ;;
+#            Download-KA-Content)
+#            downloadKAContent
+#            whatToDo
+#            ;;
 
             Utilities)
             echo; printQuestion "What utility would you like to use?"
