@@ -15,7 +15,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160918.1808 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160920.0233 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -240,7 +240,7 @@ onlineVariables(){
     SOURCECN="wget -r $gitRachelPlus/sources.list/sources-sohu.list -O /etc/apt/sources.list" 
     CAPRACHELFIRSTINSTALL2="wget -r $gitRachelPlus/install/cap-rachel-first-install-2.sh -O cap-rachel-first-install-2.sh"
     CAPRACHELFIRSTINSTALL3="wget -r $gitRachelPlus/install/cap-rachel-first-install-3.sh -O cap-rachel-first-install-3.sh"
-    LIGHTTPDFILE="wget -r $gitRachelPlus/lighttpd.conf -O lighttpd.conf"
+    LIGHTTPDFILE="wget -r $gitRachelPlus/scripts/lighttpd.conf -O lighttpd.conf"
     CAPTIVEPORTALREDIRECT="wget -r $gitRachelPlus/captive-portal/captiveportal-redirect.php -O captiveportal-redirect.php"
     PASSTICKETSHTML="wget -r $gitRachelPlus/captive-portal/pass_ticket.shtml -O pass_ticket.shtml"
     REDIRECTSHTML="wget -r $gitRachelPlus/captive-portal/redirect.shtml -O redirect.shtml"
@@ -272,7 +272,7 @@ offlineVariables(){
     SOURCECN="rsync -avhz --progress $dirContentOffline/rachelplus/sources.list/sources-cn.list /etc/apt/sources.list"
     CAPRACHELFIRSTINSTALL2="rsync -avhz --progress $dirContentOffline/rachelplus/install/cap-rachel-first-install-2.sh ."
     CAPRACHELFIRSTINSTALL3="rsync -avhz --progress $dirContentOffline/rachelplus/install/cap-rachel-first-install-3.sh ."
-    LIGHTTPDFILE="rsync -avhz --progress $dirContentOffline/rachelplus/lighttpd.conf ."
+    LIGHTTPDFILE="rsync -avhz --progress $dirContentOffline/rachelplus/scripts/lighttpd.conf ."
     CAPTIVEPORTALREDIRECT="rsync -avhz --progress $dirContentOffline/rachelplus/captive-portal/captiveportal-redirect.php ."
     PASSTICKETSHTML="rsync -avhz --progress $dirContentOffline/rachelplus/captive-portal/pass_ticket.shtml ."
     REDIRECTSHTML="rsync -avhz --progress $dirContentOffline/rachelplus/captive-portal/redirect.shtml ."
@@ -968,7 +968,7 @@ downloadOfflineContent(){
     echo; printStatus "Downloading/updating debian packages."
     mkdir -p $dirContentOffline/offlinepkgs
     cd $dirContentOffline/offlinepkgs
-    apt-get download php5-cgi php5-common php5-mysql php5-sqlite php-pear php5-curl pdftk make git git-man liberror-perl python-m2crypto mysql-server mysql-client libapache2-mod-auth-mysql sqlite3 gcc-multilib
+    apt-get download php5-cgi php5-common php5-mysql php5-sqlite php-pear php5-curl pdftk make git git-man liberror-perl python-m2crypto mysql-server mysql-client libapache2-mod-auth-mysql sqlite3 gcc-multilib gcj-4.6-jre-lib libgcj12 libgcj-common gcj-4.6-base libasound2
     commandStatus
     printGood "Done."
 
@@ -1123,7 +1123,7 @@ EOF
 
         # Install packages
         echo; printStatus "Installing packages."
-        apt-get -y install php5-cgi php5-common php5-mysql php5-sqlite php-pear php5-curl pdftk make git git-core git-man liberror-perl python-m2crypto mysql-server mysql-client libapache2-mod-auth-mysql sqlite3 gcc-multilib
+        apt-get -y install php5-cgi php5-common php5-mysql php5-sqlite php-pear php5-curl pdftk make git git-core git-man liberror-perl python-m2crypto mysql-server mysql-client libapache2-mod-auth-mysql sqlite3 gcc-multilib gcj-4.6-jre-lib libgcj12 libgcj-common gcj-4.6-base libasound2
         # Add support for multi-language front page
         pear clear-cache 2>/dev/null
         echo "\n" | pecl install stem
@@ -1961,7 +1961,7 @@ updateContentShell(){
     mv /etc/init/procps.conf /etc/init/procps.conf.old 2>/dev/null # otherwise quite a pkgs won't install
     if [[ $internet == "1" ]]; then
         apt-get update
-        apt-get -y install php5-sqlite php-pear make gcc-multilib sqlite3 php5-curl pdftk
+        apt-get -y install php5-sqlite php-pear make gcc-multilib sqlite3 php5-curl pdftk gcj-4.6-jre-lib libgcj12 libgcj-common gcj-4.6-base libasound2
     else
         cd $dirContentOffline/offlinepkgs
         dpkg -i *.deb
