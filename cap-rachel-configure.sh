@@ -1,8 +1,7 @@
 #!/bin/bash
 # FILE: cap-rachel-configure.sh
 # ONELINER Download/Install: sudo wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/cap-rachel-configure.sh -O /root/cap-rachel-configure.sh; bash cap-rachel-configure.sh
-
-# For offline builds, run the Download-Offline-Content script in the Utilities menu.
+# OFFLINE BUILDS:  Run the Download-Offline-Content script in the Utilities menu.
 
 # COMMON VARIABLES - Change as needed
 dirContentOffline="/media/usbhd-sdb1" # Enter directory of downloaded RACHEL content for offline install (e.g. I mounted my external USB on my CAP but plugging the external USB into and running the command 'fdisk -l' to find the right drive, then 'mkdir /media/RACHEL-Content' to create a folder to mount to, then 'mount /dev/sdb1 /media/RACHEL-Content' to mount the USB drive.)
@@ -31,10 +30,10 @@ rachelScriptsLog="/var/log/rachel/rachel-scripts.log"
 kaliteUser="root"
 kaliteDir="/root/.kalite" # Installed as user 'root'
 kaliteContentDir="/media/RACHEL/kacontent"
-kaliteCurrentVersion="0.16.9"
+kaliteCurrentVersion="0.16.9-0ubuntu2_all"
 kaliteInstaller="ka-lite-bundle_$kaliteCurrentVersion.deb"
-kalitePrimaryDownload="http://pantry.learningequality.org/downloads/ka-lite/0.16/installers/debian/ka-lite-bundle_$kaliteCurrentVersion-0ubuntu1_all.deb"
-kaliteSettings="$kaliteDir/settings.py" 
+kalitePrimaryDownload="http://pantry.learningequality.org/downloads/ka-lite/0.16/installers/debian/$kaliteInstaller"
+kaliteSettings="$kaliteDir/settings.py"
 installTmpDir="/root/cap-rachel-install.tmp"
 rachelTmpDir="/media/RACHEL/cap-rachel-install.tmp"
 rachelRecoveryDir="/media/RACHEL/recovery"
@@ -62,6 +61,7 @@ dbe9f1384988c00e409553f80edb49da ka-lite-bundle_0.16.1.deb
 4522f65e3c266e1de1d0f7a21469f484 ka-lite-bundle_0.16.6~post1.deb
 378391b5a69adc93a021e40c0a6e0cdd ka-lite-bundle_0.16.8.deb
 9b3750f7391e5e38a9a637f6365554c9 ka-lite-bundle_0.16.9.deb
+619248e8838e21c28b97f1e33b230436 ka-lite-bundle_0.16.9-0ubuntu2_all.deb
 b61fdc3937aa226f34f685ba0bc29db1 kiwix-0.9-linux-i686.tar.bz2
 EOF
 }
@@ -169,14 +169,16 @@ cleanup(){
 testingScript(){
     set -x
 
-    contentModuleListInstall
+    repairBugs
+    kaliteCheckFiles
+    repairKiwixLibrary
 
     set +x
     exit 1
 }
 
 opMode(){
-    echo; printQuestion "Do you want to run in ONLINE or OFFLINE mode?"
+    echo; printQuestion "Do you want to run in ONLINE (a network location) or OFFLINE (USB drive) mode?"
     select MODE in "ONLINE" "OFFLINE"; do
         case $MODE in
         # ONLINE
@@ -247,7 +249,7 @@ onlineVariables(){
     WORLDPOSSIBLEBRANDLOGOCAPTIVE="wget -r $gitRachelPlus/captive-portal/WorldPossiblebrandLogo-captive.png -O WorldPossiblebrandLogo-captive.png"
     GITCLONERACHELCONTENTSHELL="git clone https://github.com/rachelproject/contentshell contentshell"
     RSYNCDIR="$rsyncOnline"
-    ASSESSMENTITEMSJSON="wget -c $gitRachelPlus/assessmentitems.json -O /var/ka-lite/data/khan/assessmentitems.json"
+#    ASSESSMENTITEMSJSON="wget -c $gitRachelPlus/assessmentitems.json -O /var/ka-lite/data/khan/assessmentitems.json"
     KACONTENTFOLDER=""
     KALITEINSTALL="wget -c $kalitePrimaryDownload -O $installTmpDir/$kaliteInstaller"
 #    KALITEINSTALL="rsync -avhz --progress $contentOnline/$kaliteInstaller $installTmpDir/$kaliteInstaller"
@@ -279,7 +281,7 @@ offlineVariables(){
     WORLDPOSSIBLEBRANDLOGOCAPTIVE="rsync -avhz --progress $dirContentOffline/rachelplus/captive-portal/WorldPossiblebrandLogo-captive.png ."
     GITCLONERACHELCONTENTSHELL=""
     RSYNCDIR="$dirContentOffline"
-    ASSESSMENTITEMSJSON="rsync -avhz --progress $dirContentOffline/rachelplus/assessmentitems.json /var/ka-lite/data/khan/assessmentitems.json"
+#    ASSESSMENTITEMSJSON="rsync -avhz --progress $dirContentOffline/rachelplus/assessmentitems.json /var/ka-lite/data/khan/assessmentitems.json"
     KACONTENTFOLDER="$dirContentOffline/kacontent"
     KALITEINSTALL="rsync -avhz --progress $dirContentOffline/$kaliteInstaller $installTmpDir/$kaliteInstaller"
     KALITECONTENTINSTALL="rsync -avhz --progress $dirContentOffline/kacontent/ /media/RACHEL/kacontent/"
@@ -544,6 +546,8 @@ installKiwix(){
     # Add lines to $rachelScriptsFile that will start kiwix on boot
     sed -i '$e echo "\# Start kiwix on boot"' $rachelScriptsFile
     sed -i '$e echo "\/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' $rachelScriptsFile
+    # Update Kiwix version
+    cat /var/kiwix/application.ini | grep ^Version | cut -d= -f2 > /etc/kiwix-version
 }
 
 repairKiwixLibrary(){
@@ -552,7 +556,11 @@ repairKiwixLibrary(){
     tmp=`mktemp`
     library="$rachelPartition/kiwix/data/library/library.xml"
     db="$rachelWWW/admin.sqlite"
+
     # Remove/recreate existing library
+    libraryPath="/media/RACHEL/kiwix/data/library"
+    library="$libraryPath/library.xml"
+    mkdir -p $libraryPath
     rm -f $library; mkdir -p $rachelPartition/kiwix/data/library; touch $library
 
     # Find all the zim files in the modules directoy
@@ -597,6 +605,8 @@ repairKiwixLibrary(){
     killall /var/kiwix/bin/kiwix-serve
     /var/kiwix/bin/kiwix-serve --daemon --port=81 --library $library
     rm -f $tmp
+    # Update Kiwix version
+    cat /var/kiwix/application.ini | grep ^Version | cut -d= -f2 > /etc/kiwix-version
     printGood "Done."
 }
 
@@ -617,9 +627,11 @@ createKiwixRepairScript(){
 
 # Create tmp file (clean out new lines, etc)
 tmp=`mktemp`
-library="/media/RACHEL/kiwix/data/library/library.xml"
+libraryPath="/media/RACHEL/kiwix/data/library"
+library="$libraryPath/library.xml"
 
 # Remove/recreate existing library
+mkdir -p $libraryPath
 rm -f $library; touch $library
 
 # Find all the zim files in the modules directoy
@@ -652,6 +664,8 @@ done
 # Restart Kiwix
 killall /var/kiwix/bin/kiwix-serve
 /var/kiwix/bin/kiwix-serve --daemon --port=81 --library $library > /dev/null
+# Update Kiwix version
+cat /var/kiwix/application.ini | grep ^Version | cut -d= -f2 > /etc/kiwix-version
 rm -f $tmp
 EOF
     chmod +x $rachelScriptsDir/rachelKiwixStart.sh
@@ -944,14 +958,6 @@ downloadOfflineContent(){
     commandStatus
     printGood "Done."
 
-    # Download kalite content
-    echo; printStatus "Downloading/updating:  KA Lite content media files"
-    rsync -avhP $RSYNCDIR/rachelmods/KALite0.14_content $dirContentOffline
-    commandStatus
-    rsync -avhP $contentOnline/kacontent $dirContentOffline
-    commandStatus
-    printGood "Done."
-
     # Downloading kiwix
     echo; printStatus "Downloading/updating kiwix."
     wget -c $wgetOnline/downloads/public_ftp/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $dirContentOffline/kiwix-0.9-linux-i686.tar.bz2
@@ -959,10 +965,10 @@ downloadOfflineContent(){
     printGood "Done."
 
     # Downloading deb packages
-    echo; printStatus "Downloading/updating Git and PHP."
+    echo; printStatus "Downloading/updating debian packages."
     mkdir -p $dirContentOffline/offlinepkgs
     cd $dirContentOffline/offlinepkgs
-    apt-get download php5-cgi php5-common php5-mysql php5-sqlite php-pear make git git-man liberror-perl python-m2crypto mysql-server mysql-client libapache2-mod-auth-mysql sqlite3 gcc-multilib
+    apt-get download php5-cgi php5-common php5-mysql php5-sqlite php-pear php5-curl pdftk make git git-man liberror-perl python-m2crypto mysql-server mysql-client libapache2-mod-auth-mysql sqlite3 gcc-multilib
     commandStatus
     printGood "Done."
 
@@ -1117,7 +1123,7 @@ EOF
 
         # Install packages
         echo; printStatus "Installing packages."
-        apt-get -y install php5-cgi git-core python-m2crypto php5-sqlite sqlite3 php-pear make gcc-multilib
+        apt-get -y install php5-cgi php5-common php5-mysql php5-sqlite php-pear php5-curl pdftk make git git-core git-man liberror-perl python-m2crypto mysql-server mysql-client libapache2-mod-auth-mysql sqlite3 gcc-multilib
         # Add support for multi-language front page
         pear clear-cache 2>/dev/null
         echo "\n" | pecl install stem
@@ -1281,29 +1287,6 @@ contentModuleInstall(){
     rm -f /tmp/module.lst
 }
 
-contentModuleListInstall(){
-    echo; printQuestion "What is the full path to the line-seperated module list you would like to install (i.e. /root/<module.list>)?"; read userModuleList || return
-    while :; do
-        if [[ ! -f $userModuleList ]]; then
-            echo; printError "FILE NOT FOUND - You must provide a file path of a location accessible from the CAP."
-            echo; printQuestion "What is the full path to the file location for the module list you would like to install?"; read userModuleList
-        else
-            break
-        fi
-    done
-    echo; printStatus "Here is your list of modules:"
-    cat $userModuleList
-    echo; printQuestion "Are you ready to install your selected modules? (y/N) "; read REPLY
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        while read m; do
-            echo; printStatus "Downloading $m"
-            rsync -avz --delete-after $RSYNCDIR/rachelmods/$m $rachelWWW/modules/
-            commandStatus
-            printGood "Done."
-        done < $userModuleList
-    fi
-}
-
 contentLanguageInstall(){
     languageMenu(){
         echo; printQuestion "What additional language would like to download/update?"
@@ -1426,11 +1409,11 @@ kaliteInstall(){
     # Checking user provided file MD5 against known good version
     checkMD5 $installTmpDir/$kaliteInstaller
     # !!! Need to add offline method
-    # Fix for 0.6.8+ versions of KA Lite
-    apt-get install python-pip
-    pip install urllib3 --upgrade
-    pip install requests --upgrade
-    rm -rf /usr/share/kalite/dist-packages/requests 
+#    # Fix for 0.6.8-0.6.9v1 versions of KA Lite
+#    apt-get install python-pip
+#    pip install urllib3 --upgrade
+#    pip install requests --upgrade
+#    rm -rf /usr/share/kalite/dist-packages/requests 
     if [[ $md5Status == 1 ]]; then
         echo; printStatus "Installing KA Lite Version $kaliteCurrentVersion"
         echo; printError "CAUTION:  When prompted, enter 'Okay' for start on boot."
@@ -1449,6 +1432,7 @@ kaliteInstall(){
             break
         fi
         update-rc.d ka-lite disable
+        kalite --version > /etc/kalite-version
     fi
 }
 
@@ -1503,61 +1487,6 @@ kaliteSetup(){
     sed -i '/^CONTENT_ROOT/d' $kaliteSettings
     sed -i '/^DATABASES/d' $kaliteSettings
     echo 'CONTENT_ROOT = "/media/RACHEL/kacontent"' >> $kaliteSettings
-#    echo "DATABASES['assessment_items']['NAME'] = os.path.join(CONTENT_ROOT, 'assessmentitems.sqlite')" >> $kaliteSettings
-
-    
-    # The current khan_assessment.zip installer provided by KA Lite throws on error on our system 
-    echo; printStatus "Fixing the KA Lite provider khan_assessment.zip installer."
-    sed -i "s/os.rename/shutil.move/g" /usr/lib/python2.7/dist-packages/kalite/contentload/management/commands/unpack_assessment_zip.py
-    sed -i '6 a import shutil' /usr/lib/python2.7/dist-packages/kalite/contentload/management/commands/unpack_assessment_zip.py
-
-    if [[ ! $(dpkg -s ka-lite-bundle) ]]; then
-        # Ask if there is local copy of the assessmentitems.json
-        echo; printStatus "Downloading assessment items."
-        echo; printQuestion "Do you want to use a local copy of the file khan_assessment.zip?"
-        read -p "    nter (y/N) " REPLY
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            echo; printQuestion "What is the full path to the file location for assessment items ZIP file (i.e. /root/khan_assessment.zip)?"; read ASSESSMENTFILE || return
-            while :; do
-                if [[ ! -f $ASSESSMENTFILE ]]; then
-                    echo; printError "FILE NOT FOUND - You must provide a file path of a location accessible from the CAP."
-                    echo; printQuestion "What is the full path to the file location for assessment items ZIP file?"; read ASSESSMENTFILE
-                else
-                    break
-                fi
-            done
-            # Checking user provided file MD5 against known good version
-            checkMD5 $ASSESSMENTFILE
-            if [[ $md5Status == 1 ]]; then
-                echo; printGood "Installing the assessment items."
-                kalite manage unpack_assessment_zip $ASSESSMENTFILE -f
-            fi
-        # If needed, download/install assessmentitems.json
-        else
-            echo; printQuestion "Do you want to attempt to download khan_assessment.zip from the RACHEL repository online (caution...the file is nearly 500MB)?"
-            read -p "    Enter (y/N) " REPLY
-            if [[ $REPLY =~ ^[Yy]$ ]]; then
-                # Primary download server
-                wget -c https://learningequality.org/downloads/ka-lite/0.16/content/khan_assessment.zip -O $installTmpDir/khan_assessment.zip
-                commandStatus
-                    if [[ $errorCode == 1 ]]; then
-                    # Secondary download server
-                    rsync -avhP $contentOnline/khan_assessment.zip $installTmpDir/khan_assessment.zip
-                fi
-                # Checking user provided file MD5 against known good version
-                checkMD5 $installTmpDir/khan_assessment.zip
-                if [[ $md5Status == 1 ]]; then
-                    echo; printGood "Installing the assessment items."
-                    kalite manage unpack_assessment_zip $ASSESSMENTFILE -f
-                fi
-                # Installing khan_assessment.zip
-                echo; printStatus "Installing khan_assessment.zip (the install may take a minute or two)."
-                kalite manage unpack_assessment_zip $installTmpDir/khan_assessment.zip -f
-            else
-                echo; printStatus "Skipping assessment items download."
-            fi
-        fi
-    fi
 
     # Install module for RACHEL index.php
     echo; printStatus "Syncing RACHEL web interface 'KA Lite module'."
@@ -1581,13 +1510,19 @@ kaliteSetup(){
 }
 
 kaliteCheckFiles(){
+    # Stopping KA Lite
+    kalite stop
     # Creating symlinks of all KA Lite video files in the KA Lite content folder  
     echo; printStatus "Creating symlinks of all KA Lite video files in the KA Lite content folder."
     find $rachelWWW/modules/*kalite/content -name "*.mp4" -exec ln -s {} $kaliteContentDir 2>/dev/null \;
     printGood "Done."
     # Copying KA database file to KA Lite database folder
-    echo; printStatus "Copying KA database file to KA Lite database folder."
-    cp -f $rachelWWW/modules/*kalite/*.sqlite /root/.kalite/database/
+    echo; printStatus "Symlinking all KA database module files to the actual KA Lite database folder."
+    ln -sf $rachelWWW/modules/*kalite/*.sqlite /root/.kalite/database/
+    # Starting KA Lite
+    kalite start
+    # Update KA Lite version
+    kalite --version > /etc/kalite-version
     printGood "Done."
 }
 
@@ -1993,6 +1928,7 @@ repairBugs(){
 
     # Add Kiwix repair library script
     createKiwixRepairScript
+    repairKiwixLibrary
 
     # Fixing issue with 10.10.10.10 redirect and sleep times
     repairRachelScripts
@@ -2025,7 +1961,7 @@ updateContentShell(){
     mv /etc/init/procps.conf /etc/init/procps.conf.old 2>/dev/null # otherwise quite a pkgs won't install
     if [[ $internet == "1" ]]; then
         apt-get update
-        apt-get -y install php5-sqlite php-pear make gcc-multilib sqlite3
+        apt-get -y install php5-sqlite php-pear make gcc-multilib sqlite3 php5-curl pdftk
     else
         cd $dirContentOffline/offlinepkgs
         dpkg -i *.deb
@@ -2179,10 +2115,141 @@ updateRachelFolders(){
     if [[ -f /root/rachelKiwixStart.sh ]]; then mv /root/rachelKiwixStart.sh $rachelScriptsDir/; fi
 }
 
+contentModuleListInstall(){
+    while read m; do
+        echo; printStatus "Downloading $m"
+        rsync -avz --delete-after $RSYNCDIR/rachelmods/$m $rachelWWW/modules/
+        commandStatus
+        printGood "Done."
+    done < $1
+}
+
+buildRACHEL(){
+    # figure out which language we're doing
+    case $1 in
+        en | es | fr )
+            lang=$1;
+            shift
+            ;;
+        * )
+            echo Usage: `basename $0` '(en | es | fr) [ rsync host ]'
+            echo '       rsync hosts: dev, jeremy, jfield, actual hostname/ip, OR usb'
+            exit 1
+            ;;
+    esac
+
+    # figure out which server we're doing
+    case $1 in
+        dev | "" )
+            onlineVariables
+            ;;
+        jeremy )
+            offlineVariables
+            RSYNCDIR="rsync://192.168.1.74"
+            ;;
+        jfield )
+            offlineVariables
+            RSYNCDIR="rsync://192.168.1.6"
+            ;;
+        usb )
+            echo; printQuestion "What is the location of your content folder (for example, /media/usb)? "; read dirContentOffline
+            if [[ ! -d $dirContentOffline ]]; then
+                echo; printError "The folder location does not exist!  Sorry, ensure the usb drive is mounted (type 'df -h')"
+                rm -rf $installTmpDir $rachelTmpDir
+                exit 1
+            fi
+            offlineVariables
+            RSYNCDIR="$1"
+            ;;
+        * )
+            offlineVariables
+            RSYNCDIR="rsync://$1"
+            ;;
+    esac
+
+    echo; printStatus "Starting RACHEL build script"
+    echo "Building CAP with language set: $lang"
+    echo "Using server: $RSYNCDIR"
+
+    # fix known RACHEL bugs
+    repairBugs
+
+    # stop kalite startup
+    echo; printStatus "Stopping kalite"
+    kalite stop
+
+    # clear out old httpd logs, get updated config, restart
+    # by killing it gracefully and letting sw_watchdog restart it
+    echo; printStatus "Clearing httpd logs"
+    rm -f /var/log/httpd/access_log
+    rm -f /var/log/httpd/error_log
+    echo Updating lighttpd.conf
+    mv /usr/local/etc/lighttpd.conf /usr/local/etc/lighttpd.conf.last
+    wget -q https://raw.githubusercontent.com/rachelproject/rachelplus/master/scripts/lighttpd.conf /usr/local/etc/lighttpd.conf
+    echo Killing lighttpd
+    killall -INT lighttpd
+
+    # clear out possible old videos taking up space
+    echo; printStatus "Clearing old video content"
+    rm -rf /media/RACHEL/kacontent
+    mkdir /media/RACHEL/kacontent
+
+    # get content (all languages):
+    echo; printStatus "Installing/updating $lang content modules"
+    contentModuleListInstall $rachelWWW/scripts/"$lang"_plus.modules
+
+    # install kalite content packs (this covers subtitles)
+    echo; printStatus "Installing content pack"
+    kalite manage retrievecontentpack local $lang $rachelWWW/modules/"$lang"-kalite/"$lang"-contentpack.zip
+
+    # move database into place
+    echo; printStatus "Symlinking database file"
+    ln -sf /root/.kalite/database/ $rachelWWW/modules/"$lang"-kalite/content_khan_"$lang".sqlite
+
+    # bring in our multi-language patch
+    echo; printStatus "Patching kalite language code"
+    wget -q https://raw.githubusercontent.com/rachelproject/rachelplus/master/scripts/KALITE-MULTILINGUAL-api_views.py /usr/lib/python2.7/dist-packages/kalite/i18n/api_views.py
+
+    # set the default language (or leave it alone)
+    # NOTE: your session settings will override the default language
+    # so to check this you have to open in an incognito window!
+    echo; printStatus "Setting kalite language to $lang"
+    wget -q -O - "http://localhost:8008/api/i18n/set_default_language/?lang=$lang&allUsers=1"
+    echo
+
+    # get the admin DB for module sort/visibility
+    echo; printStatus "Retrieving admin.sqlite db options"
+    rsync -Pavz rsync://dev.worldpossible.org/rachelmods/extra-build-files/EN-PLUS-admin.sqlite /media/RACHEL/rachel/
+    rsync -Pavz rsync://dev.worldpossible.org/rachelmods/extra-build-files/ES-PLUS-admin.sqlite /media/RACHEL/rachel/
+    rsync -Pavz rsync://dev.worldpossible.org/rachelmods/extra-build-files/FR-PLUS-admin.sqlite /media/RACHEL/rachel/
+    rsync -Pavz rsync://dev.worldpossible.org/rachelmods/extra-build-files/JU-PLUS-admin.sqlite /media/RACHEL/rachel/
+
+    # set the sort/visibility according to language
+    uclang=$(echo $lang | tr 'a-z' 'A-Z')
+    echo; printStatus "Setting the admin.sqlite db to $uclang"
+    cp /media/RACHEL/rachel/$uclang-PLUS-admin.sqlite /media/RACHEL/rachel/admin.sqlite
+
+    # symlink KA Lite mp4s to /media/RACHEL/kacontent
+    kaliteCheckFiles
+
+    # repair/rebuild Kiwix library
+    repairKiwixLibrary
+
+    # restart kalite
+    echo; printStatus "Restarting kalite"
+    /usr/bin/kalite --version > /etc/kalite-version
+    kalite start
+    sleep 10
+
+    # update RACHEL installer version
+    if [[ ! -f /etc/rachelinstaller-version ]]; then $(cat /etc/version | cut -d- -f1 > /etc/rachelinstaller-version); fi
+    echo $(cat /etc/rachelinstaller-version | cut -d_ -f1)_$(date +%Y%m%d.%H%M) > /etc/rachelinstaller-version
+}
+
 # Loop to redisplay main menu
 whatToDo(){
     echo; printQuestion "What would you like to do next?"
-    echo "1)Initial Install  2)Install/Upgrade KALite  3)Install Kiwix  4)Install Default Weaved Services  5)Install Weaved Service  6)Add Module  7)Add Module List  8)Add Language  9)Update Modules  10)Utilities  11)Exit"
+    echo "1)Initial Install  2)Install/Upgrade KALite  3)Install Kiwix  4)Install Default Weaved Services  5)Install Weaved Service  6)Add Module  7)Add Language  8)Update Modules  9)Utilities  10)Exit"
 }
 
 # Interactive mode menu
@@ -2194,7 +2261,7 @@ interactiveMode(){
     echo "  - [Install-Default-Weaved-Services] installs the default CAP Weaved services for ports 22, 80, 8080"
     echo "  - [Install-Weaved-Service] adds a Weaved service to an online account you provide during install"
     echo "  - [Add-Module] lists current available modules; installs one at a time"
-    echo "  - [Add-Module-List] installs the list of modules that your provide"
+#    echo "  - [Add-Module-List] installs the list of modules that your provide"
     echo "  - [Add-Language] installs all modules of a language (does not install KA Lite or full Wikipedia)"
     echo "  - [Update-Modules] updates the currently installed modules"
 #    echo "  - [Download-KA-Content] checks for updated KA Lite video content"
@@ -2211,7 +2278,7 @@ interactiveMode(){
     echo "    - Testing script"
     echo "  - [Exit] the installation script"
     echo
-    select menu in "Initial-Install" "Install-Upgrade-KALite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Module" "Add-Module-List" "Add-Language" "Update-Modules" "Utilities" "Exit"; do
+    select menu in "Initial-Install" "Install-Upgrade-KALite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Module" "Add-Language" "Update-Modules" "Utilities" "Exit"; do
             case $menu in
             Initial-Install)
             newInstall
@@ -2259,13 +2326,13 @@ interactiveMode(){
             whatToDo
             ;;
 
-            Add-Module-List)
-            updateModuleNames
-            contentModuleListInstall
-            kaliteCheckFiles
-            repairKiwixLibrary
-            whatToDo
-            ;;
+#            Add-Module-List)
+#            updateModuleNames
+#            contentModuleListInstall
+#            kaliteCheckFiles
+#            repairKiwixLibrary
+#            whatToDo
+#            ;;
 
             Add-Language)
             updateModuleNames
@@ -2428,7 +2495,9 @@ interactiveMode(){
 printHelp(){
     echo "Usage:  cap-rachel-configure.sh [-h] [-i] [-r] [-u]"
     echo; echo "Examples:"
-    echo "./cap-rachel-configure.sh -h"
+    echo "./cap-rachel-configure.sh -b (en | es | fr) [dev | jeremy | jfield]"
+    echo "Build a RACHEL-Plus"
+    echo; echo "./cap-rachel-configure.sh -h"
     echo "Displays this help menu."
     echo; echo "./cap-rachel-configure.sh -i"
     echo "Interactive mode."
@@ -2470,9 +2539,28 @@ elif [[ $1 == "--usbrecovery" ]]; then
     usbRecovery
 else
     IAM=${0##*/} # Short basename
-    while getopts ":irtu" opt
+    while getopts ":b:irtu" opt
     do sc=0 #no option or 1 option arguments
         case $opt in
+        (b) # Build - Quick build
+            # Create temp directories
+            mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir
+            # Check OS version
+            osCheck
+            if [[ $# -lt $((OPTIND)) ]]; then
+                echo; echo "$IAM -b argument(s) missing...needs 2!" >&2
+                echo; echo "Usage: `basename $0` -b '(en | es | fr) [ rsync host ]'" >&2
+                echo '       rsync hosts: dev, jeremy, jfield, or actual hostname/ip' >&2
+                exit 2
+            fi
+            OPTINDplus1=$((OPTIND + 1))
+            kaLanguage=$OPTARG
+            eval rsyncHost=\$$OPTIND
+            buildRACHEL $kaLanguage $rsyncHost
+            echo; printGood "Build complete."
+            exit
+            sc=1 #2 args
+            ;;
         (i) # Interactive mode
             # Create temp directories
             mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir
@@ -2496,7 +2584,6 @@ else
             opMode
             repairBugs
             echo; printGood "Repair complete."
-            
             exit
             ;;
         (t) # Testing script
