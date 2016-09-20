@@ -15,7 +15,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160920.0233 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160920.0359 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -30,8 +30,8 @@ rachelScriptsLog="/var/log/rachel/rachel-scripts.log"
 kaliteUser="root"
 kaliteDir="/root/.kalite" # Installed as user 'root'
 kaliteContentDir="/media/RACHEL/kacontent"
-kaliteCurrentVersion="0.16.9-0ubuntu2_all"
-kaliteInstaller="ka-lite-bundle_$kaliteCurrentVersion.deb"
+kaliteCurrentVersion="0.16.9-0ubuntu2"
+kaliteInstaller=ka-lite-bundle_"$kaliteCurrentVersion"_all.deb
 kalitePrimaryDownload="http://pantry.learningequality.org/downloads/ka-lite/0.16/installers/debian/$kaliteInstaller"
 kaliteSettings="$kaliteDir/settings.py"
 installTmpDir="/root/cap-rachel-install.tmp"
@@ -1432,7 +1432,7 @@ kaliteInstall(){
             break
         fi
         update-rc.d ka-lite disable
-        kalite --version > /etc/kalite-version
+        dpkg -s ka-lite-bundle | grep ^Version | cut -d" " -f2 > /etc/kalite-version
     fi
 }
 
@@ -1456,7 +1456,7 @@ kaliteSetup(){
         fi
     elif [[ -f /etc/ka-lite/username ]]; then
         kaliteUser=$(cat /etc/ka-lite/username)
-        kaliteVersion=$(kalite manage --version)
+        kaliteVersion=$(dpkg -s ka-lite-bundle | grep ^Version | cut -d" " -f2)
         if [[ -z $kaliteVersion ]]; then kaliteVersion="UNKNOWN"; fi
         printGood "KA Lite installed under user:  $kaliteUser"
         printGood "Current KA Lite Version Installed:  $kaliteVersion"
@@ -1470,7 +1470,8 @@ kaliteSetup(){
         fi
     else
         echo; printStatus "It doesn't look like KA Lite is installed; installing now."
-        kaliteUser="ka-lite"
+#        kaliteUser="ka-lite"
+        kaliteUser="root"
         kaliteVersionDate=0
         # Remove previous KA Lite
         kaliteRemove
@@ -1491,6 +1492,9 @@ kaliteSetup(){
     # Install module for RACHEL index.php
     echo; printStatus "Syncing RACHEL web interface 'KA Lite module'."
     rsync -avz --ignore-existing --exclude="en-kalite/content" --exclude="en-kalite/en-contentpack.zip" --delete-after $RSYNCDIR/rachelmods/en-kalite $rachelWWW/modules/
+
+    # Symlink the KA Lite database and video files
+    kaliteCheckFiles
 
     # Delete previous setup commands from /etc/rc.local (not used anymore)
     sudo sed -i '/ka-lite/d' /etc/rc.local
@@ -1520,9 +1524,9 @@ kaliteCheckFiles(){
     echo; printStatus "Symlinking all KA database module files to the actual KA Lite database folder."
     ln -sf $rachelWWW/modules/*kalite/*.sqlite /root/.kalite/database/
     # Starting KA Lite
-    kalite start
+    echo; kalite start
     # Update KA Lite version
-    kalite --version > /etc/kalite-version
+    dpkg -s ka-lite-bundle | grep ^Version | cut -d" " -f2 > /etc/kalite-version
     printGood "Done."
 }
 
@@ -2235,12 +2239,6 @@ buildRACHEL(){
     # repair/rebuild Kiwix library
     repairKiwixLibrary
 
-    # restart kalite
-    echo; printStatus "Restarting kalite"
-    /usr/bin/kalite --version > /etc/kalite-version
-    kalite start
-    sleep 10
-
     # update RACHEL installer version
     if [[ ! -f /etc/rachelinstaller-version ]]; then $(cat /etc/version | cut -d- -f1 > /etc/rachelinstaller-version); fi
     echo $(cat /etc/rachelinstaller-version | cut -d_ -f1)_$(date +%Y%m%d.%H%M) > /etc/rachelinstaller-version
@@ -2288,9 +2286,6 @@ interactiveMode(){
             kaliteSetup
 #            downloadKAContent
             kaliteCheckFiles
-            # Re-scanning content folder and exercise data 
-            echo; printStatus "Restarting KA Lite in order to re-scan the content folder."
-            kalite restart
             echo; printGood "Login using wifi at http://192.168.88.1:8008 and register device."
             echo "After you register, click the new tab called 'Manage', then 'Videos' and download all the missing videos."
             repairRachelScripts
@@ -2495,7 +2490,7 @@ interactiveMode(){
 printHelp(){
     echo "Usage:  cap-rachel-configure.sh [-h] [-i] [-r] [-u]"
     echo; echo "Examples:"
-    echo "./cap-rachel-configure.sh -b (en | es | fr) [dev | jeremy | jfield]"
+    echo "./cap-rachel-configure.sh -b (en | es | fr) [dev | jeremy | jfield | host/ip | usb]"
     echo "Build a RACHEL-Plus"
     echo; echo "./cap-rachel-configure.sh -h"
     echo "Displays this help menu."
