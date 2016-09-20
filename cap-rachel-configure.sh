@@ -15,7 +15,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160920.0359 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160920.0422 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -2285,7 +2285,6 @@ interactiveMode(){
             Install-Upgrade-KALite)
             kaliteSetup
 #            downloadKAContent
-            kaliteCheckFiles
             echo; printGood "Login using wifi at http://192.168.88.1:8008 and register device."
             echo "After you register, click the new tab called 'Manage', then 'Videos' and download all the missing videos."
             repairRachelScripts
