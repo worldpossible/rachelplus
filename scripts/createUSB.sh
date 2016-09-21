@@ -19,7 +19,7 @@ printQuestion(){
 	echo -e "\x1B[01;33m[?]\x1B[0m $1"
 }
 
-version=8
+version=9
 timestamp=$(date +"%Y%m%d.%H%M")
 usbDate=$(date +"%Y%m%d")
 imageSavePath="$HOME"
@@ -30,7 +30,6 @@ rachelWWW="$rachelPartition/rachel"
 rachelScriptsDir="/root/rachel-scripts"
 rachelTmpDir="/media/RACHEL/cap-rachel-install.tmp"
 rachelRecoveryDir="/media/RACHEL/recovery"
-weavedInstall="wget -c https://github.com/weaved/installer/raw/master/Intel_CAP/weaved_IntelCAP.tar -O $rachelScriptsDir/weaved_IntelCAP.tar"
 rsyncDIR="rsync://dev.worldpossible.org"
 
 loggingStart(){
@@ -112,33 +111,6 @@ confirmRecoveryUSB(){
 	fi
 }
 
-installDefaultWeavedServices(){
-	echo; printStatus "Installing Weaved service."
-	# Download weaved files
-	echo; printStatus "Downloading required files."
-	$weavedInstall
-	cd $rachelScriptsDir
-	tar xvf weaved_IntelCAP.tar
-	if [[ -d $rachelScriptsDir/weaved_software ]]; then
-		rm -f $rachelScriptsDir/weaved_IntelCAP.tar
-		echo; printGood "Done."
-		# Run installer
-		cd $rachelScriptsDir/weaved_software
-		bash install.sh
-		# Remove port 8080 service
-		echo; printStatus "Removing unecessary Port 8080 service."
-		pid=$(ps aux | grep -v grep | grep "/usr/bin/weavedConnectd.linux -f /etc/weaved/services/Weavedhttp8080.conf -d /var/run/Weavedhttp8080.pid" | awk '{print $2}')
-		if [[ ! -z $pid ]]; then kill $pid; fi
-		rm -f /etc/weaved/services/Weavedhttp8080.conf /var/run/Weavedhttp8080.pid /usr/bin/Weavedhttp8080.sh /var/log/Weavedhttp8080.log /media/RACHEL/recovery/Weaved/Weavedhttp8080-port.conf 2>/dev/null
-		# Finished
-		echo; printGood "Weaved service install complete."
-		printGood "NOTE: An Weaved service uninstaller is available from the Utilities menu of this script."
-	else
-		echo; printError "One or more files did not download correctly; and try again."
-		echo; exit 1
-	fi
-}
-
 sanitize(){
 	# Remove history, clean logs
 	echo; printStatus "Sanitizing log files."
@@ -152,15 +124,8 @@ sanitize(){
 	rm -rf /recovery/20* $rachelRecoveryDir/20*
 	# Clean bash history
 	echo "" > /root/.bash_history
-	echo; printQuestion "Do you want to remove any currently activated Weaved services and run the default Weaved setup? (y/N)"
-	echo "If you enter 'y', we will install the staged default Weaved services for ports 22, 80, and 8080."; read REPLY
-	if [[ $REPLY =~ ^[Yy]$ ]]; then
-		# Remove previous Weaved installs
-		rm -rf /usr/bin/notify_Weaved*.sh /usr/bin/Weaved*.sh /etc/weaved /root/Weaved*.log
-		# Install default weaved services
-		installDefaultWeavedServices
-	fi
-	echo; printGood "All ready for a customer; register Weaved services, if needed."
+	# Remove previous Weaved installs
+	rm -rf /usr/bin/notify_Weaved*.sh /usr/bin/Weaved*.sh /etc/weaved /root/Weaved*.log
 }
 
 buildUSBImage(){
