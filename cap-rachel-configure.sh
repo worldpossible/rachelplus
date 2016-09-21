@@ -15,7 +15,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160920.1128 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160920.2342 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -49,18 +49,6 @@ fi
 # MD5 hash list
 buildHashList(){
     cat > $installTmpDir/hashes.md5 << 'EOF'
-97ed60c5cdb905e016983b19a94b408a khan_assessment.zip
-15b6aa51d8292b7b0cbfe36927b8e714 khan_assessment_0.15.zip
-65fe77df27169637f20198901591dff0 ka-lite_content.zip
-bd905efe7046423c1f736717a59ef82c ka-lite-bundle_0.15.0.deb
-18998e1253ca720adb2b54159119ce80 ka-lite-bundle_0.15.1.deb
-996f610686da40ffd85ffbcb129c0c91 ka-lite-bundle_0.16.0.deb
-dbe9f1384988c00e409553f80edb49da ka-lite-bundle_0.16.1.deb
-4388fe0a84683a5f8561e29ee1749162 ka-lite-bundle_0.16.5.deb
-4522f65e3c266e1de1d0f7a21469f484 ka-lite-bundle_0.16.6.deb
-4522f65e3c266e1de1d0f7a21469f484 ka-lite-bundle_0.16.6~post1.deb
-378391b5a69adc93a021e40c0a6e0cdd ka-lite-bundle_0.16.8.deb
-9b3750f7391e5e38a9a637f6365554c9 ka-lite-bundle_0.16.9.deb
 619248e8838e21c28b97f1e33b230436 ka-lite-bundle_0.16.9-0ubuntu2_all.deb
 b61fdc3937aa226f34f685ba0bc29db1 kiwix-0.9-linux-i686.tar.bz2
 EOF
@@ -673,31 +661,28 @@ EOF
 }
 
 installDefaultWeavedServices(){
+    weavedSoftware="/root/rachel-scripts/weaved_software"
     echo; printStatus "Installing Weaved service."
     cd $rachelScriptsDir
     # Download weaved files
     echo; printStatus "Downloading required files."
     $WEAVEDINSTALL
     commandStatus
-
     tar xvf weaved_IntelCAP.tar
     commandStatus
     if [[ $errorCode == 0 ]] && [[ -d $rachelScriptsDir/weaved_software ]]; then
         rm -f $rachelScriptsDir/weaved_IntelCAP.tar
         echo; printGood "Done."
-        # Run installer
+        # Run installer for port 22 - sets the alias to 0-xxxx (where xxxx is the last four of the MAC)
         cd $rachelScriptsDir/weaved_software
-        bash install.sh
-        # Remove port 8080 service
-        echo; printStatus "Removing unecessary Port 8080 service."
-        pid=$(ps aux | grep -v grep | grep "/usr/bin/weavedConnectd.linux -f /etc/weaved/services/Weavedhttp8080.conf -d /var/run/Weavedhttp8080.pid" | awk '{print $2}')
-        if [[ ! -z $pid ]]; then kill $pid; fi
-        rm -f /etc/weaved/services/Weavedhttp8080.conf /var/run/Weavedhttp8080.pid /usr/bin/Weavedhttp8080.sh /var/log/Weavedhttp8080.log /media/RACHEL/recovery/Weaved/Weavedhttp8080-port.conf 2>/dev/null
-        # Remove port 80 service
-        echo; printStatus "Removing unecessary Port 80 service."
-        pid=$(ps aux | grep -v grep | grep "/usr/bin/weavedConnectd.linux -f /etc/weaved/services/Weavedhttp80.conf -d /var/run/Weavedhttp80.pid" | awk '{print $2}')
-        if [[ ! -z $pid ]]; then kill $pid; fi
-        rm -f /etc/weaved/services/Weavedhttp80.conf /var/run/Weavedhttp80.pid /usr/bin/Weavedhttp80.sh /var/log/Weavedhttp80.log /media/RACHEL/recovery/Weaved/Weavedhttp80-port.conf 2>/dev/null
+        wget -c https://raw.githubusercontent.com/rachelproject/rachelplus/master/scripts/auto-installer.sh -O $weavedSoftware/auto-installer.sh
+        if [[ ! -f $weavedSoftware/auto-installer.conf ]]; then 
+            printError "You need to create the file $weavedSoftware/auto-installer.conf"
+            echo "Add the following lines:"
+            echo "USERNAME='Weaved-website-username'"
+            echo "PASSWD='Weaved-website-password'"
+        fi
+        bash $weavedSoftware/auto-installer.sh 
         echo; printGood "Weaved service install complete."
         printGood "NOTE: An Weaved service uninstaller is available from the Utilities menu of this script."
     else
@@ -1699,6 +1684,7 @@ updateModuleNames(){
     fi
 
     # Check for previous Kiwix zim installs
+    mkdir -p $rachelPartition/kiwix/data/content/
     cd $rachelPartition/kiwix/data/content/
     ## Move these zim files
     for f in wikipedia_en_all_*; do
@@ -2055,6 +2041,12 @@ echo "[+] Completed USB Recovery runonce script - $(date)"
 # Add header/date/time to install log file
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 sudo mv $rachelLog $rachelLogDir/rachel-runonce-$timestamp.log
+# Update Kiwix version
+cat /var/kiwix/application.ini | grep ^Version | cut -d= -f2 > /etc/kiwix-version
+# Update KA Lite version
+dpkg -s ka-lite-bundle | grep ^Version | cut -d" " -f2 > /etc/kalite-version
+# Update RACHEL installer version
+mv /media/RACHEL/rachelinstaller-version /etc/rachelinstaller-version
 # Reboot
 rm -- "$0"
 reboot
@@ -2246,7 +2238,7 @@ buildRACHEL(){
 
     # update RACHEL installer version
     if [[ ! -f /etc/rachelinstaller-version ]]; then $(cat /etc/version | cut -d- -f1 > /etc/rachelinstaller-version); fi
-    echo $(cat /etc/rachelinstaller-version | cut -d_ -f1)_$(date +%Y%m%d.%H%M) > /etc/rachelinstaller-version
+    echo $(cat /etc/rachelinstaller-version | cut -d_ -f1)-$(date +%Y%m%d.%H%M) > /etc/rachelinstaller-version
 }
 
 # Loop to redisplay main menu
@@ -2492,7 +2484,7 @@ interactiveMode(){
 }
 
 printHelp(){
-    echo "Usage:  cap-rachel-configure.sh [-h] [-i] [-r] [-u]"
+    echo; echo "Usage:  cap-rachel-configure.sh [-h] [-i] [-r] [-u]"
     echo; echo "Examples:"
     echo "./cap-rachel-configure.sh -b (en | es | fr) [dev | jeremy | jfield | host/ip | usb]"
     echo "Build a RACHEL-Plus"
