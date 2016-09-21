@@ -15,7 +15,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160920.2342 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160921.1311 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -38,6 +38,7 @@ installTmpDir="/root/cap-rachel-install.tmp"
 rachelTmpDir="/media/RACHEL/cap-rachel-install.tmp"
 rachelRecoveryDir="/media/RACHEL/recovery"
 stemPkg="stem-1.5.1.tgz"
+debPackageList="php5-cgi php5-common php5-mysql php5-sqlite php-pear php5-curl pdftk make git git-core git-man liberror-perl python-m2crypto mysql-server mysql-client libapache2-mod-auth-mysql sqlite3 gcc-multilib gcj-4.6-jre-lib libgcj12 libgcj-common gcj-4.6-base libasound2"
 errorCode="0"
 
 # Print version only, if requested
@@ -389,130 +390,6 @@ sanitize(){
     echo; printGood "All ready for a customer; register Weaved services, if needed."
 }
 
-buildUSBImage(){
-    echo; printQuestion "Do you want to sanitize this device prior to building the USB image?"
-    read -p "    Enter (y/N) " REPLY
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        sanitize
-    fi
-    # Stop script from defaulting the SSID
-    sed -i 's/^redis-cli del WlanSsidT0_ssid/#redis-cli del WlanSsidT0_ssid/g' /root/generate_recovery.sh
-    # KA Lite
-    echo; printStatus "Stopping KA Lite."
-#    /var/ka-lite/bin/kalite stop
-    kalite stop
-    # Delete the Device ID and crypto keys from the database (without affecting the admin user you have already set up)
-    echo; printStatus "Delete KA Lite Device ID and clearing crypto keys from the database"
-#    /var/ka-lite/bin/kalite manage runcode "from django.conf import settings; settings.DEBUG_ALLOW_DELETIONS = True; from securesync.models import Device; Device.objects.all().delete(); from fle_utils.config.models import Settings; Settings.objects.all().delete()"
-    kalite manage runcode "from django.conf import settings; settings.DEBUG_ALLOW_DELETIONS = True; from securesync.models import Device; Device.objects.all().delete(); from fle_utils.config.models import Settings; Settings.objects.all().delete()"
-    echo; printQuestion "Do you want to run the /root/generate_recovery.sh script?"
-    echo "    The script will save the *.tar.xz files to /media/RACHEL/recovery"
-    echo
-    echo "    **WARNING** You MUST be logged in via wifi or you will get disconnected and your script will fail during script execution."
-    echo
-    read -p "    Select 'n' to exit. (y/N) " -r
-    if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
-        killall screen 2>/dev/null
-        rm -rf $installTmpDir $rachelTmpDir
-        chmod 777 /var/run/screen
-        screen -dmS generateUSB /root/generate_recovery.sh $rachelRecoveryDir/
-        echo; printStatus "Build USB image process started in the background.  You can safely exit out of this shell without affecting it."
-        echo "It takes about 45 minutes to create the 3 images; to check the status, type 'screen -r'"
-        echo "If you get a reply of 'No screen...', then your image create is complete.  Check $rachelRecoveryDir" 
-        echo
-    fi
-}
-
-symlink(){
-    echo; printStatus "Symlinking all .mp4 videos in the module 'kaos-en' to $kaliteContentDir"
-
-    # Write python file for creating symlinks in kaos-en
-    cat > /tmp/symlink.py << 'EOF'
-import os
-
-def dirs(MyDir):
-  if os.path.isdir(MyDir):
-    for f in os.listdir(MyDir):
-      kaosname = os.path.join(MyDir,f)
-      if os.path.isdir(kaosname):
-        dirs(kaosname)
-      else:
-        if os.path.isfile(kaosname):
-          ext = os.path.splitext(f)[1]
-          if  ext == ".mp4":
-            print kaosname
-            kalname = os.path.join("/media/RACHEL/kacontent",f)
-            if os.path.exists(kalname):
-              if os.path.islink(kalname):
-                os.unlink(kalname)
-                os.rename(kaosname,kalname)
-                os.chmod(kalname, 0755)
-              elif os.path.isfile(kalname):
-                os.unlink(kaosname)
-            else:
-              os.rename(kaosname,kalname)
-            os.symlink(kalname,kaosname)
-            os.chmod(kaosname, 0755)
-            print kalname
-  return
-
-if __name__ == "__main__":
-  import sys
-  if len(sys.argv) > 1:
-    dirs(sys.argv[1])
-  else:
-    dirs("/media/RACHEL/rachel/modules/kaos-en")
-EOF
-
-    # Execute
-    python /tmp/symlink.py 2>> $rachelLog 1> /dev/null
-    rm -f /tmp/symlink.py
-
-    # Write python file for creating symlinks in khan_health
-    cat > /tmp/symlink.py << 'EOF'
-import os
-
-def dirs(MyDir):
-  if os.path.isdir(MyDir):
-    for f in os.listdir(MyDir):
-      kaosname = os.path.join(MyDir,f)
-      if os.path.isdir(kaosname):
-        dirs(kaosname)
-      else:
-        if os.path.isfile(kaosname):
-          ext = os.path.splitext(f)[1]
-          if  ext == ".mp4":
-            print kaosname
-            kalname = os.path.join("/media/RACHEL/kacontent",f)
-            if os.path.exists(kalname):
-              if os.path.islink(kalname):
-                os.unlink(kalname)
-                os.rename(kaosname,kalname)
-                os.chmod(kalname, 0755)
-              elif os.path.isfile(kalname):
-                os.unlink(kaosname)
-            else:
-              os.rename(kaosname,kalname)
-            os.symlink(kalname,kaosname)
-            os.chmod(kaosname, 0755)
-            print kalname
-  return
-
-if __name__ == "__main__":
-  import sys
-  if len(sys.argv) > 1:
-    dirs(sys.argv[1])
-  else:
-    dirs("/media/RACHEL/rachel/modules/khan_health")
-EOF
-
-    # Execute
-    python /tmp/symlink.py 2>> $rachelLog 1> /dev/null
-    rm -f /tmp/symlink.py
-
-    printGood "Done."
-}
-
 installKiwix(){
     echo; printStatus "Installing kiwix."
     $KIWIXINSTALL
@@ -677,10 +554,11 @@ installDefaultWeavedServices(){
         cd $rachelScriptsDir/weaved_software
         wget -c https://raw.githubusercontent.com/rachelproject/rachelplus/master/scripts/auto-installer.sh -O $weavedSoftware/auto-installer.sh
         if [[ ! -f $weavedSoftware/auto-installer.conf ]]; then 
-            printError "You need to create the file $weavedSoftware/auto-installer.conf"
-            echo "Add the following lines:"
+            printError "MISSING FILE:  You need to create the file $weavedSoftware/auto-installer.conf"
+            echo "Create the file and add the following lines to it:"
             echo "USERNAME='Weaved-website-username'"
             echo "PASSWD='Weaved-website-password'"
+            exit
         fi
         bash $weavedSoftware/auto-installer.sh 
         echo; printGood "Weaved service install complete."
@@ -958,7 +836,7 @@ downloadOfflineContent(){
     echo; printStatus "Downloading/updating debian packages."
     mkdir -p $dirContentOffline/offlinepkgs
     cd $dirContentOffline/offlinepkgs
-    apt-get download php5-cgi php5-common php5-mysql php5-sqlite php-pear php5-curl pdftk make git git-man liberror-perl python-m2crypto mysql-server mysql-client libapache2-mod-auth-mysql sqlite3 gcc-multilib gcj-4.6-jre-lib libgcj12 libgcj-common gcj-4.6-base libasound2
+    apt-get download $debPackageList
     commandStatus
     printGood "Done."
 
@@ -1113,7 +991,7 @@ EOF
 
         # Install packages
         echo; printStatus "Installing packages."
-        apt-get -y install php5-cgi php5-common php5-mysql php5-sqlite php-pear php5-curl pdftk make git git-core git-man liberror-perl python-m2crypto mysql-server mysql-client libapache2-mod-auth-mysql sqlite3 gcc-multilib gcj-4.6-jre-lib libgcj12 libgcj-common gcj-4.6-base libasound2
+        apt-get -y install $debPackageList
         # Add support for multi-language front page
         pear clear-cache 2>/dev/null
         echo "\n" | pecl install stem
@@ -1929,13 +1807,13 @@ repairBugs(){
     repairRachelScripts
 
     # There is one miconfigured index.htmlf that needs to be fixed on the harddrive
-    sed -i 's/\-03/\-11/g' /media/RACHEL/rachel/modules/fr_wiki/index.htmlf
+    sed -i 's/\-03/\-11/g' $rachelWWW/modules/fr_wiki/index.htmlf
 
     # Misconfiguration in "Soluciones Prácticas" module
     if [[ -d $rachelWWW/modules/es-soluciones ]]; then
         echo; printStatus "Fixing links in module:  Soluciones Prácticas"
-        sed -i 's/soluciones\/index.html/index.html/g' /media/RACHEL/rachel/modules/es-soluciones/index.htmlf
-        sed -i 's/soluciones\/index.html/index.html/g' /media/RACHEL/rachel/modules/es-soluciones/index.html
+        sed -i 's/soluciones\/index.html/index.html/g' $rachelWWW/modules/es-soluciones/index.htmlf
+        sed -i 's/soluciones\/index.html/index.html/g' $rachelWWW/modules/es-soluciones/index.html
         printGood "Done."
     fi
 
@@ -1945,8 +1823,8 @@ repairBugs(){
     # Fix GCF links
     if [[ -d $rachelWWW/modules/GCF2015 ]]; then
         echo; printStatus "Fixing GCF index.htmlf links"
-        sed -i 's/digital_lifestyle.html/digitalskills.html/g' /media/RACHEL/rachel/modules/GCF2015/index.htmlf
-        sed -i 's/job.html/jobsearch.html/g' /media/RACHEL/rachel/modules/GCF2015/index.htmlf
+        sed -i 's/digital_lifestyle.html/digitalskills.html/g' $rachelWWW/modules/GCF2015/index.htmlf
+        sed -i 's/job.html/jobsearch.html/g' $rachelWWW/modules/GCF2015/index.htmlf
         printGood "Done."
     fi
 }
@@ -1956,7 +1834,7 @@ updateContentShell(){
     mv /etc/init/procps.conf /etc/init/procps.conf.old 2>/dev/null # otherwise quite a pkgs won't install
     if [[ $internet == "1" ]]; then
         apt-get update
-        apt-get -y install php5-sqlite php-pear make gcc-multilib sqlite3 php5-curl pdftk gcj-4.6-jre-lib libgcj12 libgcj-common gcj-4.6-base libasound2
+        apt-get -y install $debPackageList
     else
         cd $dirContentOffline/offlinepkgs
         dpkg -i *.deb
@@ -2046,7 +1924,7 @@ cat /var/kiwix/application.ini | grep ^Version | cut -d= -f2 > /etc/kiwix-versio
 # Update KA Lite version
 dpkg -s ka-lite-bundle | grep ^Version | cut -d" " -f2 > /etc/kalite-version
 # Update RACHEL installer version
-mv /media/RACHEL/rachelinstaller-version /etc/rachelinstaller-version
+mv $rachelPartition/rachelinstaller-version /etc/rachelinstaller-version
 # Reboot
 rm -- "$0"
 reboot
@@ -2173,7 +2051,7 @@ buildRACHEL(){
     echo "Using server: $RSYNCDIR"
 
     # fix known RACHEL bugs
-    repairBugs
+    echo; repairBugs
 
     # stop kalite startup
     echo; printStatus "Stopping kalite"
@@ -2220,15 +2098,15 @@ buildRACHEL(){
 
     # get the admin DB for module sort/visibility
     echo; printStatus "Retrieving admin.sqlite db options"
-    rsync -Pavz rsync://dev.worldpossible.org/rachelmods/extra-build-files/EN-PLUS-admin.sqlite /media/RACHEL/rachel/
-    rsync -Pavz rsync://dev.worldpossible.org/rachelmods/extra-build-files/ES-PLUS-admin.sqlite /media/RACHEL/rachel/
-    rsync -Pavz rsync://dev.worldpossible.org/rachelmods/extra-build-files/FR-PLUS-admin.sqlite /media/RACHEL/rachel/
-    rsync -Pavz rsync://dev.worldpossible.org/rachelmods/extra-build-files/JU-PLUS-admin.sqlite /media/RACHEL/rachel/
+    rsync -Pavz $rsyncOnline/rachelmods/extra-build-files/EN-PLUS-admin.sqlite $rachelWWW/
+    rsync -Pavz $rsyncOnline/rachelmods/extra-build-files/ES-PLUS-admin.sqlite $rachelWWW/
+    rsync -Pavz $rsyncOnline/rachelmods/extra-build-files/FR-PLUS-admin.sqlite $rachelWWW/
+    rsync -Pavz $rsyncOnline/rachelmods/extra-build-files/JU-PLUS-admin.sqlite $rachelWWW/
 
     # set the sort/visibility according to language
     uclang=$(echo $lang | tr 'a-z' 'A-Z')
     echo; printStatus "Setting the admin.sqlite db to $uclang"
-    cp /media/RACHEL/rachel/$uclang-PLUS-admin.sqlite /media/RACHEL/rachel/admin.sqlite
+    cp $rachelWWW/$uclang-PLUS-admin.sqlite $rachelWWW/admin.sqlite
 
     # symlink KA Lite mp4s to /media/RACHEL/kacontent
     kaliteCheckFiles
@@ -2267,9 +2145,8 @@ interactiveMode(){
     echo "    - Repair an install of a CAP after a firmware upgrade"
     echo "    - Repair a KA Lite assessment file location"
     echo "    - Repairs of general bug fixes"
-    echo "    - Sanitize CAP (used for creating the RACHEL USB Multitool)"
-    echo "    - Symlink all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent"
-    echo "    - Check your local file's MD5 against our database"
+    echo "    - Sanitize CAP"
+    echo "    - Check a local file's MD5 against our database"
     echo "    - Testing script"
     echo "  - [Exit] the installation script"
     echo
@@ -2297,9 +2174,17 @@ interactiveMode(){
             ;;
 
             Install-Default-Weaved-Services)
-            uninstallAllWeavedServices
-            installDefaultWeavedServices
-            backupWeavedService
+            if [[ $internet != "1" ]]; then
+                echo; printError "You must be online the internet to register this device with Weaved."
+                exit 1
+            else
+                echo; printQuestion "This process will remove any installed Weaved services; do you want to continue? (y/N) "; read REPLY
+                if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
+                    uninstallAllWeavedServices
+                    installDefaultWeavedServices
+                    backupWeavedService
+                fi
+            fi
             whatToDo
             ;;
 
@@ -2350,7 +2235,7 @@ interactiveMode(){
             echo; printQuestion "What utility would you like to use?"
             echo "  - [Install-Battery-Watcher] monitors battery and shutdowns the device with less than 3% battery"
             echo "  - [Disable-Reset-Button] removes the ability to reset the device by use of the reset button"
-            echo "  - **BETA** [Download-OFFLINE-Content] to stage for OFFLINE (i.e. local) RACHEL installs"
+            echo "  - [Download-OFFLINE-Content] to stage for OFFLINE (i.e. local) RACHEL installs"
             echo "  - [Backup-Weaved-Services] backs up configs and restores them if they are not found on boot"
             echo "  - [Uninstall-Weaved-Service] removes Weaved services, one at a time"
             echo "  - [Uninstall-ALL-Weaved-Services] removes ALL Weaved services"
@@ -2360,14 +2245,12 @@ interactiveMode(){
             echo "  - [Repair-KA-Lite] repairs KA Lite's mislocation of the assessment file; runs 'kalite manage setup' as well"
             echo "  - [Repair-Bugs] provides general bug fixes (run when requested)"
             echo "  - [Sanitize] and prepare CAP for delivery to customer"
-            echo "  - [Build-USB-Image] is used for creating eMMC images used on the RACHEL USB Multitool"
             echo "  - [Change-Package-Repo] allows you to change where in the world your packages are pulled from"
-            echo "  - [Symlink] all .mp4 videos in the module kaos-en to /media/RACHEL/kacontent"
             echo "  - [Check-MD5] will check a file you provide against our hash database"
             echo "  - [Testing] script"
             echo "  - Return to [Main Menu]"
             echo
-            select util in "Install-Battery-Watcher" "Disable-Reset-Button" "Download-OFFLINE-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Update-Content-Shell" "Repair-Kiwix-Library" "Repair-Firmware" "Repair-KA-Lite" "Repair-Bugs" "Sanitize" "Build-USB-Image" "Change-Package-Repo" "Symlink" "Check-MD5" "Test" "Main-Menu"; do
+            select util in "Install-Battery-Watcher" "Disable-Reset-Button" "Download-OFFLINE-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Update-Content-Shell" "Repair-Kiwix-Library" "Repair-Firmware" "Repair-KA-Lite" "Repair-Bugs" "Sanitize" "Change-Package-Repo" "Check-MD5" "Test" "Main-Menu"; do
                 case $util in
                     Install-Battery-Watcher)
                     installBatteryWatch
@@ -2440,18 +2323,8 @@ interactiveMode(){
                     break
                     ;;
 
-                    Build-USB-Image)
-                    buildUSBImage
-                    break
-                    ;;
-
                     Change-Package-Repo)
                     changePackageRepo
-                    break
-                    ;;
-
-                    Symlink)
-                    symlink
                     break
                     ;;
 

@@ -131,7 +131,7 @@ sanitize(){
 buildUSBImage(){
 	if [[ $os == "cap" ]]; then
 		echo; printStatus "You are running this script from a RACHEL-Plus CAP."
-		printQuestion "Do you want to create/build the *.tar.xz files from this device? (y/N)"
+		echo; printQuestion "Do you want to create/build the *.tar.xz files from this device? (y/N)"
 		echo "Select 'n' if you already have the three .tar.xz images on the USB."; read REPLY
 		if [[ $REPLY =~ ^[Yy]$ ]]; then
 			# Set the createdNewImages flag
@@ -314,4 +314,3 @@ echo; printGood "Script ended:  $(date)"
 exec &>/dev/tty
 stty sane
 echo
-
