@@ -1158,76 +1158,61 @@ contentModuleInstall(){
 contentLanguageInstall(){
     languageMenu(){
         echo; printQuestion "What additional language would like to download/update?"
-        echo "1)Arabic  2)Deutsch  3)English  4)Español  5)Français  6)Português  7)Hindi"        
+        echo "1)Arabic  2)Deutsch  3)English  4)Español  5)Français  6)Kannada  7)Português  8)Hindi"        
     }
-    # Downloading KA Lite language videos
-    echo "" > $rachelScriptsDir/rsyncInclude.list
     ## Add user input to languages they want to support
-    echo; printStatus "The language install will install all modules from the language(s) you choose."
-    echo "The installer WILL NOT install very large modules (i.e. modules for radiolab, TED, GCF,"
-    echo "KA Lite, KAOS, Oregon Law Library, or the full version of Wikipedia).  These modules must be"
-    echo "installed individually using the Add-Module option."
+    echo; printStatus "The language install will install essential modules from the language(s) you choose."
     echo; printQuestion "What language content you would like to download for OFFLINE install:"
     echo "  - [Arabic] - Arabic content"
     echo "  - [Deutsch] - German content"
     echo "  - [English] - English content"
     echo "  - [Español] - Spanish content"
     echo "  - [Français] - French content"
+    echo "  - [Kannada] - Kannada content"
     echo "  - [Português] - Portuguese content"
     echo "  - [Hindi] - Hindi content"
     echo
-    select menu in "Arabic" "Deutsch" "English" "Español" "Français" "Português" "Hindi"; do
+    select menu in "Arabic" "Deutsch" "English" "Español" "Français" "Kannada" "Português" "Hindi"; do
         case $menu in
         Arabic)
-            echo "#Arabic" >> $rachelScriptsDir/rsyncInclude.list
-            echo "ar-*" >> $rachelScriptsDir/rsyncInclude.list
+            lang="ar"
+            break
         ;;
         Deutsch)
-            echo "#German" >> $rachelScriptsDir/rsyncInclude.list
-            echo "de-*" >> $rachelScriptsDir/rsyncInclude.list
+            lang="de"
+            break
         ;;
         English)
-            echo "#English" >> $rachelScriptsDir/rsyncInclude.list
-            echo "en-*" >> $rachelScriptsDir/rsyncInclude.list
+            lang="en"
+            break
         ;;
         Español)
-            echo "#Spanish" >> $rachelScriptsDir/rsyncInclude.list
-            echo "es-*" >> $rachelScriptsDir/rsyncInclude.list
+            lang="es"
+            break
         ;;
         Français)
-            echo "#French" >> $rachelScriptsDir/rsyncInclude.list
-            echo "fr-*" >> $rachelScriptsDir/rsyncInclude.list
+            lang="fr"
+            break
+        ;;
+        Kannada)
+            lang="kn"
+            break
         ;;
         Português)
-            echo "#Portuguese" >> $rachelScriptsDir/rsyncInclude.list
-            echo "pt-*" >> $rachelScriptsDir/rsyncInclude.list
+            lang="pt"
+            break
         ;;
         Hindi)
-            echo "#Hindi" >> $rachelScriptsDir/rsyncInclude.list
-            echo "hi-*" >> $rachelScriptsDir/rsyncInclude.list
+            lang="hi"
+            break
         ;;
         esac
-        echo; printStatus "Language modules included:"
-        sed -i '/^\x*$/d' $rachelScriptsDir/rsyncInclude.list
-        sort -u $rachelScriptsDir/rsyncInclude.list > $rachelScriptsDir/rsyncInclude.list.tmp; mv $rachelScriptsDir/rsyncInclude.list.tmp $rachelScriptsDir/rsyncInclude.list
-        echo "$(cat $rachelScriptsDir/rsyncInclude.list | grep \# | cut -d"#" -f2)"
-        echo; printQuestion "Do you wish to select another language? (Y/n)"; read REPLY
-        if [[ $REPLY =~ ^[Nn]$ ]]; then
-            break   
-        else
-            languageMenu
-        fi
     done
-    buildRsyncModuleExcludeList
-    buildRsyncLangExcludeList
-    MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" --exclude-from "$rachelScriptsDir/rsyncLangExclude.list" --include-from "$rachelScriptsDir/rsyncInclude.list" --exclude '*' $RSYNCDIR/rachelmods/ | awk '{print $5}' | tail -n +2)
-    echo; printStatus "Rsyncing core RACHEL content from $RSYNCDIR"
-    while IFS= read -r module; do
-        echo; printStatus "Downloading $module"
-        rsync -avz --update --delete $RSYNCDIR/rachelmods/$module $rachelWWW/modules/
-        commandStatus
-        printGood "Done."
-    done <<< "$MODULELIST"
+    # get content
+    echo; printStatus "Installing/updating $lang content modules"
+    contentModuleListInstall $rachelWWW/scripts/"$lang"_plus.modules
+    commandStatus
+    printGood "Done."
 }
 
 contentUpdate(){
