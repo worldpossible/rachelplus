@@ -1792,7 +1792,9 @@ repairBugs(){
     repairRachelScripts
 
     # There is one miconfigured index.htmlf that needs to be fixed on the harddrive
-    sed -i 's/\-03/\-11/g' $rachelWWW/modules/fr_wiki/index.htmlf
+    if [[ -d $rachelWWW/modules/fr_wiki/index.htmlf ]]; then
+        sed -i 's/\-03/\-11/g' $rachelWWW/modules/fr_wiki/index.htmlf
+    fi
 
     # Misconfiguration in "Soluciones Prácticas" module
     if [[ -d $rachelWWW/modules/es-soluciones ]]; then
