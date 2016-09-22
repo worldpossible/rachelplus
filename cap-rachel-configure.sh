@@ -15,7 +15,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160921.1311 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160922.0903 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -1371,11 +1371,11 @@ kaliteCheckFiles(){
     kalite stop
     # Creating symlinks of all KA Lite video files in the KA Lite content folder  
     echo; printStatus "Creating symlinks of all KA Lite video files in the KA Lite content folder."
-    find $rachelWWW/modules/*kalite/content -name "*.mp4" -exec ln -s {} $kaliteContentDir 2>/dev/null \;
+    find $rachelWWW/modules/*kalite/content -name "*.mp4" -exec ln -sf {} $kaliteContentDir 2>/dev/null \;
     printGood "Done."
     # Copying KA database file to KA Lite database folder
     echo; printStatus "Symlinking all KA database module files to the actual KA Lite database folder."
-    ln -sf $rachelWWW/modules/*kalite/*.sqlite /root/.kalite/database/
+    find $rachelWWW/modules/*kalite -name "*.sqlite" -exec ln -sf {} /root/.kalite/database/ \;
     # Starting KA Lite
     echo; kalite start
     # Update KA Lite version
@@ -2049,7 +2049,7 @@ buildRACHEL(){
     rm -f /var/log/httpd/error_log
     echo Updating lighttpd.conf
     mv /usr/local/etc/lighttpd.conf /usr/local/etc/lighttpd.conf.last
-    wget -q https://raw.githubusercontent.com/rachelproject/rachelplus/master/scripts/lighttpd.conf /usr/local/etc/lighttpd.conf
+    wget -q https://raw.githubusercontent.com/rachelproject/rachelplus/master/scripts/lighttpd.conf -O /usr/local/etc/lighttpd.conf
     echo Killing lighttpd
     killall -INT lighttpd
 
@@ -2068,7 +2068,8 @@ buildRACHEL(){
 
     # move database into place
     echo; printStatus "Symlinking database file"
-    ln -sf /root/.kalite/database/ $rachelWWW/modules/"$lang"-kalite/content_khan_"$lang".sqlite
+    find $rachelWWW/modules/*kalite -name "*.sqlite" -exec ln -sf {} /root/.kalite/database/ \;
+#    ln -sf /root/.kalite/database/ $rachelWWW/modules/"$lang"-kalite/content_khan_"$lang".sqlite
 
     # bring in our multi-language patch
     echo; printStatus "Patching kalite language code"
