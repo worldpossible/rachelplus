@@ -15,7 +15,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160922.0903 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160923.0036 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -562,7 +562,9 @@ installDefaultWeavedServices(){
         fi
         bash $weavedSoftware/auto-installer.sh 
         echo; printGood "Weaved service install complete."
-        printGood "NOTE: An Weaved service uninstaller is available from the Utilities menu of this script."
+        echo "NOTE: A Weaved service uninstaller is available from the Utilities menu of this script."
+        # Remove config file
+        rm -f $rachelScriptsDir/weaved_software/auto-installer.conf
     else
         echo; printError "One or more files did not download correctly; check log file ($rachelLog) and try again."
         echo; exit 1
@@ -1900,21 +1902,20 @@ else
     cd $rachelWWW
     git checkout $gitContentShellCommit
 fi
-echo "[+] Completed USB Recovery runonce script - $(date)"
-# Add header/date/time to install log file
-timestamp=$(date +"%b-%d-%Y-%H%M%Z")
-sudo mv $rachelLog $rachelLogDir/rachel-runonce-$timestamp.log
 # Update Kiwix version
 cat /var/kiwix/application.ini | grep ^Version | cut -d= -f2 > /etc/kiwix-version
 # Update KA Lite version
 dpkg -s ka-lite-bundle | grep ^Version | cut -d" " -f2 > /etc/kalite-version
 # Update RACHEL installer version
 mv $rachelPartition/rachelinstaller-version /etc/rachelinstaller-version
+# FINISHED
+echo "[+] Completed USB Recovery runonce script - $(date)"
+# Add header/date/time to install log file
+timestamp=$(date +"%b-%d-%Y-%H%M%Z")
+sudo mv $rachelLog $rachelLogDir/rachel-runonce-$timestamp.log
 # Reboot
 rm -- "$0"
-reboot
-# Restart kalite
-#kalite stop; kalite start
+sleep 10; shutdown -h now
 EOF
 }
 
@@ -2166,7 +2167,7 @@ interactiveMode(){
             else
                 echo; printQuestion "This process will remove any installed Weaved services; do you want to continue? (y/N) "; read REPLY
                 if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
-                    uninstallAllWeavedServices
+                    uninstallAllWeavedServices; sleep 2
                     installDefaultWeavedServices
                     backupWeavedService
                 fi
@@ -2198,6 +2199,8 @@ interactiveMode(){
 
             Add-Language)
             updateModuleNames
+            updateContentShell
+            checkContentShell
             contentLanguageInstall
             kaliteCheckFiles
             repairKiwixLibrary
