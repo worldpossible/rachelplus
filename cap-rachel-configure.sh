@@ -15,7 +15,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160923.0036 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160923.0124 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -68,25 +68,6 @@ extra-build-files
 .gitignore
 README.txt
 peewee.db
-EOF
-}
-
-# Rsync Language Exclude List
-buildRsyncLangExcludeList(){
-    cat > $rachelScriptsDir/rsyncLangExclude.list << 'EOF'
-*radiolab
-*TED
-*GCF
-*kalite*
-*ka-lite*
-*kaos
-*wikipedia
-*nonzim
-*law_library
-*oya
-*afristory-za
-*khan_academy
-*khan_health
 EOF
 }
 
@@ -419,48 +400,35 @@ repairKiwixLibrary(){
     echo; printStatus "Rebuilding/repairing the Kiwix library."
     # Create tmp file (clean out new lines, etc)
     tmp=`mktemp`
-    library="$rachelPartition/kiwix/data/library/library.xml"
-    db="$rachelWWW/admin.sqlite"
-
-    # Remove/recreate existing library
     libraryPath="/media/RACHEL/kiwix/data/library"
     library="$libraryPath/library.xml"
+
+    # Remove/recreate existing library
     mkdir -p $libraryPath
-    rm -f $library; mkdir -p $rachelPartition/kiwix/data/library; touch $library
+    rm -f $library; touch $library
 
     # Find all the zim files in the modules directoy
-    ls $rachelWWW/modules/*/data/content/*.zim* 2>/dev/null |sed 's/ /\n/g' > $tmp
-    ls $rachelPartition/kiwix/data/content/*.zim* 2>/dev/null |sed 's/ /\n/g' >> $tmp
+    ls /media/RACHEL/rachel/modules/*/data/content/*.zim* 2>/dev/null | sed 's/ /\n/g' > $tmp
+    ls /media/RACHEL/kiwix/data/content/*.zim* 2>/dev/null | sed 's/ /\n/g' >> $tmp
 
-    # Check for sqlite3 install
-    checkForHiddenModules(){
-        if [[ -f $db ]]; then
-            # Remove modules that are marked hidden on main menu
-            for d in $(sqlite3 $rachelWWW/admin.sqlite 'select moddir from modules where hidden = 1'); do
-                sed -i '/'$d'/d' $tmp
-            done
-        fi
-    }
-    if [[ `which sqlite3` ]]; then
-        checkForHiddenModules
-    else
-        if [[ $internet == "1" ]]; then
-            apt-get update; apt-get install -y sqlite3
-            checkForHiddenModules
-        else
-            echo; printError "SQLite3 is not installed and you do not have internet; I can not determine what modules are supposed to be hidden.  Adding all available modules to the Kiwix library."
-        fi
-    fi
+    # Remove extra files - we only need the first (.zim or .zimaa)
+    sed -i '/zima[^a]/d' $tmp
+
+    # Remove modules that are marked hidden on main menu
+    for d in $(sqlite3 /media/RACHEL/rachel/admin.sqlite 'select moddir from modules where hidden = 1'); do
+        sed -i '/\/'$d'\//d' $tmp
+    done
 
     for i in $(cat $tmp); do
         if [[ $? -ge 1 ]]; then echo "No zims found."; fi
         cmd="/var/kiwix/bin/kiwix-manage $library add $i"
         moddir="$(echo $i | cut -d'/' -f1-6)"
-        zim="$(echo $i | cut -d'/' -f9)"
-        if [[ -d "$moddir/data/index/$zim.idx" ]]; then
-            cmd="$cmd --indexPath=$moddir/data/index/$zim.idx"
-        elif [[ -d "$rachelPartition/kiwix/data/index/$zim.idx" ]]; then
-            cmd="$cmd --indexPath=$rachelPartition/kiwix/data/index/$zim.idx"
+        # we have to remove the extension because we need .zim but it might be .zimaa
+        noext="$(echo ${i##*/} | cut -d'.' -f1)"
+        if [[ -d "$moddir/data/index/$noext.zim.idx" ]]; then
+            cmd="$cmd --indexPath=$moddir/data/index/$noext.zim.idx"
+        elif [[ -d "/media/RACHEL/kiwix/data/index/$noext.zim.idx" ]]; then
+            cmd="$cmd --indexPath=/media/RACHEL/kiwix/data/index/$noext.zim.idx"
         fi
         $cmd 2>/dev/null
         if [[ $? -ge 1 ]]; then echo "Couldn't add $zim to library"; fi
@@ -468,10 +436,10 @@ repairKiwixLibrary(){
 
     # Restart Kiwix
     killall /var/kiwix/bin/kiwix-serve
-    /var/kiwix/bin/kiwix-serve --daemon --port=81 --library $library
-    rm -f $tmp
+    /var/kiwix/bin/kiwix-serve --daemon --port=81 --library $library > /dev/null
     # Update Kiwix version
     cat /var/kiwix/application.ini | grep ^Version | cut -d= -f2 > /etc/kiwix-version
+    rm -f $tmp
     printGood "Done."
 }
 
@@ -1219,7 +1187,6 @@ contentLanguageInstall(){
 
 contentUpdate(){
     buildRsyncModuleExcludeList
-    buildRsyncLangExcludeList
     MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" $rachelWWW/modules/ | awk '{print $5}' | tail -n +2)
     while IFS= read -r module; do
         echo; printStatus "Downloading $module"
