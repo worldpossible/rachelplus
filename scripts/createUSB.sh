@@ -285,7 +285,7 @@ compressHashUSBImage(){
 		md5app=md5
 	fi
 	echo "Running cmd:  $md5app $imageName $imageName.zip"
-	time $md5app $imageName $imageName.zip
+	time $md5app $imageName $imageName.zip | tee -a $imageName.zip.md5
 }
 
 ##### MAIN PROGRAM
