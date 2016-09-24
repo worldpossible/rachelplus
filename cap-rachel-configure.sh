@@ -1182,9 +1182,6 @@ contentLanguageInstall(){
     echo; printStatus "Installing/updating $lang content modules"
     contentModuleListInstall $rachelWWW/scripts/"$lang"_plus.modules
     commandStatus
-    # install kalite content packs (this covers subtitles)
-    echo; printStatus "Installing content pack"
-    kalite manage retrievecontentpack local $lang $rachelWWW/modules/"$lang"-kalite/"$lang"-contentpack.zip
     printGood "Done."
 }
 
@@ -1341,6 +1338,9 @@ kaliteSetup(){
 kaliteCheckFiles(){
     # Stopping KA Lite
     kalite stop
+    # check/install kalite content packs (this covers subtitles)
+    echo; printStatus "Installing content pack"
+    kalite manage retrievecontentpack local $lang $rachelWWW/modules/"$lang"-kalite/"$lang"-contentpack.zip
     # Creating symlinks of all KA Lite video files in the KA Lite content folder  
     echo; printStatus "Creating symlinks of all KA Lite video files in the KA Lite content folder."
     find $rachelWWW/modules/*kalite/content -name "*.mp4" -exec ln -sf {} $kaliteContentDir 2>/dev/null \;
