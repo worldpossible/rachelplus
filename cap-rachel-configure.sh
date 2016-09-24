@@ -15,7 +15,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160923.0124 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20160924.0133 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -1182,6 +1182,9 @@ contentLanguageInstall(){
     echo; printStatus "Installing/updating $lang content modules"
     contentModuleListInstall $rachelWWW/scripts/"$lang"_plus.modules
     commandStatus
+    # install kalite content packs (this covers subtitles)
+    echo; printStatus "Installing content pack"
+    kalite manage retrievecontentpack local $lang $rachelWWW/modules/"$lang"-kalite/"$lang"-contentpack.zip
     printGood "Done."
 }
 
@@ -1313,7 +1316,7 @@ kaliteSetup(){
 
     # Install module for RACHEL index.php
     echo; printStatus "Syncing RACHEL web interface 'KA Lite module'."
-    rsync -avz --ignore-existing --exclude="en-kalite/content" --exclude="en-kalite/en-contentpack.zip" --delete-after $RSYNCDIR/rachelmods/en-kalite $rachelWWW/modules/
+    rsync -avz --delete-after $RSYNCDIR/rachelmods/en-kalite $rachelWWW/modules/
 
     # Symlink the KA Lite database and video files
     kaliteCheckFiles
@@ -1395,51 +1398,45 @@ checkCaptivePortal(){
     errorCode=0
     # Download RACHEL Captive Portal files
     echo; printStatus "Checking Captive Portal files."
-
     if [[ ! -f $rachelWWW/captiveportal-redirect.php ]]; then
         echo; printStatus "Downloading captiveportal-redirect.php."
         cd $rachelWWW
         $CAPTIVEPORTALREDIRECT
         commandStatus
     fi
-
     if [[ ! -f $rachelWWW/pass_ticket.shtml ]]; then
         echo; printStatus "Downloading pass_ticket.shtml."
         cd $rachelWWW
         $PASSTICKETSHTML
-        chmod +x $rachelWWW/pass_ticket.shtml
         commandStatus
     fi
-
     if [[ ! -f $rachelWWW/redirect.shtml ]]; then
         echo; printStatus "Downloading redirect.shtml."
         cd $rachelWWW
         $REDIRECTSHTML
-        chmod +x $rachelWWW/redirect.shtml
         commandStatus
     fi
-
     if [[ ! -f $rachelWWW/art/RACHELbrandLogo-captive.png ]]; then
         cd $rachelWWW/art
         echo; printStatus "Downloading RACHELbrandLogo-captive.png."
         $RACHELBRANDLOGOCAPTIVE
         commandStatus
     fi
-
     if [[ ! -f $rachelWWW/art/HFCbrandLogo-captive.jpg ]]; then
         cd $rachelWWW/art
         echo; printStatus "Downloading HFCbrandLogo-captive.jpg."
         $HFCBRANDLOGOCAPTIVE
         commandStatus
     fi
-
     if [[ ! -f $rachelWWW/art/WorldPossiblebrandLogo-captive.png ]]; then
         cd $rachelWWW/art
         echo; printStatus "Downloading WorldPossiblebrandLogo-captive.png."
         $WORLDPOSSIBLEBRANDLOGOCAPTIVE
         commandStatus
     fi
-
+    # Check executable settings
+    chmod +x $rachelWWW/pass_ticket.shtml
+    chmod +x $rachelWWW/redirect.shtml
     if [[ $errorCode == 1 ]]; then 
         printError "Something may have gone wrong; check $rachelLog for errors."
     else 
@@ -1871,6 +1868,8 @@ else
     cd $rachelWWW
     git checkout $gitContentShellCommit
 fi
+# Check captive portal executables
+
 # Update Kiwix version
 cat /var/kiwix/application.ini | grep ^Version | cut -d= -f2 > /etc/kiwix-version
 # Update KA Lite version
@@ -2039,7 +2038,6 @@ buildRACHEL(){
     # move database into place
     echo; printStatus "Symlinking database file"
     find $rachelWWW/modules/*kalite -name "*.sqlite" -exec ln -sf {} /root/.kalite/database/ \;
-#    ln -sf /root/.kalite/database/ $rachelWWW/modules/"$lang"-kalite/content_khan_"$lang".sqlite
 
     # bring in our multi-language patch
     echo; printStatus "Patching kalite language code"
