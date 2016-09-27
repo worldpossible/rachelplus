@@ -1119,6 +1119,10 @@ contentModuleInstall(){
             echo; printStatus "Downloading $m"
             rsync -avz --delete-after $RSYNCDIR/rachelmods/$m $rachelWWW/modules/
             commandStatus
+            # If KA Lite module, than set the kaliteUpdate "flag" to install the contentpack
+            if [[ $m == *kalite ]]; then
+                touch $rachelPartition/kaliteUpdate
+            fi
             printGood "Done."
         done < /tmp/module.lst
     fi
@@ -1182,6 +1186,8 @@ contentLanguageInstall(){
     echo; printStatus "Installing/updating $lang content modules"
     contentModuleListInstall $rachelWWW/scripts/"$lang"_plus.modules
     commandStatus
+    # Since we are installing the entire language (which includes KA Lite); set the kaliteUpdate flag to install contentpack
+    touch $rachelPartition/kaliteUpdate
     printGood "Done."
 }
 
@@ -1192,6 +1198,10 @@ contentUpdate(){
         echo; printStatus "Downloading $module"
         rsync -avzP --update --delete-after --exclude-from "$rachelScriptsDir/rsyncExclude.list" $RSYNCDIR/rachelmods/$module $rachelWWW/modules/
         commandStatus
+        # If KA Lite module, than set the kaliteUpdate "flag" to install the contentpack
+        if [[ $module == *kalite ]]; then
+            touch $rachelPartition/kaliteUpdate
+        fi
         printGood "Done."
     done <<< "$MODULELIST"
 }
@@ -1338,9 +1348,12 @@ kaliteSetup(){
 kaliteCheckFiles(){
     # Stopping KA Lite
     kalite stop
-    # check/install kalite content packs (this covers subtitles)
-    echo; printStatus "Installing content pack"
-    kalite manage retrievecontentpack local $lang $rachelWWW/modules/"$lang"-kalite/"$lang"-contentpack.zip
+    if [[ -f $rachelPartition/kaliteUpdate ]]; then
+        # check/install kalite content packs (this covers subtitles)
+        echo; printStatus "Installing content pack (5-7 minutes to install English; less for other languages)"
+        kalite manage retrievecontentpack local $lang $rachelWWW/modules/"$lang"-kalite/"$lang"-contentpack.zip
+        rm -f $rachelPartition/kaliteUpdate
+    fi
     # Creating symlinks of all KA Lite video files in the KA Lite content folder  
     echo; printStatus "Creating symlinks of all KA Lite video files in the KA Lite content folder."
     find $rachelWWW/modules/*kalite/content -name "*.mp4" -exec ln -sf {} $kaliteContentDir 2>/dev/null \;
@@ -1368,27 +1381,28 @@ downloadKAContent(){
     select menu in "English" "Español" "Français" "Skip"; do
         case $menu in
         English)
-            kalang="en-kalite"
+            lang="en-kalite"
             break
         ;;
         Español)
-            kalang="es-kalite"
+            lang="es-kalite"
             break
         ;;
         Français)
-            kalang="fr-kalite"
+            lang="fr-kalite"
             break
         ;;
         Skip)
-            kalang=""
+            lang=""
             break
         ;;
         esac
     done
-    if [[ ! -z $kalang ]]; then
+    if [[ ! -z $lang ]]; then
         echo; printStatus "Downloading KA Lite content from $RSYNCDIR"
-        rsync -Pavz --include *.mp4 --exclude assessment --exclude locale $RSYNCDIR/rachelmods/$kalang/content/ $kaliteContentDir
+        rsync -Pavz --include *.mp4 --exclude assessment --exclude locale $RSYNCDIR/rachelmods/$lang/content/ $kaliteContentDir
     fi
+    touch $rachelPartition/kaliteUpdate
     kaliteCheckFiles
     commandStatus
     printGood "Done."
@@ -2063,6 +2077,7 @@ buildRACHEL(){
     cp $rachelWWW/$uclang-PLUS-admin.sqlite $rachelWWW/admin.sqlite
 
     # symlink KA Lite mp4s to /media/RACHEL/kacontent
+    touch $rachelPartition/kaliteUpdate
     kaliteCheckFiles
 
     # repair/rebuild Kiwix library
