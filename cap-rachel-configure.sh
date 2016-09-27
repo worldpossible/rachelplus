@@ -1337,17 +1337,27 @@ kaliteSetup(){
 
 kaliteCheckFiles(){
     # Stopping KA Lite
+    echo; printStatus "Stopping kalite"
     kalite stop
+    # clear out possible old videos taking up space
+    echo; printStatus "Clearing old video content"
+    rm -rf /media/RACHEL/kacontent
+    mkdir /media/RACHEL/kacontent
     # check/install kalite content packs (this covers subtitles)
-    echo; printStatus "Installing content pack"
-    kalite manage retrievecontentpack local $lang $rachelWWW/modules/"$lang"-kalite/"$lang"-contentpack.zip
+    echo; printStatus "Installing content packs"
+    for i in `ls $rachelWWW/modules/*-kalite/*-contentpack.zip`; do
+        if [[ $i =~ ([a-z]{2})-contentpack.zip ]]; then
+            thislang=${BASH_REMATCH[1]}
+            kalite manage retrievecontentpack local $thislang $rachelWWW/modules/"$thislang"-kalite/"$thislang"-contentpack.zip
+        fi
+    done
     # Creating symlinks of all KA Lite video files in the KA Lite content folder  
     echo; printStatus "Creating symlinks of all KA Lite video files in the KA Lite content folder."
-    find $rachelWWW/modules/*kalite/content -name "*.mp4" -exec ln -sf {} $kaliteContentDir 2>/dev/null \;
+    find $rachelWWW/modules/*-kalite/content -name "*.mp4" -exec ln -sf {} $kaliteContentDir 2>/dev/null \;
     printGood "Done."
     # Copying KA database file to KA Lite database folder
     echo; printStatus "Symlinking all KA database module files to the actual KA Lite database folder."
-    find $rachelWWW/modules/*kalite -name "*.sqlite" -exec ln -sf {} /root/.kalite/database/ \;
+    find $rachelWWW/modules/*-kalite -name "*.sqlite" -exec ln -sf {} /root/.kalite/database/ \;
     # Starting KA Lite
     echo; kalite start
     # Update KA Lite version
@@ -1784,23 +1794,25 @@ repairBugs(){
 
 updateContentShell(){
     # Update to the latest contentshell
-    mv /etc/init/procps.conf /etc/init/procps.conf.old 2>/dev/null # otherwise quite a pkgs won't install
-    if [[ $internet == "1" ]]; then
-        apt-get update
-        apt-get -y install $debPackageList
-    else
+    mv /etc/init/procps.conf /etc/init/procps.conf.old 2>/dev/null # otherwise quite a lot of pkgs won't install
+#    if [[ $internet == "1" ]]; then
+#        apt-get update
+#        apt-get -y install $debPackageList
+#    else
+# we decided we want fixed versions for consistency
         cd $dirContentOffline/offlinepkgs
         dpkg -i *.deb
-    fi
+#    fi
     pear clear-cache 2>/dev/null
     pecl info stem > /dev/null
     if [[ $? -ge 1 ]]; then 
         echo; printStatus "Installing the stem module."
-        if [[ $internet == "1" ]]; then
-            echo "\n" | pecl install stem
-        else
+#        if [[ $internet == "1" ]]; then
+#            echo "\n" | pecl install stem
+#        else
+# we decided we want fixed versions for consistency
             echo "\n" | pecl install $dirContentOffline/offlinepkgs/$stemPkg
-        fi
+#        fi
         # Add support for stem extension
         echo '; configuration for php stem module' > /etc/php5/conf.d/stem.ini
         echo 'extension=stem.so' >> /etc/php5/conf.d/stem.ini
@@ -1950,6 +1962,9 @@ updateRachelFolders(){
 
 contentModuleListInstall(){
     while read m; do
+        [[ $m =~ ^# ]] && continue # skip comments
+        [[ -z $m ]] && continue    # skip blanks
+        m=${m#"."}                 # remove leading dot (download but hidden (later))
         echo; printStatus "Downloading $m"
         rsync -avz --delete-after $RSYNCDIR/rachelmods/$m $rachelWWW/modules/
         commandStatus
@@ -2007,10 +2022,6 @@ buildRACHEL(){
     # fix known RACHEL bugs
     echo; repairBugs
 
-    # stop kalite startup
-    echo; printStatus "Stopping kalite"
-    kalite stop
-
     # clear out old httpd logs, get updated config, restart
     # by killing it gracefully and letting sw_watchdog restart it
     echo; printStatus "Clearing httpd logs"
@@ -2022,22 +2033,14 @@ buildRACHEL(){
     echo Killing lighttpd
     killall -INT lighttpd
 
-    # clear out possible old videos taking up space
-    echo; printStatus "Clearing old video content"
-    rm -rf /media/RACHEL/kacontent
-    mkdir /media/RACHEL/kacontent
-
-    # get content (all languages):
-    echo; printStatus "Installing/updating $lang content modules"
-    contentModuleListInstall $rachelWWW/scripts/"$lang"_plus.modules
-
-    # install kalite content packs (this covers subtitles)
-    echo; printStatus "Installing content pack"
-    kalite manage retrievecontentpack local $lang $rachelWWW/modules/"$lang"-kalite/"$lang"-contentpack.zip
-
-    # move database into place
-    echo; printStatus "Symlinking database file"
-    find $rachelWWW/modules/*kalite -name "*.sqlite" -exec ln -sf {} /root/.kalite/database/ \;
+    # get content (all languages)
+    for i in `ls $rachelWWW/scripts/*_plus.modules`; do
+        if [[ $i =~ ([a-z]{2})_plus.modules ]]; then
+            thislang=${BASH_REMATCH[1]}
+            echo; printStatus "Installing/updating ${thislang}_plus.modules"
+            contentModuleListInstall $rachelWWW/scripts/"$thislang"_plus.modules
+        fi
+    done
 
     # bring in our multi-language patch
     echo; printStatus "Patching kalite language code"
@@ -2050,14 +2053,14 @@ buildRACHEL(){
     wget -q -O - "http://localhost:8008/api/i18n/set_default_language/?lang=$lang&allUsers=1"
     echo
 
-    # get the admin DB for module sort/visibility
+    # XXX get the admin DB for module sort/visibility
     echo; printStatus "Retrieving admin.sqlite db options"
     rsync -Pavz $rsyncOnline/rachelmods/extra-build-files/EN-PLUS-admin.sqlite $rachelWWW/
     rsync -Pavz $rsyncOnline/rachelmods/extra-build-files/ES-PLUS-admin.sqlite $rachelWWW/
     rsync -Pavz $rsyncOnline/rachelmods/extra-build-files/FR-PLUS-admin.sqlite $rachelWWW/
     rsync -Pavz $rsyncOnline/rachelmods/extra-build-files/JU-PLUS-admin.sqlite $rachelWWW/
 
-    # set the sort/visibility according to language
+    # XXX set the sort/visibility according to language
     uclang=$(echo $lang | tr 'a-z' 'A-Z')
     echo; printStatus "Setting the admin.sqlite db to $uclang"
     cp $rachelWWW/$uclang-PLUS-admin.sqlite $rachelWWW/admin.sqlite
