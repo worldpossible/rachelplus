@@ -1353,6 +1353,8 @@ kaliteCheckFiles(){
     echo; printStatus "Clearing old video content"
     rm -rf /media/RACHEL/kacontent
     mkdir /media/RACHEL/kacontent
+    # clear out old database files
+    rm -rf /root/.kalite/database/content_khan_*.sqlite
     # check/install kalite content packs (this covers subtitles)
     if [[ -f $rachelPartition/kaliteUpdate ]]; then
         echo; printStatus "Installing content pack (5-7 minutes to install English; less for other languages)"
@@ -1814,7 +1816,8 @@ updateContentShell(){
 #        apt-get -y install $debPackageList
 #    else
 # we decided we want fixed versions for consistency
-        cd $dirContentOffline/offlinepkgs
+# also, this seems to be where they are (not in $dirContentOffline)
+        cd $rachelPartition/offlinepkgs
         dpkg -i *.deb
 #    fi
     pear clear-cache 2>/dev/null
@@ -1825,7 +1828,7 @@ updateContentShell(){
 #            echo "\n" | pecl install stem
 #        else
 # we decided we want fixed versions for consistency
-            echo "\n" | pecl install $dirContentOffline/offlinepkgs/$stemPkg
+            echo "\n" | pecl install $rachelPartition/offlinepkgs/$stemPkg
 #        fi
         # Add support for stem extension
         echo '; configuration for php stem module' > /etc/php5/conf.d/stem.ini
@@ -2068,16 +2071,8 @@ buildRACHEL(){
     echo
 
     # XXX get the admin DB for module sort/visibility
-    echo; printStatus "Retrieving admin.sqlite db options"
-    rsync -Pavz $rsyncOnline/rachelmods/extra-build-files/EN-PLUS-admin.sqlite $rachelWWW/
-    rsync -Pavz $rsyncOnline/rachelmods/extra-build-files/ES-PLUS-admin.sqlite $rachelWWW/
-    rsync -Pavz $rsyncOnline/rachelmods/extra-build-files/FR-PLUS-admin.sqlite $rachelWWW/
-    rsync -Pavz $rsyncOnline/rachelmods/extra-build-files/JU-PLUS-admin.sqlite $rachelWWW/
-
-    # XXX set the sort/visibility according to language
-    uclang=$(echo $lang | tr 'a-z' 'A-Z')
-    echo; printStatus "Setting the admin.sqlite db to $uclang"
-    cp $rachelWWW/$uclang-PLUS-admin.sqlite $rachelWWW/admin.sqlite
+    echo; printStatus "Setting sort/visibility from .modules file"
+    php $rachelWWW/sortmods.php $rachelWWW/scripts/"$lang"_plus.modules
 
     # symlink KA Lite mp4s to /media/RACHEL/kacontent
     touch $rachelPartition/kaliteUpdate
