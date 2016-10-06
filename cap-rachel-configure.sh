@@ -2059,11 +2059,13 @@ buildRACHEL(){
         fi
     done
 
-    # bring in our multi-language patch
-    echo; printStatus "Patching kalite language code"
-    wget -q https://raw.githubusercontent.com/rachelproject/rachelplus/master/scripts/KALITE-MULTILINGUAL-api_views.py /usr/lib/python2.7/dist-packages/kalite/i18n/api_views.py
 
-    # set the default language (or leave it alone)
+    # bring in our multi-language patch (requires kalite restart)
+    echo; printStatus "Patching kalite language code"
+    kalite stop
+    wget -q https://raw.githubusercontent.com/rachelproject/rachelplus/master/scripts/KALITE-MULTILINGUAL-api_views.py -O /usr/lib/python2.7/dist-packages/kalite/i18n/api_views.py
+    kalite start
+    # set the default language
     # NOTE: your session settings will override the default language
     # so to check this you have to open in an incognito window!
     echo; printStatus "Setting kalite language to $lang"
