@@ -1357,7 +1357,7 @@ kaliteCheckFiles(){
     rm -rf /root/.kalite/database/content_khan_*.sqlite
     # check/install kalite content packs (this covers subtitles)
     if [[ -f $rachelPartition/kaliteUpdate ]]; then
-        echo; printStatus "Installing content pack (5-7 minutes to install English; less for other languages)"
+        echo; printStatus "Installing content packs"
         for i in `ls $rachelWWW/modules/*-kalite/*-contentpack.zip`; do
             if [[ $i =~ ([a-z]{2})-contentpack.zip ]]; then
                 thislang=${BASH_REMATCH[1]}
@@ -1990,16 +1990,19 @@ contentModuleListInstall(){
 }
 
 buildRACHEL(){
+
     # figure out which language we're doing
     case $1 in
-        en | es | fr )
-            lang=$1;
-            shift
+        "" )
+            echo "Usage: bash "`basename $0`" .modules_file [ rsync source ]"
+            echo "       .modules files in $rachelWWW/scripts or current directory ("`pwd`")"
+            echo "       rsync source: dev, jeremy, jfield, actual hostname/ip, OR usb"
+            exit 1
             ;;
         * )
-            echo Usage: `basename $0` '(en | es | fr) [ rsync host ]'
-            echo '       rsync hosts: dev, jeremy, jfield, actual hostname/ip, OR usb'
-            exit 1
+            # append .modules to the name
+            modulesFile=$1.modules;
+            shift
             ;;
     esac
 
@@ -2033,11 +2036,23 @@ buildRACHEL(){
     esac
 
     echo; printStatus "Starting RACHEL build script"
-    echo "Building CAP with language set: $lang"
-    echo "Using server: $RSYNCDIR"
+    echo "Building CAP with file: $modulesFile"
+    echo "Using rsync source: $RSYNCDIR"
 
     # fix known RACHEL bugs
-    echo; repairBugs
+# jfield checked - none of this is needed after a Recovery USB method 3 (format)
+#    echo; repairBugs
+
+    echo; printStatus "Installing fresh contentshell"
+    freshContentShell
+
+    # check if the .modules file specified exists - we have to do this
+    # after we update contentshell because it may be there
+    if [[ ! -f $rachelWWW/scripts/$modulesFile && ! -f ./$modulesFile ]]; then
+        echo; printError "No such .modules file: $modulesFile"
+        printError "The file must appear in $rachelWWW/scripts or current directory ("`pwd`")"
+        exit;
+    fi
 
     # clear out old httpd logs, get updated config, restart
     # by killing it gracefully and letting sw_watchdog restart it
@@ -2047,18 +2062,22 @@ buildRACHEL(){
     echo Updating lighttpd.conf
     mv /usr/local/etc/lighttpd.conf /usr/local/etc/lighttpd.conf.last
     wget -q https://raw.githubusercontent.com/rachelproject/rachelplus/master/scripts/lighttpd.conf -O /usr/local/etc/lighttpd.conf
-    echo Killing lighttpd
+    echo Restarting lighttpd
     killall -INT lighttpd
 
-    # get content (all languages)
-    for i in `ls $rachelWWW/scripts/*_plus.modules`; do
-        if [[ $i =~ ([a-z]{2})_plus.modules ]]; then
-            thislang=${BASH_REMATCH[1]}
-            echo; printStatus "Installing/updating ${thislang}_plus.modules"
-            contentModuleListInstall $rachelWWW/scripts/"$thislang"_plus.modules
-        fi
-    done
-
+    # get content
+    if [[ -f ./$modulesFile ]]; then
+        # if we've got a local file, get only those modules
+        echo; printStatus "Installing/updating $modulesFile"
+        contentModuleListInstall ./"$modulesFile"
+    else
+        # if it's a file in github we get everything and sort/hide/show later
+        # we already checked earlier that it exists
+        for m in `ls $rachelWWW/scripts/*.modules`; do
+            echo; printStatus "Installing/updating $m"
+            contentModuleListInstall $m
+        done
+    fi
 
     # bring in our multi-language patch (requires kalite restart)
     echo; printStatus "Patching kalite language code"
@@ -2068,24 +2087,46 @@ buildRACHEL(){
     # set the default language
     # NOTE: your session settings will override the default language
     # so to check this you have to open in an incognito window!
+    lang=`echo $modulesFile | cut -c1-2`
     echo; printStatus "Setting kalite language to $lang"
     wget -q -O - "http://localhost:8008/api/i18n/set_default_language/?lang=$lang&allUsers=1"
     echo
 
-    # XXX get the admin DB for module sort/visibility
-    echo; printStatus "Setting sort/visibility from .modules file"
-    php $rachelWWW/sortmods.php $rachelWWW/scripts/"$lang"_plus.modules
+    # run our script against modulesFile for sort/show/hide
+    echo; printStatus "Setting sort/visibility from $modulesFile"
+    php $rachelWWW/sortmods.php $rachelWWW/scripts/$modulesFile
 
     # symlink KA Lite mp4s to /media/RACHEL/kacontent
     touch $rachelPartition/kaliteUpdate
     kaliteCheckFiles
 
-    # repair/rebuild Kiwix library
-    repairKiwixLibrary
+    # restart kiwix
+    /root/rachel-scripts/rachelKiwixStart.sh
 
     # update RACHEL installer version
     if [[ ! -f /etc/rachelinstaller-version ]]; then $(cat /etc/version | cut -d- -f1 > /etc/rachelinstaller-version); fi
     echo $(cat /etc/rachelinstaller-version | cut -d_ -f1)-$(date +%Y%m%d.%H%M) > /etc/rachelinstaller-version
+}
+
+freshContentShell(){
+
+    # preserve the modules directory in case someone
+    # already put modules in there (partial or custom build)
+    rm -rf /media/RACHEL/modules.orig
+    mv /media/RACHEL/rachel/modules /media/RACHEL/modules.orig
+    # blow away the rachel directoy so we can start fresh
+    rm -rf /media/RACHEL/rachel
+    # update contentshell to latest version
+    git clone --depth=1 https://github.com/rachelproject/contentshell.git /media/RACHEL/rachel
+    rm -rf /media/RACHEL/rachel/.git*
+    # this is for the captive portal scripts
+    chmod 775 /media/RACHEL/rachel/*.shtml
+    # restore the previous modules directory
+    rm -rf  /media/RACHEL/rachel/modules
+    mv /media/RACHEL/modules.orig /media/RACHEL/rachel/modules
+    # remove this unused directory
+    rm -rf /media/RACHEL/contentshell
+
 }
 
 # Loop to redisplay main menu
