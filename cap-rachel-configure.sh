@@ -1983,7 +1983,7 @@ contentModuleListInstall(){
         [[ -z $m ]] && continue    # skip blanks
         m=${m#"."}                 # remove leading dot (download but hidden (later))
         echo; printStatus "Downloading $m"
-        rsync -avz --delete-after $RSYNCDIR/rachelmods/$m $rachelWWW/modules/
+        rsync -avz --del $RSYNCDIR/rachelmods/$m $rachelWWW/modules/
         commandStatus
         printGood "Done."
     done < $1
@@ -2048,7 +2048,11 @@ buildRACHEL(){
 
     # check if the .modules file specified exists - we have to do this
     # after we update contentshell because it may be there
-    if [[ ! -f $rachelWWW/scripts/$modulesFile && ! -f ./$modulesFile ]]; then
+    if [[ -f ./$modulesFile ]]; then
+        modulesFile=./$modulesFile
+    elif [[ -f $rachelWWW/scripts/$modulesFile ]]; then
+        modulesFile=$rachelWWW/scripts/$modulesFile
+    else
         echo; printError "No such .modules file: $modulesFile"
         printError "The file must appear in $rachelWWW/scripts or current directory ("`pwd`")"
         exit;
@@ -2065,19 +2069,9 @@ buildRACHEL(){
     echo Restarting lighttpd
     killall -INT lighttpd
 
-    # get content
-    if [[ -f ./$modulesFile ]]; then
-        # if we've got a local file, get only those modules
-        echo; printStatus "Installing/updating $modulesFile"
-        contentModuleListInstall ./"$modulesFile"
-    else
-        # if it's a file in github we get everything and sort/hide/show later
-        # we already checked earlier that it exists
-        for m in `ls $rachelWWW/scripts/*.modules`; do
-            echo; printStatus "Installing/updating $m"
-            contentModuleListInstall $m
-        done
-    fi
+    # get content - we checked earlier that file exists
+    echo; printStatus "Installing/updating $modulesFile"
+    contentModuleListInstall $modulesFile
 
     # bring in our multi-language patch (requires kalite restart)
     echo; printStatus "Patching kalite language code"
@@ -2087,14 +2081,16 @@ buildRACHEL(){
     # set the default language
     # NOTE: your session settings will override the default language
     # so to check this you have to open in an incognito window!
-    lang=`echo $modulesFile | cut -c1-2`
-    echo; printStatus "Setting kalite language to $lang"
-    wget -q -O - "http://localhost:8008/api/i18n/set_default_language/?lang=$lang&allUsers=1"
-    echo
+    lang=`basename $modulesFile | cut -c1-2`
+    if [[ $lang == "es" || $lang == "fr" ]]; then
+        echo; printStatus "Setting kalite language to $lang"
+        wget -q -O - "http://localhost:8008/api/i18n/set_default_language/?lang=$lang&allUsers=1"
+        echo
+    fi
 
     # run our script against modulesFile for sort/show/hide
     echo; printStatus "Setting sort/visibility from $modulesFile"
-    php $rachelWWW/sortmods.php $rachelWWW/scripts/$modulesFile
+    php $rachelWWW/sortmods.php $modulesFile
 
     # symlink KA Lite mp4s to /media/RACHEL/kacontent
     touch $rachelPartition/kaliteUpdate
