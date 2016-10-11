@@ -474,8 +474,16 @@ ls /media/RACHEL/kiwix/data/content/*.zim* 2>/dev/null | sed 's/ /\n/g' >> $tmp
 # Remove extra files - we only need the first (.zim or .zimaa)
 sed -i '/zima[^a]/d' $tmp
 
+# Find which db file we're using (it changed location in v2)
+if [[ -f /media/RACHEL/rachel/admin/admin.sqlite ]]; then
+    dbfile=/media/RACHEL/rachel/admin/admin.sqlite
+else
+    # old location
+    dbfile=/media/RACHEL/rachel/admin.sqlite
+fi
+
 # Remove modules that are marked hidden on main menu
-for d in $(sqlite3 /media/RACHEL/rachel/admin.sqlite 'select moddir from modules where hidden = 1'); do
+for d in $(sqlite3 $dbfile 'select moddir from modules where hidden = 1'); do
     sed -i '/\/'$d'\//d' $tmp
 done
 
@@ -2096,6 +2104,8 @@ buildRACHEL(){
     touch $rachelPartition/kaliteUpdate
     kaliteCheckFiles
 
+    # update rachelKiwixStart.sh
+    createKiwixRepairScript
     # restart kiwix
     /root/rachel-scripts/rachelKiwixStart.sh
 
