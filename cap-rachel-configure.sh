@@ -15,7 +15,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20160924.0133 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20161011.2233 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -141,7 +141,6 @@ testingScript(){
 
     repairBugs
     kaliteCheckFiles
-    repairKiwixLibrary
 
     set +x
     exit 1
@@ -380,10 +379,6 @@ installKiwix(){
     # Make content directory
     mkdir -p /media/RACHEL/kiwix
     # Start up Kiwix
-## Commented out as there are no zim files populating the library.xml file until the repairKiwixLibrary function runs (happens after the install)
-#    echo; printStatus "Starting Kiwix server."
-#    touch /media/RACHEL/kiwix/data/library/library.xml
-#    /var/kiwix/bin/kiwix-serve --daemon --port=81 --library /media/RACHEL/kiwix/data/library/library.xml
     echo; printStatus "Setting Kiwix to start on boot."
     # Remove old kiwix boot lines from /etc/rc.local
     sed -i '/kiwix/d' /etc/rc.local
@@ -394,53 +389,6 @@ installKiwix(){
     sed -i '$e echo "\/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' $rachelScriptsFile
     # Update Kiwix version
     cat /var/kiwix/application.ini | grep ^Version | cut -d= -f2 > /etc/kiwix-version
-}
-
-repairKiwixLibrary(){
-    echo; printStatus "Rebuilding/repairing the Kiwix library."
-    # Create tmp file (clean out new lines, etc)
-    tmp=`mktemp`
-    libraryPath="/media/RACHEL/kiwix/data/library"
-    library="$libraryPath/library.xml"
-
-    # Remove/recreate existing library
-    mkdir -p $libraryPath
-    rm -f $library; touch $library
-
-    # Find all the zim files in the modules directoy
-    ls /media/RACHEL/rachel/modules/*/data/content/*.zim* 2>/dev/null | sed 's/ /\n/g' > $tmp
-    ls /media/RACHEL/kiwix/data/content/*.zim* 2>/dev/null | sed 's/ /\n/g' >> $tmp
-
-    # Remove extra files - we only need the first (.zim or .zimaa)
-    sed -i '/zima[^a]/d' $tmp
-
-    # Remove modules that are marked hidden on main menu
-    for d in $(sqlite3 /media/RACHEL/rachel/admin.sqlite 'select moddir from modules where hidden = 1'); do
-        sed -i '/\/'$d'\//d' $tmp
-    done
-
-    for i in $(cat $tmp); do
-        if [[ $? -ge 1 ]]; then echo "No zims found."; fi
-        cmd="/var/kiwix/bin/kiwix-manage $library add $i"
-        moddir="$(echo $i | cut -d'/' -f1-6)"
-        # we have to remove the extension because we need .zim but it might be .zimaa
-        noext="$(echo ${i##*/} | cut -d'.' -f1)"
-        if [[ -d "$moddir/data/index/$noext.zim.idx" ]]; then
-            cmd="$cmd --indexPath=$moddir/data/index/$noext.zim.idx"
-        elif [[ -d "/media/RACHEL/kiwix/data/index/$noext.zim.idx" ]]; then
-            cmd="$cmd --indexPath=/media/RACHEL/kiwix/data/index/$noext.zim.idx"
-        fi
-        $cmd 2>/dev/null
-        if [[ $? -ge 1 ]]; then echo "Couldn't add $zim to library"; fi
-    done
-
-    # Restart Kiwix
-    killall /var/kiwix/bin/kiwix-serve
-    /var/kiwix/bin/kiwix-serve --daemon --port=81 --library $library > /dev/null
-    # Update Kiwix version
-    cat /var/kiwix/application.ini | grep ^Version | cut -d= -f2 > /etc/kiwix-version
-    rm -f $tmp
-    printGood "Done."
 }
 
 createKiwixRepairScript(){
@@ -1786,7 +1734,8 @@ repairBugs(){
 
     # Add Kiwix repair library script
     createKiwixRepairScript
-    repairKiwixLibrary
+    # restart kiwix
+    /root/rachel-scripts/rachelKiwixStart.sh
 
     # Fixing issue with 10.10.10.10 redirect and sleep times
     repairRachelScripts
@@ -1819,26 +1768,13 @@ repairBugs(){
 updateContentShell(){
     # Update to the latest contentshell
     mv /etc/init/procps.conf /etc/init/procps.conf.old 2>/dev/null # otherwise quite a lot of pkgs won't install
-#    if [[ $internet == "1" ]]; then
-#        apt-get update
-#        apt-get -y install $debPackageList
-#    else
-# we decided we want fixed versions for consistency
-# also, this seems to be where they are (not in $dirContentOffline)
-        cd $rachelPartition/offlinepkgs
-        dpkg -i *.deb
-#    fi
+    cd $rachelPartition/offlinepkgs
+    dpkg -i *.deb
     pear clear-cache 2>/dev/null
     pecl info stem > /dev/null
     if [[ $? -ge 1 ]]; then 
         echo; printStatus "Installing the stem module."
-#        if [[ $internet == "1" ]]; then
-#            echo "\n" | pecl install stem
-#        else
-# we decided we want fixed versions for consistency
-            echo "\n" | pecl install $rachelPartition/offlinepkgs/$stemPkg
-#        fi
-        # Add support for stem extension
+        echo "\n" | pecl install $rachelPartition/offlinepkgs/$stemPkg
         echo '; configuration for php stem module' > /etc/php5/conf.d/stem.ini
         echo 'extension=stem.so' >> /etc/php5/conf.d/stem.ini
     fi
@@ -2115,26 +2051,24 @@ buildRACHEL(){
 }
 
 freshContentShell(){
-
     # preserve the modules directory in case someone
     # already put modules in there (partial or custom build)
     rm -rf /media/RACHEL/modules.orig
-    mv /media/RACHEL/rachel/modules /media/RACHEL/modules.orig
+    mv $rachelWWW/modules $rachelPartition/modules.orig
     # blow away the rachel directoy so we can start fresh
-    rm -rf /media/RACHEL/rachel
+    rm -rf $rachelWWW
     # update contentshell to latest version
-    git clone --depth=1 https://github.com/rachelproject/contentshell.git /media/RACHEL/rachel
-    rm -rf /media/RACHEL/rachel/.git*
+    git clone --depth=1 https://github.com/rachelproject/contentshell.git $rachelWWW
+    rm -rf $rachelWWW/.git*
     # this is for the captive portal scripts
-    chmod 775 /media/RACHEL/rachel/*.shtml
+    chmod 775 $rachelWWW/*.shtml
     # restore the previous modules directory
-    rm -rf  /media/RACHEL/rachel/modules
-    mv /media/RACHEL/modules.orig /media/RACHEL/rachel/modules
+    rm -rf  $rachelWWW/modules
+    mv $rachelPartition/modules.orig $rachelWWW/modules
     # admin directory needs to be writable so that web/sqlite can create files there
     chmod 777 /media/RACHEL/rachel/admin
     # remove this unused directory
-    rm -rf /media/RACHEL/contentshell
-
+    rm -rf $rachelPartition/contentshell
 }
 
 # Loop to redisplay main menu
@@ -2152,10 +2086,8 @@ interactiveMode(){
     echo "  - [Install-Default-Weaved-Services] installs the default CAP Weaved services for ports 22, 80, 8080"
     echo "  - [Install-Weaved-Service] adds a Weaved service to an online account you provide during install"
     echo "  - [Add-Module] lists current available modules; installs one at a time"
-#    echo "  - [Add-Module-List] installs the list of modules that your provide"
     echo "  - [Add-Language] installs all modules of a language (does not install KA Lite or full Wikipedia)"
     echo "  - [Update-Modules] updates the currently installed modules"
-#    echo "  - [Download-KA-Content] checks for updated KA Lite video content"
     echo "  - Other [Utilities]"
     echo "    - Install a battery monitor that cleanly shuts down this device with less than 3% battery"
     echo "    - Download RACHEL content to stage for OFFLINE installs"
@@ -2186,7 +2118,10 @@ interactiveMode(){
 
             Install-Kiwix)
             installKiwix
-            repairKiwixLibrary
+            # update rachelKiwixStart.sh
+            createKiwixRepairScript
+            # restart kiwix
+            /root/rachel-scripts/rachelKiwixStart.sh
             repairRachelScripts
             whatToDo
             ;;
@@ -2216,17 +2151,12 @@ interactiveMode(){
             updateModuleNames
             contentModuleInstall
             kaliteCheckFiles
-            repairKiwixLibrary
+            # update rachelKiwixStart.sh
+            createKiwixRepairScript
+            # restart kiwix
+            /root/rachel-scripts/rachelKiwixStart.sh
             whatToDo
             ;;
-
-#            Add-Module-List)
-#            updateModuleNames
-#            contentModuleListInstall
-#            kaliteCheckFiles
-#            repairKiwixLibrary
-#            whatToDo
-#            ;;
 
             Add-Language)
             updateModuleNames
@@ -2234,7 +2164,10 @@ interactiveMode(){
             checkContentShell
             contentLanguageInstall
             kaliteCheckFiles
-            repairKiwixLibrary
+            # update rachelKiwixStart.sh
+            createKiwixRepairScript
+            # restart kiwix
+            /root/rachel-scripts/rachelKiwixStart.sh
             whatToDo
             ;;
 
@@ -2242,14 +2175,12 @@ interactiveMode(){
             updateModuleNames
             contentUpdate
             kaliteCheckFiles
-            repairKiwixLibrary
+            # update rachelKiwixStart.sh
+            createKiwixRepairScript
+            # restart kiwix
+            /root/rachel-scripts/rachelKiwixStart.sh
             whatToDo
             ;;
-
-#            Download-KA-Content)
-#            downloadKAContent
-#            whatToDo
-#            ;;
 
             Utilities)
             echo; printQuestion "What utility would you like to use?"
@@ -2319,7 +2250,10 @@ interactiveMode(){
                     ;;
 
                     Repair-Kiwix-Library)
-                    repairKiwixLibrary
+                    # update rachelKiwixStart.sh
+                    createKiwixRepairScript
+                    # restart kiwix
+                    /root/rachel-scripts/rachelKiwixStart.sh
                     break
                     ;;
 
