@@ -2130,6 +2130,8 @@ freshContentShell(){
     # restore the previous modules directory
     rm -rf  /media/RACHEL/rachel/modules
     mv /media/RACHEL/modules.orig /media/RACHEL/rachel/modules
+    # admin directory needs to be writable so that web/sqlite can create files there
+    chmod 777 /media/RACHEL/rachel/admin
     # remove this unused directory
     rm -rf /media/RACHEL/contentshell
 
