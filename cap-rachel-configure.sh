@@ -2053,7 +2053,7 @@ buildRACHEL(){
 freshContentShell(){
     # preserve the modules directory in case someone
     # already put modules in there (partial or custom build)
-    rm -rf /media/RACHEL/modules.orig
+    rm -rf $rachelPartition/modules.orig
     mv $rachelWWW/modules $rachelPartition/modules.orig
     # blow away the rachel directoy so we can start fresh
     rm -rf $rachelWWW
@@ -2062,11 +2062,11 @@ freshContentShell(){
     rm -rf $rachelWWW/.git*
     # this is for the captive portal scripts
     chmod 775 $rachelWWW/*.shtml
+    # admin directory needs to be writable so that web/sqlite can create files there
+    chmod 777 /media/RACHEL/rachel/admin
     # restore the previous modules directory
     rm -rf  $rachelWWW/modules
     mv $rachelPartition/modules.orig $rachelWWW/modules
-    # admin directory needs to be writable so that web/sqlite can create files there
-    chmod 777 /media/RACHEL/rachel/admin
     # remove this unused directory
     rm -rf $rachelPartition/contentshell
 }
