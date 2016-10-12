@@ -2064,6 +2064,8 @@ freshContentShell(){
     chmod 775 $rachelWWW/*.shtml
     # admin directory needs to be writable so that web/sqlite can create files there
     chmod 777 /media/RACHEL/rachel/admin
+    # modules directory needs to be writable so that updates can be web-downloaded
+    chmod 777 /media/RACHEL/rachel/modules
     # restore the previous modules directory
     rm -rf  $rachelWWW/modules
     mv $rachelPartition/modules.orig $rachelWWW/modules
