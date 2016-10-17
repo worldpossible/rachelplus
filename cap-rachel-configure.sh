@@ -15,7 +15,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20161011.2233 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20161016.2133 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -156,7 +156,7 @@ opMode(){
             internet="1"
             onlineVariables
             checkInternet
-            break
+            break;
         ;;
         # OFFLINE
         OFFLINE)
@@ -181,11 +181,13 @@ opMode(){
                 fi
             fi
             offlineVariables
-            break
+            break;
+        ;;
+        # Catch all
+        *)
+            echo; printQuestion "Do you want to run in ONLINE (a network location) or OFFLINE (USB drive) mode?";
         ;;
         esac
-        printGood "Done."
-        break
     done
 }
 
@@ -1637,6 +1639,13 @@ EOF
         printGood "Done."
     fi
 
+    # Check for disable wifi flag
+    echo; printStatus "Added check to disable wifi"
+    sed -i '$e echo "\# Check if we should disable wifi"' $rachelScriptsFile
+    sed -i '$e echo "echo \\$(date) - Checking if we should disable wifi"' $rachelScriptsFile
+    sed -i '$e echo "if [[ -f '$rachelScriptsDir'/disable_wifi ]]; then sleep 5; ifconfig wlan0 down; echo \\"Wifi disabled\\"; fi"' $rachelScriptsFile
+    printGood "Done."
+
     # Add RACHEL script complete line
     sed -i '$e echo "echo \\$(date) - RACHEL startup completed"' $rachelScriptsFile
     echo; printGood "Rachel start script update complete."
@@ -1900,6 +1909,20 @@ disableResetButton(){
         echo; printGood "Reset button already disabled."
     fi
     echo "Reset button disabled.  Delete this file to re-enable." > $rachelScriptsDir/disable_reset
+}
+
+disableWifi(){
+    echo; printStatus "Disabling wifi"
+    ifconfig wlan0 down
+    echo "Wifi disabled.  Delete this file to re-enable." > $rachelScriptsDir/disable_wifi
+    # Check that the rachelScripts.sh file is updated
+    repairRachelScripts    
+}
+
+enableWifi(){
+    echo; printStatus "Enabling wifi"
+    /etc/WiFi_Setting.sh
+    rm -f $rachelScriptsDir/disable_wifi
 }
 
 updateRachelFolders(){
@@ -2187,6 +2210,8 @@ interactiveMode(){
             Utilities)
             echo; printQuestion "What utility would you like to use?"
             echo "  - [Install-Battery-Watcher] monitors battery and shutdowns the device with less than 3% battery"
+            echo "  - [Enable-Wifi] enables the wifi access point (if disabled)"
+            echo "  - [Disable-Wifi] disables the wifi instantly and on reboot"
             echo "  - [Disable-Reset-Button] removes the ability to reset the device by use of the reset button"
             echo "  - [Download-OFFLINE-Content] to stage for OFFLINE (i.e. local) RACHEL installs"
             echo "  - [Backup-Weaved-Services] backs up configs and restores them if they are not found on boot"
@@ -2203,10 +2228,21 @@ interactiveMode(){
             echo "  - [Testing] script"
             echo "  - Return to [Main Menu]"
             echo
-            select util in "Install-Battery-Watcher" "Disable-Reset-Button" "Download-OFFLINE-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Update-Content-Shell" "Repair-Kiwix-Library" "Repair-Firmware" "Repair-KA-Lite" "Repair-Bugs" "Sanitize" "Change-Package-Repo" "Check-MD5" "Test" "Main-Menu"; do
+            select util in "Install-Battery-Watcher" "Enable-Wifi" "Disable-Wifi" "Disable-Reset-Button" "Download-OFFLINE-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Update-Content-Shell" "Repair-Kiwix-Library" "Repair-Firmware" "Repair-KA-Lite" "Repair-Bugs" "Sanitize" "Change-Package-Repo" "Check-MD5" "Test" "Main-Menu"; do
                 case $util in
                     Install-Battery-Watcher)
                     installBatteryWatch
+                    repairRachelScripts
+                    break
+                    ;;
+
+                    Enable-Wifi)
+                    enableWifi
+                    break
+                    ;;
+
+                    Disable-Wifi)
+                    disableWifi
                     repairRachelScripts
                     break
                     ;;
