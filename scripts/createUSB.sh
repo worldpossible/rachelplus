@@ -19,7 +19,7 @@ printQuestion(){
 	echo -e "\x1B[01;33m[?]\x1B[0m $1"
 }
 
-version=9
+version=10
 timestamp=$(date +"%Y%m%d.%H%M")
 usbDate=$(date +"%Y%m%d")
 imageSavePath="$HOME"
@@ -212,7 +212,16 @@ updateVersions(){
 
 setUSBVersion(){
 	echo; printStatus "Setting the RACHEL Recovery USB version."
-	awk 'BEGIN{OFS=FS="\""} $1~/version=/ {$2="'$usbVersion'";}1' $mountName/update.sh > update.tmp; mv update.tmp update.sh
+	awk 'BEGIN{OFS=FS="\""} $1~/^usbVersion=/ {$2="'$usbVersion'";}1' $mountName/update.sh > update.tmp; mv update.tmp update.sh
+}
+
+setUSBCreationDate(){
+	echo; printStatus "Setting the RACHEL Recovery USB creation date."
+	sed -i '/^version=/d' $mountName/update.sh
+	if grep -q ^usbCreated= $mountName/update.sh; then
+		sed -i '33 a usbCreated=""' $mountName/update.sh
+	fi
+	awk 'BEGIN{OFS=FS="\""} $1~/^usbCreated=/ {$2="'$timestamp'";}1' $mountName/update.sh > update.tmp; mv update.tmp update.sh
 }
 
 setRecoveryMETHOD(){
@@ -301,6 +310,7 @@ confirmRecoveryUSB
 buildUSBImage
 removeOSXJunk
 setUSBVersion
+setUSBCreationDate
 setRecoveryMETHOD
 addDefaultModules
 updateVersionNums
