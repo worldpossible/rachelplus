@@ -15,7 +15,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20161114.2143 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20161114.2156 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -1216,6 +1216,21 @@ kaliteInstall(){
         commandStatus
         # Turn logging back on
         exec &> >(tee -a "$rachelLog")
+        # If /root/.kalite is not a symlink, move KA Lite database to hard drive to prevent filling up the eMMC with user data
+        if [[ ! -L /root/.kalite ]]; then
+            kalite stop
+            printStatus "Before copying KA Lite folder - here is an 'ls' of $rachelPartition"
+            ls -la $rachelPartition
+            echo; printStatus "Copying primary (.kalite) and backup (.kalite-backup) directory to $rachelPartition"
+            cp -r /root/.kalite $rachelPartition/.kalite-backup
+            mv /root/.kalite $rachelPartition/
+            echo; printStatus "After copying KA Lite folder - $rachelPartition (should list folders .kalite and .kalite-backup)"
+            ls -la $rachelPartition
+            echo; printStatus "Symlinking /root/.kalite to /media/RACHEL/.kalite"
+            ln -s $rachelPartition/.kalite /root/.kalite
+            echo; printGood "Symlinking complete - /root"
+        fi
+        # Complete installation
         if [[ $errorCode == 0 ]]; then
             echo; printGood "KA Lite $kaliteCurrentVersion installed."
         else
