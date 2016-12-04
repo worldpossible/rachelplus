@@ -15,7 +15,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20161114.2156 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20161204.1819 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -38,7 +38,7 @@ installTmpDir="/root/cap-rachel-install.tmp"
 rachelTmpDir="/media/RACHEL/cap-rachel-install.tmp"
 rachelRecoveryDir="/media/RACHEL/recovery"
 stemPkg="stem-1.5.1.tgz"
-debPackageList="php5-cgi php5-common php5-mysql php5-sqlite php-pear php5-curl pdftk make git git-core git-man liberror-perl python-m2crypto mysql-server mysql-client libapache2-mod-auth-mysql sqlite3 gcc-multilib gcj-4.6-jre-lib libgcj12 libgcj-common gcj-4.6-base libasound2"
+debPackageList="php5-cgi php5-common php5-mysql php5-sqlite php-pear php5-curl pdftk make git git-core git-man liberror-perl python-m2crypto mysql-server mysql-client libapache2-mod-auth-mysql sqlite3 gcc-multilib gcj-4.6-jre-lib libgcj12 libgcj-common gcj-4.6-base libasound2 fuse-utils fuse-exfat exfat-utils"
 errorCode="0"
 
 # Print version only, if requested
