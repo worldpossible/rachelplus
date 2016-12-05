@@ -221,7 +221,7 @@ setUSBVersion(){
 setUSBCreationDate(){
 	echo; printStatus "Setting the RACHEL Recovery USB creation date."
 	sed -i '/^version=/d' $mountName/update.sh
-	if grep -q ^usbCreated= $mountName/update.sh; then
+	if ! grep -q ^usbCreated= $mountName/update.sh; then
 		sed -i '33 a usbCreated=""' $mountName/update.sh
 	fi
 	awk 'BEGIN{OFS=FS="\""} $1~/^usbCreated=/ {$2="'$timestamp'";}1' $mountName/update.sh > update.tmp; mv update.tmp update.sh
