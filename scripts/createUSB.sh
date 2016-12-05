@@ -19,7 +19,7 @@ printQuestion(){
 	echo -e "\x1B[01;33m[?]\x1B[0m $1"
 }
 
-version=10
+version=1.10.0
 timestamp=$(date +"%Y%m%d.%H%M")
 usbDate=$(date +"%Y%m%d")
 imageSavePath="$HOME"
@@ -122,8 +122,11 @@ sanitize(){
 	rm -f /media/RACHEL/ka-lite_content.zip
 	# Clean previous files from running the generate_recovery.sh script 
 	rm -rf /recovery/20* $rachelRecoveryDir/20*
-	# Clean bash history
+	# Clean bash, nano, mysql, and vim history
 	echo "" > /root/.bash_history
+	echo "" > /root/.viminfo
+	echo "" > /root/.nano_history
+	echo "" > /root/.mysql_history	
 	# Remove previous Weaved installs
 	rm -rf /usr/bin/notify_Weaved*.sh /usr/bin/Weaved*.sh /etc/weaved /root/Weaved*.log
 }
