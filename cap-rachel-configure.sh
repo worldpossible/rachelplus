@@ -1864,6 +1864,13 @@ dpkg -i *.deb
 #if [[ -f $dirContentOffline/kalitedb/content_khan_es.sqlite ]]; then cp $dirContentOffline/kalitedb/content_khan_es.sqlite /root/.kalite/database/; fi
 #if [[ -f $dirContentOffline/kalitedb/content_khan_fr.sqlite ]]; then cp $dirContentOffline/kalitedb/content_khan_fr.sqlite /root/.kalite/database/; fi
 #if [[ -f $dirContentOffline/kalitedb/data.sqlite ]]; then cp $dirContentOffline/kalitedb/data.sqlite /root/.kalite/database/; fi
+# Add symlinks - when running the Recovery USB, symlinks are not permitted on FAT partitions, so we have to create them after recovery runs
+echo; echo "[*] Add symlink for en-local_content."
+ln -s $rachelWWW/modules/en-local_content/rachel-index.php $rachelWWW/modules/en-local_content/index.htmlf
+echo; echo "[*] Add symlinks for .kalite admin directory."
+ln -s $rachelWWW/modules/en-kalite/content_khan_en.sqlite $rachelPartition/.kalite/content_khan_en.sqlite
+ln -s $rachelWWW/modules/en-kalite/content_khan_es.sqlite $rachelPartition/.kalite/content_khan_es.sqlite
+ln -s $rachelWWW/modules/en-kalite/content_khan_fr.sqlite $rachelPartition/.kalite/content_khan_fr.sqlite
 # Update to the latest contentshell
 echo; echo "[*] Updating to latest contentshell."
 cd $dirContentOffline/contentshell
