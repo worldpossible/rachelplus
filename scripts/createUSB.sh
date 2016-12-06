@@ -19,7 +19,7 @@ printQuestion(){
 	echo -e "\x1B[01;33m[?]\x1B[0m $1"
 }
 
-version=1.10.0
+version=1.10.1
 timestamp=$(date +"%Y%m%d.%H%M")
 usbDate=$(date +"%Y%m%d")
 imageSavePath="$HOME"
@@ -162,6 +162,7 @@ buildUSBImage(){
 			echo "Select 'n' to exit. (y/N)"; read REPLY
 			if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
 				echo "It takes about 75 minutes (on a RACHEL-Plus CAP) to create the 3 images; then, the USB script will continue."
+				echo "Started building images at $(date "+%r")"
 				rm -rf $0 $installTmpDir $rachelTmpDir
 				echo; time /root/generate_recovery.sh $rachelRecoveryDir/
 				echo
