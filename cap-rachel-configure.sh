@@ -1990,7 +1990,15 @@ contentModuleListInstall(){
         [[ -z $m ]] && continue    # skip blanks
         m=${m#"."}                 # remove leading dot (download but hidden (later))
         echo; printStatus "Downloading $m"
-        rsync -avz --del $RSYNCDIR/rachelmods/$m $rachelWWW/modules/
+
+        # it is faster without zip unless we're going to dev
+        # (i.e. LAN or USB)
+        if [[ $RSYNCDIR == $rsyncOnline ]]; then
+            rsync -avz --del $RSYNCDIR/rachelmods/$m $rachelWWW/modules/
+        else
+            rsync -av --del $RSYNCDIR/rachelmods/$m $rachelWWW/modules/
+        fi
+
         commandStatus
         printGood "Done."
     done < $1
