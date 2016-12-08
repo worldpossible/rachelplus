@@ -15,7 +15,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20161205.1104 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20161205.2319 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -1890,8 +1890,31 @@ else
     cd $rachelWWW
     git checkout $gitContentShellCommit
 fi
-# Check captive portal executables
-
+# Check KA Lite admin directory location
+# If /root/.kalite is not a symlink, move KA Lite database to hard drive for speed increase and to prevent filling up the eMMC with user data
+echo; printStatus "Checking that .kalite directory lives on hard disk"
+if [[ ! -L /root/.kalite ]]; then
+    echo; "[+] Need to move .kalite from eMMC to hard disk"
+    kalite stop
+    echo; "[+] Before copying KA Lite folder - here is an 'ls' of $rachelPartition"
+    ls -la $rachelPartition
+    echo; "[+] Copying primary (.kalite) and backup (.kalite-backup) directory to $rachelPartition"
+    if [[ -d $rachelPartition/.kalite ]]; then
+        rm -rf $rachelPartition/.kalite-backup
+        mv $rachelPartition/.kalite $rachelPartition/.kalite-backup
+    else
+        rm -rf $rachelPartition/.kalite
+        cp -r /root/.kalite $rachelPartition/.kalite-backup
+    fi
+    mv /root/.kalite $rachelPartition/
+    echo; "[+] After copying KA Lite folder - $rachelPartition (should list folders .kalite and .kalite-backup)"
+    ls -la $rachelPartition
+    echo; "[+] Symlinking /root/.kalite to /media/RACHEL/.kalite"
+    ln -s $rachelPartition/.kalite /root/.kalite
+    echo; "[+] Symlinking complete - /root"
+else
+    echo; "[+] .kalite directory is located on the hard disk"
+fi
 # Update Kiwix version
 cat /var/kiwix/application.ini | grep ^Version | cut -d= -f2 > /etc/kiwix-version
 # Update KA Lite version
