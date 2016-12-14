@@ -133,6 +133,8 @@ sudo mv $rachelLog $rachelLogDir/rachel-install-$timestamp.log
 echo; printGood "Log file saved to: $rachelLogDir/rachel-install-$timestamp.log"
 printGood "RACHEL CAP Install Complete."
 
+echo 1 > /root/script3.ran
+
 # Reboot
 echo; printStatus "I need to reboot; once rebooted, your CAP is ready for RACHEL content."
 echo "Download modules from http://dev.worldpossible.org/mods/"

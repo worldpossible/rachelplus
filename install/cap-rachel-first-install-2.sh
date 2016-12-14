@@ -51,8 +51,9 @@ printGood "Done."
 # Add lines to /etc/rc.local that will start the next script to run on reboot
 sudo sed -i '$e echo "bash '$installTmpDir'\/cap-rachel-first-install-3.sh&"' /etc/rc.local
 
+echo 1 > /root/script2.ran
+
 # Reboot
-noCleanup=1
 echo; printGood "RACHEL CAP Install - Script 2 ended at $(date)"
 echo; printStatus "I need to reboot; once rebooted, please run the next download/install command."
 printStatus "Rebooting in 10 seconds..."

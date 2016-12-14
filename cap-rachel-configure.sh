@@ -3,12 +3,16 @@
 # ONELINER Download/Install: sudo wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/cap-rachel-configure.sh -O /root/cap-rachel-configure.sh; bash cap-rachel-configure.sh
 # OFFLINE BUILDS:  Run the Download-Offline-Content script in the Utilities menu.
 
+## TESTING
+rm -f /root/script2.ran
+rm -f /root/script3.ran
+
 # COMMON VARIABLES - Change as needed
 dirContentOffline="/media/usbhd-sdb1" # Enter directory of downloaded RACHEL content for offline install (e.g. I mounted my external USB on my CAP but plugging the external USB into and running the command 'fdisk -l' to find the right drive, then 'mkdir /media/RACHEL-Content' to create a folder to mount to, then 'mount /dev/sdb1 /media/RACHEL-Content' to mount the USB drive.)
 rsyncOnline="rsync://dev.worldpossible.org" # The current RACHEL rsync repository
 contentOnline="rsync://rachel.golearn.us/content" # Another RACHEL rsync repository
 wgetOnline="http://rachelfriends.org" # RACHEL large file repo (ka-lite_content, etc)
-gitRachelPlus="https://raw.githubusercontent.com/rachelproject/rachelplus/master" # RACHELPlus Scripts GitHub Repo
+gitRachelPlus="https://raw.githubusercontent.com/rachelproject/rachelplus/CAPv2-install" # RACHELPlus Scripts GitHub Repo
 gitContentShell="https://raw.githubusercontent.com/rachelproject/contentshell/master" # RACHELPlus ContentShell GitHub Repo
 gitContentShellCommit="b5770d0"
 
@@ -210,10 +214,10 @@ onlineVariables(){
     SOURCEUK="wget -r $gitRachelPlus/sources.list/sources-uk.list -O /etc/apt/sources.list"
     SOURCESG="wget -r $gitRachelPlus/sources.list/sources-sg.list -O /etc/apt/sources.list"
     SOURCECN="wget -r $gitRachelPlus/sources.list/sources-sohu.list -O /etc/apt/sources.list" 
-#    CAPRACHELFIRSTINSTALL2="wget -r $gitRachelPlus/install/cap-rachel-first-install-2.sh -O cap-rachel-first-install-2.sh"
-#    CAPRACHELFIRSTINSTALL3="wget -r $gitRachelPlus/install/cap-rachel-first-install-3.sh -O cap-rachel-first-install-3.sh"
-    CAPRACHELFIRSTINSTALL2="cp /root/cap-rachel-first-install-2.sh cap-rachel-first-install-2.sh"
-    CAPRACHELFIRSTINSTALL3="cp /root/cap-rachel-first-install-3.sh cap-rachel-first-install-3.sh"
+    CAPRACHELFIRSTINSTALL2="wget -r $gitRachelPlus/install/cap-rachel-first-install-2.sh -O cap-rachel-first-install-2.sh"
+    CAPRACHELFIRSTINSTALL3="wget -r $gitRachelPlus/install/cap-rachel-first-install-3.sh -O cap-rachel-first-install-3.sh"
+#    CAPRACHELFIRSTINSTALL2="cp /root/cap-rachel-first-install-2.sh cap-rachel-first-install-2.sh"
+#    CAPRACHELFIRSTINSTALL3="cp /root/cap-rachel-first-install-3.sh cap-rachel-first-install-3.sh"
     LIGHTTPDFILE="wget -r $gitRachelPlus/scripts/lighttpd.conf -O lighttpd.conf"
     CAPTIVEPORTALREDIRECT="wget -r $gitContentShell/captiveportal-redirect.php -O captiveportal-redirect.php"
     PASSTICKETSHTML="wget -r $gitContentShell/pass_ticket.shtml -O pass_ticket.shtml"
@@ -956,6 +960,14 @@ EOF
         #sgdisk -n 3:255852544:-1M -c 3:"RACHEL" -u 3:99999999-9999-9999-9999-999999999999 -t 3:8300 /dev/sda # RACHEL 343.8GB
         sgdisk -n 3:41945088:-1M -c 3:"RACHEL" -u 3:99999999-9999-9999-9999-999999999999 -t 3:8300 /dev/sda
         sgdisk -p /dev/sda
+        printGood "Done."
+
+        # Adding the partitions in /etc/fstab
+        echo; printStatus "Adding /dev/sda partitions into /etc/fstab"
+        sed -i '/\/dev\/sda/d' /etc/fstab
+        echo -e "/dev/sda1\t/media/preloaded\t\text4\tauto,nobootwait 0\t0" >> /etc/fstab
+        echo -e "/dev/sda2\t/media/uploaded\t\text4\tauto,nobootwait 0\t0" >> /etc/fstab
+        echo -e "/dev/sda3\t/media/RACHEL\t\text4\tauto,nobootwait 0\t0" >> /etc/fstab
         printGood "Done."
 
         # Add rachel-scripts.sh startup in /etc/rc.local
