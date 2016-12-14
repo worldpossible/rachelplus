@@ -210,8 +210,10 @@ onlineVariables(){
     SOURCEUK="wget -r $gitRachelPlus/sources.list/sources-uk.list -O /etc/apt/sources.list"
     SOURCESG="wget -r $gitRachelPlus/sources.list/sources-sg.list -O /etc/apt/sources.list"
     SOURCECN="wget -r $gitRachelPlus/sources.list/sources-sohu.list -O /etc/apt/sources.list" 
-    CAPRACHELFIRSTINSTALL2="wget -r $gitRachelPlus/install/cap-rachel-first-install-2.sh -O cap-rachel-first-install-2.sh"
-    CAPRACHELFIRSTINSTALL3="wget -r $gitRachelPlus/install/cap-rachel-first-install-3.sh -O cap-rachel-first-install-3.sh"
+#    CAPRACHELFIRSTINSTALL2="wget -r $gitRachelPlus/install/cap-rachel-first-install-2.sh -O cap-rachel-first-install-2.sh"
+#    CAPRACHELFIRSTINSTALL3="wget -r $gitRachelPlus/install/cap-rachel-first-install-3.sh -O cap-rachel-first-install-3.sh"
+    CAPRACHELFIRSTINSTALL2="cp /root/cap-rachel-first-install-2.sh cap-rachel-first-install-2.sh"
+    CAPRACHELFIRSTINSTALL3="cp /root/cap-rachel-first-install-3.sh cap-rachel-first-install-3.sh"
     LIGHTTPDFILE="wget -r $gitRachelPlus/scripts/lighttpd.conf -O lighttpd.conf"
     CAPTIVEPORTALREDIRECT="wget -r $gitContentShell/captiveportal-redirect.php -O captiveportal-redirect.php"
     PASSTICKETSHTML="wget -r $gitContentShell/pass_ticket.shtml -O pass_ticket.shtml"
@@ -833,57 +835,6 @@ newInstall(){
 
     cd $installTmpDir
 
-    # Fix hostname issue in /etc/hosts
-    echo; printStatus "Fixing hostname in /etc/hosts"
-    sed -i 's/ec-server/WRTD-303N-Server/g' /etc/hosts
-    printGood "Done."
-
-    # Update package repos
-    changePackageRepo
-
-    # Download/stage GitHub files to $installTmpDir
-    echo; printStatus "Downloading RACHEL install scripts for CAP to the temp folder $installTmpDir."
-    ## cap-rachel-first-install-2.sh
-    echo; printStatus "Downloading cap-rachel-first-install-2.sh"
-    $CAPRACHELFIRSTINSTALL2
-    commandStatus
-    ## cap-rachel-first-install-3.sh
-    echo; printStatus "Downloading cap-rachel-first-install-3.sh"
-    $CAPRACHELFIRSTINSTALL3
-    commandStatus
-    ## lighttpd.conf - RACHEL version (I don't overwrite at this time due to other dependencies)
-    echo; printStatus "Downloading lighttpd.conf"
-    $LIGHTTPDFILE
-    commandStatus
-
-    # Download RACHEL Captive Portal files
-    echo; printStatus "Downloading Captive Portal content to $installTmpDir."
-
-    echo; printStatus "Downloading captiveportal-redirect.php."
-    $CAPTIVEPORTALREDIRECT
-    commandStatus
-
-    echo; printStatus "Downloading RACHELbrandLogo-captive.png."
-    $RACHELBRANDLOGOCAPTIVE
-    commandStatus
-    
-    echo; printStatus "Downloading HFCbrandLogo-captive.jpg."
-    $HFCBRANDLOGOCAPTIVE
-    commandStatus
-    
-    echo; printStatus "Downloading WorldPossiblebrandLogo-captive.png."
-    $WORLDPOSSIBLEBRANDLOGOCAPTIVE
-    commandStatus
-
-    # Check if files downloaded correctly
-    if [[ $errorCode == 0 ]]; then
-        echo; printGood "Done."
-    else
-        echo; printError "One or more files did not download correctly; check log file ($rachelLog) and try again."
-        cleanup
-        echo; exit 1
-    fi
-
     # Show location of the log file
     echo; printStatus "Directory of RACHEL install log files with date/time stamps:"
     echo "$rachelLogDir"
@@ -892,9 +843,10 @@ newInstall(){
     echo; printError "WARNING:  This will completely wipe your CAP and restore to RACHEL defaults."
     echo "Any downloaded modules WILL be erased during this process."
 
-    echo; read -p "Are you ready to start the install? (y/n) " -r
+    echo; read -p "Are you ready to start the install? (y/N) " REPLY
     if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
-        # Add rachel-scripts.sh script - because it doesn't exist
+
+        # Create the shell of the rachel-scripts.sh script - because it doesn't exist
         sed "s,%rachelScriptsLog%,$rachelScriptsLog,g" > $rachelScriptsFile << 'EOF'
 #!/bin/bash
 # Send output to log file
@@ -902,6 +854,27 @@ rm -f %rachelScriptsLog%
 exec 1>> %rachelScriptsLog% 2>&1
 exit 0
 EOF
+
+        # Fix hostname issue in /etc/hosts on v1 CAPs
+        if [[ $(grep ec-server /etc/hosts) ]]; then
+            echo; printStatus "Fixing hostname in /etc/hosts"
+            sed -i 's/ec-server/WRTD-303N-Server/g' /etc/hosts
+            printGood "Done."
+        fi
+
+        # Update package repos
+        changePackageRepo
+
+        # Download/stage GitHub files to $installTmpDir
+        echo; printStatus "Downloading RACHEL install scripts for CAP to the temp folder $installTmpDir."
+        ## cap-rachel-first-install-2.sh
+        echo; printStatus "Downloading cap-rachel-first-install-2.sh"
+        $CAPRACHELFIRSTINSTALL2
+        commandStatus
+        ## cap-rachel-first-install-3.sh
+        echo; printStatus "Downloading cap-rachel-first-install-3.sh"
+        $CAPRACHELFIRSTINSTALL3
+        commandStatus
 
         # Delete previous setup commands from the $rachelScriptsFile
         echo; printStatus "Delete previous RACHEL setup commands from $rachelScriptsFile"
@@ -918,8 +891,15 @@ EOF
         apt-get clean; apt-get purge; apt-get update
         printGood "Done."
 
-        # Install packages
+        # Install RACHEL required packages
         echo; printStatus "Installing packages."
+        # Setup root password for mysql install
+        debconf-set-selections <<< 'mysql-server mysql-server/root_password Rachel+1 root'
+        debconf-set-selections <<< 'mysql-server mysql-server/root_password_again Rachel+1 root'
+        chown root:root /tmp
+        chmod 1777 /tmp
+        # Remove old versions of mysql prior to install
+        apt-get -y remove --purge mysql-server mysql-client mysql-common
         apt-get -y install $debPackageList
         # Add support for multi-language front page
         pear clear-cache 2>/dev/null
@@ -927,6 +907,7 @@ EOF
         # Add support for stem extension
         echo '; configuration for php stem module' > /etc/php5/conf.d/stem.ini
         echo 'extension=stem.so' >> /etc/php5/conf.d/stem.ini
+        printGood "Done."
 
         # Add the following line at the end of file
         grep -q '^cgi.fix_pathinfo = 1' /etc/php5/cgi/php.ini && sed -i '/^cgi.fix_pathinfo = 1/d' /etc/php5/cgi/php.ini; echo 'cgi.fix_pathinfo = 1' >> /etc/php5/cgi/php.ini
@@ -937,19 +918,9 @@ EOF
         rm -rf contentshell # in case of previous failed install
         $GITCLONERACHELCONTENTSHELL
 
-        # Install MySQL client and server
-        echo; printStatus "Installing mysql client and server."
-        debconf-set-selections <<< 'mysql-server mysql-server/root_password password root'
-        debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password root'
-        cd /
-        chown root:root /tmp
-        chmod 1777 /tmp
-        apt-get -y remove --purge mysql-server mysql-client mysql-common
-        apt-get -y install mysql-server mysql-client libapache2-mod-auth-mysql php5-mysql
-        printGood "Done."
-
         # Overwrite the lighttpd.conf file with our customized RACHEL version
         echo; printStatus "Updating lighttpd.conf to RACHEL version"
+        $LIGHTTPDFILE
         mv $installTmpDir/lighttpd.conf /usr/local/etc/lighttpd.conf
         printGood "Done."
 
@@ -972,11 +943,18 @@ EOF
         sgdisk -p /dev/sda
         sgdisk -o /dev/sda
         parted -s /dev/sda mklabel gpt
-        sgdisk -n 1:2048:41945087 -c 1:"preloaded" -u 1:77777777-7777-7777-7777-777777777777 -t 1:8300 /dev/sda
-        sgdisk -n 2:41945088:251660287 -c 2:"uploaded" -u 2:88888888-8888-8888-8888-888888888888 -t 2:8300 /dev/sda
-    #            sgdisk -n 2:21G:+100G -c 2:"uploaded" -u 2:88888888-8888-8888-8888-888888888888 -t 2:8300 /dev/sda
-        sgdisk -n 3:251660288:-1M -c 3:"RACHEL" -u 3:99999999-9999-9999-9999-999999999999 -t 3:8300 /dev/sda
-    #            sgdisk -n 3:122G:-1M -c 3:"RACHEL" -u 3:99999999-9999-9999-9999-999999999999 -t 3:8300 /dev/sda
+        ## Part1: 3G for preloaded content
+        #sgdisk -n 1:2048:765460479 -c 1:"preloaded" -u 1:77777777-7777-7777-7777-777777777777 -t 1:8300 /dev/sda # original
+        #sgdisk -n 1:2048:+20G -c 1:"preloaded" -u 1:77777777-7777-7777-7777-777777777777 -t 1:8300 /dev/sda # RACHEL 20GB
+        sgdisk -n 1:2048:+3G -c 1:"preloaded" -u 1:77777777-7777-7777-7777-777777777777 -t 1:8300 /dev/sda
+        ## Part2: 17G for teacher content
+        #sgdisk -n 2:765460480:-1M -c 2:"uploaded" -u 2:88888888-8888-8888-8888-888888888888 -t 2:8300 /dev/sda # original
+        #sgdisk -n 2:21G:+100G -c 2:"uploaded" -u 2:88888888-8888-8888-8888-888888888888 -t 2:8300 /dev/sda # RACHEL 100GB
+        sgdisk -n 2:6293504:+17G -c 2:"uploaded" -u 2:88888888-8888-8888-8888-888888888888 -t 2:8300 /dev/sda
+        ## Part3: Remaining for RACHEL content
+        #sgdisk -n 3:+122G:-1M -c 3:"RACHEL" -u 3:99999999-9999-9999-9999-999999999999 -t 3:8300 /dev/sda # RACHEL 343.8GB
+        #sgdisk -n 3:255852544:-1M -c 3:"RACHEL" -u 3:99999999-9999-9999-9999-999999999999 -t 3:8300 /dev/sda # RACHEL 343.8GB
+        sgdisk -n 3:41945088:-1M -c 3:"RACHEL" -u 3:99999999-9999-9999-9999-999999999999 -t 3:8300 /dev/sda
         sgdisk -p /dev/sda
         printGood "Done."
 
@@ -989,6 +967,7 @@ EOF
         sudo sed -i '$e echo "bash '$installTmpDir'\/cap-rachel-first-install-2.sh&"' $rachelScriptsFile
 
         echo; printGood "RACHEL CAP Install - Script ended at $(date)"
+        noCleanup=1
         rebootCAP
     else
         echo; printError "User requests not to continue...exiting at $(date)"
@@ -2170,13 +2149,13 @@ freshContentShell(){
 # Loop to redisplay main menu
 whatToDo(){
     echo; printQuestion "What would you like to do next?"
-    echo "1)Initial Install  2)Install/Upgrade KALite  3)Install Kiwix  4)Install Default Weaved Services  5)Install Weaved Service  6)Add Module  7)Add Language  8)Update Modules  9)Utilities  10)Exit"
+    echo "1)Base Install  2)Install/Upgrade KALite  3)Install Kiwix  4)Install Default Weaved Services  5)Install Weaved Service  6)Add Module  7)Add Language  8)Update Modules  9)Utilities  10)Exit"
 }
 
 # Interactive mode menu
 interactiveMode(){
     echo; printQuestion "What you would like to do:"
-    echo "  - [Initial-Install] of RACHEL on a CAP (completely erases any content)"
+    echo "  - [Base-Install] of RACHEL on a raw CAP (completely erases any content)"
     echo "  - [Install-Upgrade-KALite]"
     echo "  - [Install-Kiwix]"
     echo "  - [Install-Default-Weaved-Services] installs the default CAP Weaved services for ports 22, 80, 8080"
@@ -2196,9 +2175,9 @@ interactiveMode(){
     echo "    - Testing script"
     echo "  - [Exit] the installation script"
     echo
-    select menu in "Initial-Install" "Install-Upgrade-KALite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Module" "Add-Language" "Update-Modules" "Utilities" "Exit"; do
+    select menu in "Base-Install" "Install-Upgrade-KALite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Module" "Add-Language" "Update-Modules" "Utilities" "Exit"; do
             case $menu in
-            Initial-Install)
+            Base-Install)
             newInstall
             ;;
 
@@ -2464,6 +2443,8 @@ if [[ $1 == "" || $1 == "--help" || $1 == "-h" ]]; then
     printHelp
 elif [[ $1 == "--usbrecovery" ]]; then
     usbRecovery
+elif [[ $1 == "--source-only" ]]; then
+    printGood "Only importing source functions."
 else
     IAM=${0##*/} # Short basename
     while getopts ":b:irtu" opt
