@@ -894,8 +894,8 @@ EOF
         # Install RACHEL required packages
         echo; printStatus "Installing packages."
         # Setup root password for mysql install
-        debconf-set-selections <<< 'mysql-server mysql-server/root_password Rachel+1 root'
-        debconf-set-selections <<< 'mysql-server mysql-server/root_password_again Rachel+1 root'
+        debconf-set-selections <<< 'mysql-server mysql-server/root_password password root'
+        debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password root'
         chown root:root /tmp
         chmod 1777 /tmp
         # Remove old versions of mysql prior to install
