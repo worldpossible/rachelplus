@@ -8,7 +8,18 @@ rachelLogFile="rachel-install.tmp"
 rachelLog="$rachelLogDir/$rachelLogFile"
 installTmpDir="/root/cap-rachel-install.tmp"
 
-exec 1>> $rachelLog 2>&1
+# Close STDOUT file descriptor
+exec 1<&-
+# Close STDERR FD
+exec 2<&-
+
+# Open STDOUT as $rachelLog file for read and write.
+exec 1>>$rachelLog
+
+# Redirect STDERR to STDOUT
+exec 2>&1
+
+#exec 1>> $rachelLog 2>&1
 
 function printGood () {
     echo -e "\x1B[01;32m[+]\x1B[0m $1"
@@ -44,18 +55,18 @@ umount /dev/sda1 /dev/sda2 /dev/sda3
 # Create the new filesystems so we can write files to them
 echo; printStatus "Creating filesystems"
 # Turn logging off - might cause issues
-exec &>/dev/tty
+#exec &>/dev/tty
 mkfs.ext4 -L "preloaded" -U 77777777-7777-7777-7777-777777777777 /dev/sda1
 mkfs.ext4 -L "uploaded" -U 88888888-8888-8888-8888-888888888888 /dev/sda2
 mkfs.ext4 -L "RACHEL" -U 99999999-9999-9999-9999-999999999999 /dev/sda3
 # Turn logging back on
-exec &> >(tee -a "$rachelLog")
+#exec &> >(tee -a "$rachelLog")
 printGood "Done."
 
 # Add lines to /etc/rc.local that will start the next script to run on reboot
 sudo sed -i '$e echo "bash '$installTmpDir'\/cap-rachel-first-install-3.sh&"' /etc/rc.local
 
-echo 1 > /root/script2.ran
+echo 1 > /root/script-$(date).ran
 
 # Reboot
 echo; printGood "RACHEL CAP Install - Script 2 ended at $(date)"

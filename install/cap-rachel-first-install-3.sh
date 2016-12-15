@@ -20,7 +20,18 @@ rachelScriptsDir="/root/rachel-scripts"
 rachelScriptsFile="$rachelScriptsDir/rachelStartup.sh"
 rachelScriptsLog="$rachelLogDir/rachel-scripts.log"
 
-exec 1>> $rachelLog 2>&1
+# Close STDOUT file descriptor
+exec 1<&-
+# Close STDERR FD
+exec 2<&-
+
+# Open STDOUT as $rachelLog file for read and write.
+exec 1>>$rachelLog
+
+# Redirect STDERR to STDOUT
+exec 2>&1
+
+#exec 1>> $rachelLog 2>&1
 
 function printGood () {
     echo -e "\x1B[01;32m[+]\x1B[0m $1"

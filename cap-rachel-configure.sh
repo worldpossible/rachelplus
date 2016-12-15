@@ -945,7 +945,7 @@ EOF
         umount /dev/sda1 /dev/sda2
         echo; printStatus "Repartitioning hard drive"
         # Turn logging off - might cause issues
-        exec &>/dev/tty
+#        exec &>/dev/tty
         sgdisk -p /dev/sda
         sgdisk -o /dev/sda
         parted -s /dev/sda mklabel gpt
@@ -962,7 +962,7 @@ EOF
         #sgdisk -n 3:255852544:-1M -c 3:"RACHEL" -u 3:99999999-9999-9999-9999-999999999999 -t 3:8300 /dev/sda # RACHEL 343.8GB
         sgdisk -n 3:41945088:-1M -c 3:"RACHEL" -u 3:99999999-9999-9999-9999-999999999999 -t 3:8300 /dev/sda
         # Turn logging back on
-        exec &> >(tee -a "$rachelLog")
+#        exec &> >(tee -a "$rachelLog")
         sgdisk -p /dev/sda
         printGood "Done."
 
