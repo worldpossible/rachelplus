@@ -216,8 +216,6 @@ onlineVariables(){
     SOURCECN="wget -r $gitRachelPlus/sources.list/sources-sohu.list -O /etc/apt/sources.list" 
     CAPRACHELFIRSTINSTALL2="wget -r $gitRachelPlus/install/cap-rachel-first-install-2.sh -O cap-rachel-first-install-2.sh"
     CAPRACHELFIRSTINSTALL3="wget -r $gitRachelPlus/install/cap-rachel-first-install-3.sh -O cap-rachel-first-install-3.sh"
-#    CAPRACHELFIRSTINSTALL2="cp /root/cap-rachel-first-install-2.sh cap-rachel-first-install-2.sh"
-#    CAPRACHELFIRSTINSTALL3="cp /root/cap-rachel-first-install-3.sh cap-rachel-first-install-3.sh"
     LIGHTTPDFILE="wget -r $gitRachelPlus/scripts/lighttpd.conf -O lighttpd.conf"
     CAPTIVEPORTALREDIRECT="wget -r $gitContentShell/captiveportal-redirect.php -O captiveportal-redirect.php"
     PASSTICKETSHTML="wget -r $gitContentShell/pass_ticket.shtml -O pass_ticket.shtml"
@@ -227,10 +225,10 @@ onlineVariables(){
     WORLDPOSSIBLEBRANDLOGOCAPTIVE="wget -r $gitContentShell/art/World-Possible-Logo-300x120.png -O World-Possible-Logo-300x120.png"
     GITCLONERACHELCONTENTSHELL="git clone https://github.com/rachelproject/contentshell contentshell"
     RSYNCDIR="$rsyncOnline"
-#    ASSESSMENTITEMSJSON="wget -c $gitRachelPlus/assessmentitems.json -O /var/ka-lite/data/khan/assessmentitems.json"
     KACONTENTFOLDER=""
     KALITEINSTALL="wget -c $kalitePrimaryDownload -O $installTmpDir/$kaliteInstaller"
-#    KALITEINSTALL="rsync -avhz --progress $contentOnline/$kaliteInstaller $installTmpDir/$kaliteInstaller"
+    # Pull from KA Lite directly rather than from our server   
+    # KALITEINSTALL="rsync -avhz --progress $contentOnline/$kaliteInstaller $installTmpDir/$kaliteInstaller"
     KALITECONTENTINSTALL="rsync -avhz --progress $contentOnline/kacontent/ /media/RACHEL/kacontent/"
     KIWIXINSTALL="wget -c $wgetOnline/downloads/public_ftp/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $rachelTmpDir/kiwix-0.9-linux-i686.tar.bz2"
     WEAVEDINSTALL="wget -c https://github.com/weaved/installer/raw/master/Intel_CAP/weaved_IntelCAP.tar -O $rachelScriptsDir/weaved_IntelCAP.tar"
@@ -979,8 +977,10 @@ EOF
         sudo sed -i '$e echo "# Add rachel startup scripts"' /etc/rc.local
         sudo sed -i '$e echo "bash '$rachelScriptsDir'/rachelStartup.sh&"' /etc/rc.local
 
-        # Add lines to $rachelScriptsFile that will start the next script to run on reboot
-        sudo sed -i '$e echo "bash '$installTmpDir'\/cap-rachel-first-install-2.sh&"' $rachelScriptsFile
+#        # Add lines to $rachelScriptsFile that will start the next script to run on reboot
+#        sudo sed -i '$e echo "bash '$installTmpDir'\/cap-rachel-first-install-2.sh&"' $rachelScriptsFile
+        # Add lines to /etc/rc.local that will start the next script to run on reboot
+        sudo sed -i '$e echo "bash '$installTmpDir'\/cap-rachel-first-install-2.sh&"' /etc/rc.local
 
         echo; printGood "RACHEL CAP Install - Script ended at $(date)"
         noCleanup=1
