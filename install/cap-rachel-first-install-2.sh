@@ -12,14 +12,12 @@ installTmpDir="/root/cap-rachel-install.tmp"
 exec 1<&-
 # Close STDERR FD
 exec 2<&-
+# Open STDOUT as $rachelLog file for read and write.
+exec 1>>$rachelLog
+# Redirect STDERR to STDOUT
+exec 2>&1
 
-# # Open STDOUT as $rachelLog file for read and write.
-# exec 1>>$rachelLog
-
-# # Redirect STDERR to STDOUT
-# exec 2>&1
-
-exec 1>> $rachelLog 2>&1
+# exec 1>> $rachelLog 2>&1
 
 function printGood () {
     echo -e "\x1B[01;32m[+]\x1B[0m $1"
@@ -66,7 +64,7 @@ printGood "Done."
 # Add lines to /etc/rc.local that will start the next script to run on reboot
 sudo sed -i '$e echo "bash '$installTmpDir'\/cap-rachel-first-install-3.sh&"' /etc/rc.local
 
-echo 1 > /root/script-$(date).ran
+echo 1 > /root/script2.ran
 
 # Reboot
 echo; printGood "RACHEL CAP Install - Script 2 ended at $(date)"
