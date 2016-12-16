@@ -2139,6 +2139,10 @@ buildRACHEL(){
     # restart kiwix
     /root/rachel-scripts/rachelKiwixStart.sh
 
+    # install esp for remote service
+    echo; printStatus "Installing RACHEL esp"
+    installEsp
+    
     # update RACHEL installer version
     if [[ ! -f /etc/rachelinstaller-version ]]; then $(cat /etc/version | cut -d- -f1 > /etc/rachelinstaller-version); fi
     echo $(cat /etc/rachelinstaller-version | cut -d_ -f1)-$(date +%Y%m%d.%H%M) > /etc/rachelinstaller-version
@@ -2165,6 +2169,19 @@ freshContentShell(){
     mv $rachelPartition/modules.orig $rachelWWW/modules
     # remove this unused directory
     rm -rf $rachelPartition/contentshell
+}
+
+installEsp(){
+    # download files and set permissions
+    wget -q https://raw.githubusercontent.com/rachelproject/esp/master/client/checker.php -O $rachelScriptsDir/checker.php
+    rsync -av --del $RSYNCDIR/rachelmods/extra-build-files/esp.sshkey $rachelScriptsDir
+    chmod 600 $rachelScriptsDir/esp.sshkey
+
+    # remove any existing weaved startup code
+    sed -i '/Weaved/d' $rachelScriptsFile
+    # add our esp startup code after Kiwix starts
+    sed -i '/rachelKiwixStart.sh/a # start rachel-esp checker\necho $(date) - Starting checker.php for rachel-esp\nphp /root/rachel-scripts/checker.php > /dev/null 2>&1 & # rachel-esp' $rachelScriptsFile
+
 }
 
 # Loop to redisplay main menu
