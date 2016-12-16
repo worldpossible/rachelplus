@@ -25,13 +25,13 @@ exec 1<&-
 # Close STDERR FD
 exec 2<&-
 
-# Open STDOUT as $rachelLog file for read and write.
-exec 1>>$rachelLog
+# # Open STDOUT as $rachelLog file for read and write.
+# exec 1>>$rachelLog
 
-# Redirect STDERR to STDOUT
-exec 2>&1
+# # Redirect STDERR to STDOUT
+# exec 2>&1
 
-#exec 1>> $rachelLog 2>&1
+exec 1>> $rachelLog 2>&1
 
 function printGood () {
     echo -e "\x1B[01;32m[+]\x1B[0m $1"
@@ -71,7 +71,7 @@ echo; printStatus "The partition table for /dev/sda should look very similar to 
 # v1 CAPs post RACHEL Recovery USB v9 and v2 CAPs
 echo "/dev/sda1       2.9G  4.6M  2.8G   1% /media/preloaded"
 echo "/dev/sda2        17G   44M   16G   1% /media/uploaded"
-echo "/dev/sda3       439G   67M  411G   1% /media/RACHEL"
+echo "/dev/sda3       439G   71M  417G   1% /media/RACHEL"
 # OLD v1 CAPs
 #echo "/dev/sda1        20G   44M   19G   1% /media/preloaded"
 #echo "/dev/sda2        99G   60M   94G   1% /media/uploaded"
@@ -79,6 +79,7 @@ echo "/dev/sda3       439G   67M  411G   1% /media/RACHEL"
 
 # Fixing $rachelScriptsFile
 repairRachelScripts
+printGood "Done."
 
 # Remove outdated startup script - replaced by /root/rachel-scripts/rachelStartup.sh
 rm -f /root/iptables-rachel.sh
@@ -104,12 +105,16 @@ createKiwixRepairScript
 sed -i '$e echo "echo \\$(date) - RACHEL startup completed"' $rachelScriptsFile
 
 # Display currently mounted partitions
-mount
+echo; printStatus "Listing currently mounted /dev/sda partitions."
+mount | grep sda
 
 # If $rachelWWW doesn't exist, set it up
 if [[ ! -d $rachelWWW ]]; then
     echo; printStatus "Setting up RACHEL Content Shell."
     mv $installTmpDir/contentshell $rachelWWW
+    printGood "Done."
+else
+	printError "RACHEL directory already exists, skipping."
 fi
 
 # # Move RACHEL Captive Portal redirect page and images to correct folders
@@ -131,6 +136,8 @@ fi
 
 # Add local content module
 echo; printStatus "Adding the local content module."
+echo "rsyncOnline=$rsyncOnline"
+echo "Executing -> rsync -avz $rsyncOnline/rachelmods/en-local_content $rachelWWW/modules/" 
 rsync -avz $rsyncOnline/rachelmods/en-local_content $rachelWWW/modules/
 printGood "Done."
 

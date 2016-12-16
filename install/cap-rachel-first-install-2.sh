@@ -13,13 +13,13 @@ exec 1<&-
 # Close STDERR FD
 exec 2<&-
 
-# Open STDOUT as $rachelLog file for read and write.
-exec 1>>$rachelLog
+# # Open STDOUT as $rachelLog file for read and write.
+# exec 1>>$rachelLog
 
-# Redirect STDERR to STDOUT
-exec 2>&1
+# # Redirect STDERR to STDOUT
+# exec 2>&1
 
-#exec 1>> $rachelLog 2>&1
+exec 1>> $rachelLog 2>&1
 
 function printGood () {
     echo -e "\x1B[01;32m[+]\x1B[0m $1"
