@@ -16,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20161217.0011 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20161218.0216 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -2185,10 +2185,10 @@ description "ESP"
 author      "Jonathan Field <jfield@worldpossible.org>"
 
 # Events
-start on startup
+start on net-device-up IFACE=eth0
 stop on shutdown
 
-# Automatically respawn
+# Automatically restart process if crashed
 respawn
 respawn limit 20 5
 
@@ -2208,9 +2208,9 @@ EOF
     # remove any existing weaved startup code
     sed -i '/Weaved/d' $rachelScriptsFile
     # remove any existing esp startup code
-    sed -i '/checker/d' $rachelScriptsFile
+    sed -i '/esp/d' $rachelScriptsFile
     # add our esp startup code after Kiwix starts    
-    sed -i '/rachelKiwixStart.sh/a # start rachel-esp checker\necho $(date) - Starting checker.php for rachel-esp\nphp /root/rachel-scripts/checker.php > /dev/null 2>&1 & # rachel-esp' $rachelScriptsFile
+    sed -i '/rachelKiwixStart.sh/a # start rachel-esp checker\necho $(date) - Starting checker.php for rachel-esp\nservice esp start' $rachelScriptsFile
     printGood "ESP install completed."
 }
 
@@ -2221,7 +2221,7 @@ uninstallESP(){
     # remove esp files
     rm -f /etc/init/esp.conf $rachelScriptsDir/checker.php $rachelScriptsDir/esp.sshkey
     # remove any existing esp startup code
-    sed -i '/checker/d' $rachelScriptsFile
+    sed -i '/esp/d' $rachelScriptsFile
     printGood "Done."
 }
 
