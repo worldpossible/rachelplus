@@ -8,6 +8,7 @@ dirContentOffline="/media/usbhd-sdb1" # Enter directory of downloaded RACHEL con
 rsyncOnline="rsync://dev.worldpossible.org" # The current RACHEL rsync repository
 contentOnline="rsync://rachel.golearn.us/content" # Another RACHEL rsync repository
 wgetOnline="http://rachelfriends.org" # RACHEL large file repo (ka-lite_content, etc)
+gitESP="https://raw.githubusercontent.com/rachelproject/esp/master" # RACHELPlus Scripts GitHub Repo
 gitRachelPlus="https://raw.githubusercontent.com/rachelproject/rachelplus/master" # RACHELPlus Scripts GitHub Repo
 gitContentShell="https://raw.githubusercontent.com/rachelproject/contentshell/master" # RACHELPlus ContentShell GitHub Repo
 gitContentShellCommit="b5770d0"
@@ -15,7 +16,7 @@ gitContentShellCommit="b5770d0"
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20161205.2319 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20161217.0011 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -2172,22 +2173,57 @@ freshContentShell(){
 }
 
 installEsp(){
+    echo; printStatus "Installing ESP."
     # download files and set permissions
-    wget -q https://raw.githubusercontent.com/rachelproject/esp/master/client/checker.php -O $rachelScriptsDir/checker.php
+    wget -q $gitESP/client/checker.php -O $rachelScriptsDir/checker.php
     rsync -av --del $RSYNCDIR/rachelmods/extra-build-files/esp.sshkey $rachelScriptsDir
     chmod 600 $rachelScriptsDir/esp.sshkey
+    # create startup process
+    cat > /etc/init/esp.conf << 'EOF'
+# Info
+description "ESP"
+author      "Jonathan Field <jfield@worldpossible.org>"
 
+# Events
+start on startup
+stop on shutdown
+
+# Automatically respawn
+respawn
+respawn limit 20 5
+
+# Run the script!
+script
+    exec /usr/bin/php -f /root/rachel-scripts/checker.php
+end script
+EOF
+    printGood "Done."
+    echo; printStatus "Starting ESP."
+    # start the process
+    service esp start
+    printGood "Done."
+    echo; printStatus "Checking status of running process:"
+    # check the status
+    service esp status
     # remove any existing weaved startup code
     sed -i '/Weaved/d' $rachelScriptsFile
     # add our esp startup code after Kiwix starts
     sed -i '/rachelKiwixStart.sh/a # start rachel-esp checker\necho $(date) - Starting checker.php for rachel-esp\nphp /root/rachel-scripts/checker.php > /dev/null 2>&1 & # rachel-esp' $rachelScriptsFile
+    printGood "ESP install completed."
+}
 
+uninstallESP(){
+    echo; printStatus "Uninstalling ESP."
+    service esp stop
+    rm -f /etc/init/esp.conf $rachelScriptsDir/checker.php $rachelScriptsDir/esp.sshkey
+    printGood "Done."
 }
 
 # Loop to redisplay main menu
 whatToDo(){
     echo; printQuestion "What would you like to do next?"
-    echo "1)Initial Install  2)Install/Upgrade KALite  3)Install Kiwix  4)Install Default Weaved Services  5)Install Weaved Service  6)Add Module  7)Add Language  8)Update Modules  9)Utilities  10)Exit"
+    # echo "1)Initial Install  2)Install/Upgrade KALite  3)Install Kiwix  4)Install Default Weaved Services  5)Install Weaved Service  6)Add Module  7)Add Language  8)Update Modules  9)Utilities  10)Exit"
+    echo "1)Initial Install  2)Install/Upgrade KALite  3)Install Kiwix  4)Install ESP  5)Add Module  6)Add Language  7)Update Modules  8)Utilities  9)Exit"
 }
 
 # Interactive mode menu
@@ -2196,8 +2232,9 @@ interactiveMode(){
     echo "  - [Initial-Install] of RACHEL on a CAP (completely erases any content)"
     echo "  - [Install-Upgrade-KALite]"
     echo "  - [Install-Kiwix]"
-    echo "  - [Install-Default-Weaved-Services] installs the default CAP Weaved services for ports 22, 80, 8080"
-    echo "  - [Install-Weaved-Service] adds a Weaved service to an online account you provide during install"
+    # echo "  - [Install-Default-Weaved-Services] installs the default CAP Weaved services for ports 22, 80, 8080"
+    # echo "  - [Install-Weaved-Service] adds a Weaved service to an online account you provide during install"
+    echo "  - [Install-ESP]"
     echo "  - [Add-Module] lists current available modules; installs one at a time"
     echo "  - [Add-Language] installs all modules of a language (does not install KA Lite or full Wikipedia)"
     echo "  - [Update-Modules] updates the currently installed modules"
@@ -2213,7 +2250,8 @@ interactiveMode(){
     echo "    - Testing script"
     echo "  - [Exit] the installation script"
     echo
-    select menu in "Initial-Install" "Install-Upgrade-KALite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Module" "Add-Language" "Update-Modules" "Utilities" "Exit"; do
+    # select menu in "Initial-Install" "Install-Upgrade-KALite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Module" "Add-Language" "Update-Modules" "Utilities" "Exit"; do
+    select menu in "Initial-Install" "Install-Upgrade-KALite" "Install-Kiwix" "Install-ESP" "Add-Module" "Add-Language" "Update-Modules" "Utilities" "Exit"; do
             case $menu in
             Initial-Install)
             newInstall
@@ -2239,24 +2277,29 @@ interactiveMode(){
             whatToDo
             ;;
 
-            Install-Default-Weaved-Services)
-            if [[ $internet != "1" ]]; then
-                echo; printError "You must be online the internet to register this device with Weaved."
-                exit 1
-            else
-                echo; printQuestion "This process will remove any installed Weaved services; do you want to continue? (y/N) "; read REPLY
-                if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
-                    uninstallAllWeavedServices; sleep 2
-                    installDefaultWeavedServices
-                    backupWeavedService
-                fi
-            fi
-            whatToDo
-            ;;
+            # Install-Default-Weaved-Services)
+            # if [[ $internet != "1" ]]; then
+            #     echo; printError "You must be online the internet to register this device with Weaved."
+            #     exit 1
+            # else
+            #     echo; printQuestion "This process will remove any installed Weaved services; do you want to continue? (y/N) "; read REPLY
+            #     if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
+            #         uninstallAllWeavedServices; sleep 2
+            #         installDefaultWeavedServices
+            #         backupWeavedService
+            #     fi
+            # fi
+            # whatToDo
+            # ;;
 
-            Install-Weaved-Service)
-            installWeavedService
-            backupWeavedService
+            # Install-Weaved-Service)
+            # installWeavedService
+            # backupWeavedService
+            # whatToDo
+            # ;;
+
+            Install-ESP)
+            installEsp
             whatToDo
             ;;
 
@@ -2302,9 +2345,10 @@ interactiveMode(){
             echo "  - [Disable-Wifi] disables the wifi instantly and on reboot"
             echo "  - [Disable-Reset-Button] removes the ability to reset the device by use of the reset button"
             echo "  - [Download-OFFLINE-Content] to stage for OFFLINE (i.e. local) RACHEL installs"
-            echo "  - [Backup-Weaved-Services] backs up configs and restores them if they are not found on boot"
-            echo "  - [Uninstall-Weaved-Service] removes Weaved services, one at a time"
-            echo "  - [Uninstall-ALL-Weaved-Services] removes ALL Weaved services"
+            # echo "  - [Backup-Weaved-Services] backs up configs and restores them if they are not found on boot"
+            # echo "  - [Uninstall-Weaved-Service] removes Weaved services, one at a time"
+            # echo "  - [Uninstall-ALL-Weaved-Services] removes ALL Weaved services"
+            echo "  - [Uninstall-ESP] removes ESP service"
             echo "  - [Update-Content-Shell] updates the RACHEL contentshell from GitHub"
             echo "  - [Repair-Kiwix-Library] rebuilds the Kiwix Library"
             echo "  - [Repair-Firmware] repairs an install of a CAP after a firmware upgrade"
@@ -2316,7 +2360,8 @@ interactiveMode(){
             echo "  - [Testing] script"
             echo "  - Return to [Main Menu]"
             echo
-            select util in "Install-Battery-Watcher" "Enable-Wifi" "Disable-Wifi" "Disable-Reset-Button" "Download-OFFLINE-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Update-Content-Shell" "Repair-Kiwix-Library" "Repair-Firmware" "Repair-KA-Lite" "Repair-Bugs" "Sanitize" "Change-Package-Repo" "Check-MD5" "Test" "Main-Menu"; do
+            # select util in "Install-Battery-Watcher" "Enable-Wifi" "Disable-Wifi" "Disable-Reset-Button" "Download-OFFLINE-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Update-Content-Shell" "Repair-Kiwix-Library" "Repair-Firmware" "Repair-KA-Lite" "Repair-Bugs" "Sanitize" "Change-Package-Repo" "Check-MD5" "Test" "Main-Menu"; do
+            select util in "Install-Battery-Watcher" "Enable-Wifi" "Disable-Wifi" "Disable-Reset-Button" "Download-OFFLINE-Content" "Uninstall-ESP" "Update-Content-Shell" "Repair-Kiwix-Library" "Repair-Firmware" "Repair-KA-Lite" "Repair-Bugs" "Sanitize" "Change-Package-Repo" "Check-MD5" "Test" "Main-Menu"; do
                 case $util in
                     Install-Battery-Watcher)
                     installBatteryWatch
@@ -2346,28 +2391,33 @@ interactiveMode(){
                     break
                     ;;
 
-                    Backup-Weaved-Services)
-                    backupWeavedService
+                    Uninstall-ESP)
+                    uninstallESP
                     break
                     ;;
 
-                    Uninstall-Weaved-Service)
-                    uninstallWeavedService
-                    break
-                    ;;
+                    # Backup-Weaved-Services)
+                    # backupWeavedService
+                    # break
+                    # ;;
 
-                    Uninstall-ALL-Weaved-Services)
-                    echo; printError "This uninstaller will completely remove Weaved from your CAP."
-                    echo; printQuestion "Do you still wish to continue?"
-                    read -p "    Enter (y/N) " REPLY
-                    if [[ $REPLY =~ ^[Yy]$ ]]; then
-                        uninstallAllWeavedServices
-                        backupWeavedService
-                    else
-                        printError "Uninstall cancelled."
-                    fi
-                    break
-                    ;;
+                    # Uninstall-Weaved-Service)
+                    # uninstallWeavedService
+                    # break
+                    # ;;
+
+                    # Uninstall-ALL-Weaved-Services)
+                    # echo; printError "This uninstaller will completely remove Weaved from your CAP."
+                    # echo; printQuestion "Do you still wish to continue?"
+                    # read -p "    Enter (y/N) " REPLY
+                    # if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    #     uninstallAllWeavedServices
+                    #     backupWeavedService
+                    # else
+                    #     printError "Uninstall cancelled."
+                    # fi
+                    # break
+                    # ;;
 
                     Update-Content-Shell)
                     echo; printStatus "Updating the RACHEL content shell."
