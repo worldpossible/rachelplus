@@ -2142,7 +2142,7 @@ buildRACHEL(){
 
     # install esp for remote service
     echo; printStatus "Installing RACHEL esp"
-    installEsp
+    installESP
     
     # update RACHEL installer version
     if [[ ! -f /etc/rachelinstaller-version ]]; then $(cat /etc/version | cut -d- -f1 > /etc/rachelinstaller-version); fi
@@ -2172,7 +2172,7 @@ freshContentShell(){
     rm -rf $rachelPartition/contentshell
 }
 
-installEsp(){
+installESP(){
     echo; printStatus "Installing ESP."
     # download files and set permissions
     wget -q $gitESP/client/checker.php -O $rachelScriptsDir/checker.php
@@ -2207,15 +2207,21 @@ EOF
     service esp status
     # remove any existing weaved startup code
     sed -i '/Weaved/d' $rachelScriptsFile
-    # add our esp startup code after Kiwix starts
+    # remove any existing esp startup code
+    sed -i '/checker/d' $rachelScriptsFile
+    # add our esp startup code after Kiwix starts    
     sed -i '/rachelKiwixStart.sh/a # start rachel-esp checker\necho $(date) - Starting checker.php for rachel-esp\nphp /root/rachel-scripts/checker.php > /dev/null 2>&1 & # rachel-esp' $rachelScriptsFile
     printGood "ESP install completed."
 }
 
 uninstallESP(){
     echo; printStatus "Uninstalling ESP."
+    # stop esp service
     service esp stop
+    # remove esp files
     rm -f /etc/init/esp.conf $rachelScriptsDir/checker.php $rachelScriptsDir/esp.sshkey
+    # remove any existing esp startup code
+    sed -i '/checker/d' $rachelScriptsFile
     printGood "Done."
 }
 
@@ -2299,7 +2305,7 @@ interactiveMode(){
             # ;;
 
             Install-ESP)
-            installEsp
+            installESP
             whatToDo
             ;;
 
