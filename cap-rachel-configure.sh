@@ -42,6 +42,7 @@ installTmpDir="/root/cap-rachel-install.tmp"
 rachelTmpDir="/media/RACHEL/cap-rachel-install.tmp"
 rachelRecoveryDir="/media/RACHEL/recovery"
 stemPkg="stem-1.5.1.tgz"
+stemURL="https://pecl.php.net/get/$stemPkg"
 debPackageList="php5-cgi php5-common php5-mysql php5-sqlite php-pear php5-curl pdftk make git git-core git-man liberror-perl python-m2crypto mysql-server mysql-client libapache2-mod-auth-mysql sqlite3 gcc-multilib gcj-4.6-jre-lib libgcj12 libgcj-common gcj-4.6-base libasound2 fuse-utils fuse-exfat exfat-utils"
 errorCode="0"
 
@@ -144,8 +145,7 @@ cleanup(){
 testingScript(){
     set -x
 
-    repairBugs
-    kaliteCheckFiles
+    installPkgUpdates
 
     set +x
     exit 1
@@ -207,13 +207,21 @@ osCheck(){
     fi
 }
 
+capCheck(){
+    if [[ $(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)="12.04" ]]; then
+        capVersion=CAPv1
+    else
+        capVersion=CAPv2
+    fi
+}
+
 onlineVariables(){
     GPGKEY1="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 40976EAF437D05B5"
     GPGKEY2="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 16126D3A3E5C1192"
-    SOURCEUS="wget -r $gitRachelPlus/sources.list/sources-us.list -O /etc/apt/sources.list"
-    SOURCEUK="wget -r $gitRachelPlus/sources.list/sources-uk.list -O /etc/apt/sources.list"
-    SOURCESG="wget -r $gitRachelPlus/sources.list/sources-sg.list -O /etc/apt/sources.list"
-    SOURCECN="wget -r $gitRachelPlus/sources.list/sources-sohu.list -O /etc/apt/sources.list" 
+    SOURCEUS="wget -r $gitRachelPlus/sources.list/sources-$capVersion-us.list -O /etc/apt/sources.list"
+    SOURCEUK="wget -r $gitRachelPlus/sources.list/sources-$capVersion-uk.list -O /etc/apt/sources.list"
+    SOURCESG="wget -r $gitRachelPlus/sources.list/sources-$capVersion-sg.list -O /etc/apt/sources.list"
+    SOURCECN="wget -r $gitRachelPlus/sources.list/sources-$capVersion-sohu.list -O /etc/apt/sources.list" 
     CAPRACHELFIRSTINSTALL2="wget -r $gitRachelPlus/install/cap-rachel-first-install-2.sh -O cap-rachel-first-install-2.sh"
     CAPRACHELFIRSTINSTALL3="wget -r $gitRachelPlus/install/cap-rachel-first-install-3.sh -O cap-rachel-first-install-3.sh"
     LIGHTTPDFILE="wget -r $gitRachelPlus/scripts/lighttpd.conf -O lighttpd.conf"
@@ -242,10 +250,10 @@ onlineVariables(){
 offlineVariables(){
     GPGKEY1="apt-key add $dirContentOffline/rachelplus/gpg-keys/437D05B5"
     GPGKEY2="apt-key add $dirContentOffline/rachelplus/gpg-keys/3E5C1192"
-    SOURCEUS="rsync -avhz --progress $dirContentOffline/rachelplus/sources.list/sources-us.list /etc/apt/sources.list"
-    SOURCEUK="rsync -avhz --progress $dirContentOffline/rachelplus/sources.list/sources-uk.list /etc/apt/sources.list"
-    SOURCESG="rsync -avhz --progress $dirContentOffline/rachelplus/sources.list/sources-sg.list /etc/apt/sources.list"
-    SOURCECN="rsync -avhz --progress $dirContentOffline/rachelplus/sources.list/sources-cn.list /etc/apt/sources.list"
+    SOURCEUS="rsync -avhz --progress $dirContentOffline/rachelplus/sources.list/sources-$capVersion-us.list /etc/apt/sources.list"
+    SOURCEUK="rsync -avhz --progress $dirContentOffline/rachelplus/sources.list/sources-$capVersion-uk.list /etc/apt/sources.list"
+    SOURCESG="rsync -avhz --progress $dirContentOffline/rachelplus/sources.list/sources-$capVersion-sg.list /etc/apt/sources.list"
+    SOURCECN="rsync -avhz --progress $dirContentOffline/rachelplus/sources.list/sources-$capVersion-cn.list /etc/apt/sources.list"
     CAPRACHELFIRSTINSTALL2="rsync -avhz --progress $dirContentOffline/rachelplus/install/cap-rachel-first-install-2.sh ."
     CAPRACHELFIRSTINSTALL3="rsync -avhz --progress $dirContentOffline/rachelplus/install/cap-rachel-first-install-3.sh ."
     LIGHTTPDFILE="rsync -avhz --progress $dirContentOffline/rachelplus/scripts/lighttpd.conf ."
@@ -1752,7 +1760,7 @@ repairBugs(){
     updateModuleNames
 
     # Update to the latest contentshell
-    updateContentShell
+    installPkgUpdates
     checkContentShell
 
     # Update KA Lite root directory location
@@ -1802,18 +1810,38 @@ repairBugs(){
     fi
 }
 
-updateContentShell(){
+installPkgUpdates(){
+    pkgInstaller(){
+        dpkg -i *.deb
+        pear clear-cache 2>/dev/null
+        pecl info stem > /dev/null
+        if [[ $? -ge 1 ]]; then 
+            echo; printStatus "Installing the stem module."
+            mkdir -p $rachelPartition/offlinepkgs
+            if [[ internet="1" ]]; then
+                wget -c $stemURL -O $rachelPartition/offlinepkgs/$stemPkg
+            fi
+            echo "\n" | pecl install $rachelPartition/offlinepkgs/$stemPkg
+            echo '; configuration for php stem module' > /etc/php5/conf.d/stem.ini
+            echo 'extension=stem.so' >> /etc/php5/conf.d/stem.ini
+        fi
+    }
     # Update to the latest contentshell
     mv /etc/init/procps.conf /etc/init/procps.conf.old 2>/dev/null # otherwise quite a lot of pkgs won't install
-    cd $rachelPartition/offlinepkgs
-    dpkg -i *.deb
-    pear clear-cache 2>/dev/null
-    pecl info stem > /dev/null
-    if [[ $? -ge 1 ]]; then 
-        echo; printStatus "Installing the stem module."
-        echo "\n" | pecl install $rachelPartition/offlinepkgs/$stemPkg
-        echo '; configuration for php stem module' > /etc/php5/conf.d/stem.ini
-        echo 'extension=stem.so' >> /etc/php5/conf.d/stem.ini
+    if [[ internet="1" ]]; then
+        mkdir -p $rachelPartition/offlinepkgs
+        apt-get update; apt-get download $debPackageList
+        # mkdir -p $rachelPartition/offlinepkgs
+        # if [[ internet="1" ]]; then
+        #     apt-get update; apt-get download $debPackageList
+
+        # fi
+        pkgInstaller
+    elif [[ -d $rachelPartition/offlinepkgs ]]; then
+        cd $rachelPartition/offlinepkgs
+        pkgInstaller
+    else
+        printError "Packages not found for installation."
     fi
 }
 
@@ -2251,7 +2279,7 @@ interactiveMode(){
 
             Add-Language)
             updateModuleNames
-            updateContentShell
+            installPkgUpdates
             checkContentShell
             contentLanguageInstall
             kaliteCheckFiles
@@ -2349,6 +2377,7 @@ interactiveMode(){
 
                     Update-Content-Shell)
                     echo; printStatus "Updating the RACHEL content shell."
+                    installPkgUpdates
                     checkContentShell
                     break
                     ;;
@@ -2469,8 +2498,8 @@ else
         (b) # Build - Quick build
             # Create temp directories
             mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir
-            # Check OS version
-            osCheck
+            # Check OS and CAP version
+            osCheck; capCheck
             if [[ $# -lt $((OPTIND)) ]]; then
                 echo; echo "$IAM -b argument(s) missing...needs 2!" >&2
                 echo; echo "Usage: `basename $0` -b '(en | es | fr) [ rsync host ]'" >&2
@@ -2488,8 +2517,8 @@ else
         (i) # Interactive mode
             # Create temp directories
             mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir
-            # Check OS version
-            osCheck
+            # Check OS and CAP version
+            osCheck; capCheck
             # Determine the operational mode - ONLINE or OFFLINE
             opMode
             # Build the hash list 
@@ -2502,8 +2531,8 @@ else
         (r) # REPAIR - quick repair; doesn't hurt if run multiple times.
             # Create temp directories
             mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir
-            # Check OS version
-            osCheck
+            # Check OS and CAP version
+            osCheck; capCheck
             # Determine the operational mode - ONLINE or OFFLINE
             opMode
             repairBugs
@@ -2511,8 +2540,8 @@ else
             exit
             ;;
         (t) # Testing script
-            # Check OS version
-            osCheck
+            # Check OS and CAP version
+            osCheck; capCheck
             # Determine the operational mode - ONLINE or OFFLINE
             opMode
             testingScript
@@ -2520,8 +2549,8 @@ else
         (u) # UPDATE - Update setips.sh to the latest release build.
             # Create temp directories
             mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir
-            # Check OS version
-            osCheck
+            # Check OS and CAP version
+            osCheck; capCheck
             # Determine the operational mode - ONLINE or OFFLINE
             opMode
             if [[ $internet == "1" ]]; then
