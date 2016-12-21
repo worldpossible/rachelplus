@@ -18,7 +18,8 @@ gitContentShellCommit="b5770d0"
 
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
-osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
+osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
+# osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
 scriptVersion=20161205.2319 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
@@ -198,27 +199,20 @@ opMode(){
 
 osCheck(){
     if [[ -z "$osID" ]] || [[ -z "$osVersion" ]]; then
-      printError "Internal issue. Couldn't detect OS information."
+        printError "Internal issue. Couldn't detect OS information."
     elif [[ "$osID" == "ubuntu" ]]; then
-#      osVersion=$(awk -F '["=]' '/^VERSION_ID=/ {print $3}' /etc/os-release 2>&- | cut -d'.' -f1)
-      printGood "Ubuntu ${osVersion} $(uname -m) Detected."
+        # osVersion=$(awk -F '["=]' '/^VERSION_ID=/ {print $3}' /etc/os-release 2>&- | cut -d'.' -f1)
+        printGood "Ubuntu ${osVersion} $(uname -m) Detected."
+        capVersion=$(grep DISTRIB_CODENAME /etc/lsb-release | cut -d"=" -f2)
     elif [[ "$osID" == "debian" ]]; then
-      printGood "Debian ${osVersion} $(uname -m) Detected."
-    fi
-}
-
-capCheck(){
-    if [[ $(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)="12.04" ]]; then
-        capVersion=CAPv1
-    else
-        capVersion=CAPv2
+        printGood "Debian ${osVersion} $(uname -m) Detected."
     fi
 }
 
 onlineVariables(){
     GPGKEY1="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 40976EAF437D05B5"
     GPGKEY2="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 16126D3A3E5C1192"
-    SOURCEUS="wget -r $gitRachelPlus/sources.list/sources-$capVersion-us.list -O /etc/apt/sources.list"
+    SOURCEUS="wget -r $gitRachelPlus/sources.list/sources-us-.list -O /etc/apt/sources.list"
     SOURCEUK="wget -r $gitRachelPlus/sources.list/sources-$capVersion-uk.list -O /etc/apt/sources.list"
     SOURCESG="wget -r $gitRachelPlus/sources.list/sources-$capVersion-sg.list -O /etc/apt/sources.list"
     SOURCECN="wget -r $gitRachelPlus/sources.list/sources-$capVersion-sohu.list -O /etc/apt/sources.list" 
