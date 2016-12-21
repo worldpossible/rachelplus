@@ -1,0 +1,7 @@
+###### Ubuntu Main Repos
+deb http://uk.archive.ubuntu.com/ubuntu/ precise main restricted universe multiverse 
+deb-src http://uk.archive.ubuntu.com/ubuntu/ precise main 
+
+###### Ubuntu Update Repos
+deb http://uk.archive.ubuntu.com/ubuntu/ precise-security main restricted universe multiverse 
+deb http://uk.archive.ubuntu.com/ubuntu/ precise-updates main restricted universe multiverse 
