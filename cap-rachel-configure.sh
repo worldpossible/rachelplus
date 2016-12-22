@@ -242,7 +242,7 @@ onlineVariables(){
     WEAVEDUNINSTALLER="wget -c https://github.com/weaved/installer/raw/master/weaved_software/uninstaller.sh -O $rachelScriptsDir/weaved_software/uninstaller.sh"
     DOWNLOADCONTENTSCRIPT="wget -c $gitRachelPlus/scripts"
     CONTENTWIKI="wget -c http://download.kiwix.org/portable/wikipedia/$FILENAME -O $rachelTmpDir/$FILENAME"
-    RACHELSCRIPTSDOWNLOADLINK="wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/cap-rachel-configure.sh -O $installTmpDir/cap-rachel-configure.sh"
+    RACHELSCRIPTSDOWNLOADLINK="wget $gitRachelPlus/cap-rachel-configure.sh -O $installTmpDir/cap-rachel-configure.sh"    
 }
 
 offlineVariables(){
