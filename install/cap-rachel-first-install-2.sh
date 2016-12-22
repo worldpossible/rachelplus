@@ -69,6 +69,7 @@ echo 1 > /root/script2.ran
 # Reboot
 echo; printGood "RACHEL CAP Install - Script 2 ended at $(date)"
 echo; printStatus "I need to reboot; once rebooted, please run the next download/install command."
-printStatus "Rebooting in 10 seconds..."
-sleep 10
+printStatus "Rebooting in 5 seconds..."
+sleep 5
+noCleanup=1
 reboot

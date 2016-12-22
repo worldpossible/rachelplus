@@ -67,7 +67,7 @@ echo; printStatus "Printing paritition table:"
 df -h
 echo; printStatus "The partition table for /dev/sda should look very similar to the following:"
 # v1 CAPs post RACHEL Recovery USB v9 and v2 CAPs
-echo "/dev/sda1       2.9G  4.6M  2.8G   1% /media/preloaded"
+echo "/dev/sda1       2.9G  4.5M  2.8G   1% /media/preloaded"
 echo "/dev/sda2        17G   44M   16G   1% /media/uploaded"
 echo "/dev/sda3       439G   71M  417G   1% /media/RACHEL"
 # OLD v1 CAPs
@@ -75,9 +75,51 @@ echo "/dev/sda3       439G   71M  417G   1% /media/RACHEL"
 #echo "/dev/sda2        99G   60M   94G   1% /media/uploaded"
 #echo "/dev/sda3       339G   67M  321G   1% /media/RACHEL"
 
+# Update CAP package repositories
+echo; printStatus "Updating CAP package repositories"
+$GPGKEY1
+$GPGKEY2
+$GPGKEY3
+apt-get clean; apt-get purge; apt-get update
+printGood "Done."
+
+# Install RACHEL required packages
+echo; printStatus "Installing packages."
+# Setup root password for mysql install
+debconf-set-selections <<< 'mysql-server mysql-server/root_password password root'
+debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password root'
+chown root:root /tmp
+chmod 1777 /tmp
+# Remove old versions of mysql prior to install
+# apt-get -y remove --purge mysql-server mysql-client mysql-common
+installPkgUpdates
+# # Add support for multi-language front page
+# pear clear-cache 2>/dev/null
+# echo "\n" | pecl install stem
+# # Add support for stem extension
+# echo '; configuration for php stem module' > /etc/php5/conf.d/stem.ini
+# echo 'extension=stem.so' >> /etc/php5/conf.d/stem.ini
+printGood "Done."
+
+# Add the following line at the end of file
+grep -q '^cgi.fix_pathinfo = 1' /etc/php5/cgi/php.ini && sed -i '/^cgi.fix_pathinfo = 1/d' /etc/php5/cgi/php.ini; echo 'cgi.fix_pathinfo = 1' >> /etc/php5/cgi/php.ini
+printGood "Done."
+
+# Checking contentshell is located at /media/RACHEL/rachel
+echo; printStatus "Cloning the RACHEL content shell from GitHub into $(pwd)"
+rm -rf contentshell # in case of previous failed install
+cd $installTmpDir
+$GITCLONERACHELCONTENTSHELL
+
+# Overwrite the lighttpd.conf file with our customized RACHEL version
+echo; printStatus "Updating lighttpd.conf to RACHEL version"
+cd $installTmpDir
+$LIGHTTPDFILE
+mv $installTmpDir/lighttpd.conf /usr/local/etc/lighttpd.conf
+printGood "Done."
+
 # Fixing $rachelScriptsFile
 repairRachelScripts
-printGood "Done."
 
 # Remove outdated startup script - replaced by /root/rachel-scripts/rachelStartup.sh
 rm -f /root/iptables-rachel.sh
@@ -98,9 +140,6 @@ installBatteryWatch
 
 # Add Kiwix library update script
 createKiwixRepairScript
-
-# Add RACHEL script complete line
-sed -i '$e echo "echo \\$(date) - RACHEL startup completed"' $rachelScriptsFile
 
 # Display currently mounted partitions
 echo; printStatus "Listing currently mounted /dev/sda partitions."
@@ -154,5 +193,6 @@ echo 1 > /root/script3.ran
 # Reboot
 echo; printStatus "I need to reboot; once rebooted, your CAP is ready for RACHEL content."
 echo "Download modules from http://dev.worldpossible.org/mods/"
-echo; printStatus "Rebooting..." 
+echo; printStatus "Rebooting..."
+noCleanup=1
 reboot

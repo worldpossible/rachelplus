@@ -18,9 +18,10 @@ gitContentShellCommit="b5770d0"
 
 # CORE RACHEL VARIABLES - Change **ONLY** if you know what you are doing
 osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
-osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
+osVersion=$(lsb_release -ds)
+# osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20161205.2319 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20161221.1424 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -44,14 +45,8 @@ rachelTmpDir="/media/RACHEL/cap-rachel-install.tmp"
 rachelRecoveryDir="/media/RACHEL/recovery"
 stemPkg="stem-1.5.1.tgz"
 stemURL="https://pecl.php.net/get/$stemPkg"
-debPackageList="php5-cgi php5-common php5-mysql php5-sqlite php-pear php5-curl pdftk make git git-core git-man liberror-perl python-m2crypto mysql-server mysql-client libapache2-mod-auth-mysql sqlite3 gcc-multilib gcj-4.6-jre-lib libgcj12 libgcj-common gcj-4.6-base libasound2 fuse-utils fuse-exfat exfat-utils"
+debPackageList="php5-cgi php5-common php5-mysql php5-sqlite php5-curl php5-dev php-pear pdftk make git git-core git-man liberror-perl python-m2crypto mysql-server mysql-client libapache2-mod-auth-mysql sqlite3 gcc-multilib gcj-4.6-jre-lib libgcj12 libgcj-common gcj-4.6-base libasound2 fuse-utils fuse-exfat exfat-utils"
 errorCode="0"
-
-# Print version only, if requested
-if [[ $1 == "--version" ]]; then
-    echo $scriptVersion
-    exit 0
-fi
 
 # MD5 hash list
 buildHashList(){
@@ -139,14 +134,14 @@ cleanup(){
     echo; printStatus "Cleaning up install scripts."
     rm -rf $installTmpDir $rachelTmpDir
     printGood "Done."
-    stty sane
+    # stty sane
     echo; exit $?
 }
 
 testingScript(){
     set -x
 
-    installPkgUpdates
+    newInstall
 
     set +x
     exit 1
@@ -200,22 +195,31 @@ opMode(){
 osCheck(){
     if [[ -z "$osID" ]] || [[ -z "$osVersion" ]]; then
         printError "Internal issue. Couldn't detect OS information."
+        osName="precise"
     elif [[ "$osID" == "ubuntu" ]]; then
         # osVersion=$(awk -F '["=]' '/^VERSION_ID=/ {print $3}' /etc/os-release 2>&- | cut -d'.' -f1)
-        printGood "Ubuntu ${osVersion} $(uname -m) Detected."
-        capVersion=$(grep DISTRIB_CODENAME /etc/lsb-release | cut -d"=" -f2)
+        printGood "${osVersion} $(uname -m) Detected."
+        osName=$(lsb_release -cs)
+        # osName=$(grep DISTRIB_CODENAME /etc/lsb-release | cut -d"=" -f2)
     elif [[ "$osID" == "debian" ]]; then
-        printGood "Debian ${osVersion} $(uname -m) Detected."
+        printGood "${osVersion} $(uname -m) Detected."
+        debianVersion=$(cat /etc/debian_version | cut -d"." -f1)
+        if [[ $debianVersion="7" ]]; then
+            osName="wheezy"
+        else
+            osName="jessie"
+        fi
     fi
 }
 
 onlineVariables(){
     GPGKEY1="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 40976EAF437D05B5"
     GPGKEY2="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 16126D3A3E5C1192"
-    SOURCEUS="wget -r $gitRachelPlus/sources.list/sources-us-.list -O /etc/apt/sources.list"
-    SOURCEUK="wget -r $gitRachelPlus/sources.list/sources-$capVersion-uk.list -O /etc/apt/sources.list"
-    SOURCESG="wget -r $gitRachelPlus/sources.list/sources-$capVersion-sg.list -O /etc/apt/sources.list"
-    SOURCECN="wget -r $gitRachelPlus/sources.list/sources-$capVersion-sohu.list -O /etc/apt/sources.list" 
+    GPGKEY3="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DF9B28CA252A784"
+    SOURCEUS="wget -r $gitRachelPlus/sources.list/$osName/sources-us.list -O /etc/apt/sources.list"
+    SOURCEUK="wget -r $gitRachelPlus/sources.list/$osName/sources-uk.list -O /etc/apt/sources.list"
+    SOURCESG="wget -r $gitRachelPlus/sources.list/$osName/sources-sg.list -O /etc/apt/sources.list"
+    SOURCECN="wget -r $gitRachelPlus/sources.list/$osName/sources-sohu.list -O /etc/apt/sources.list" 
     CAPRACHELFIRSTINSTALL2="wget -r $gitRachelPlus/install/cap-rachel-first-install-2.sh -O cap-rachel-first-install-2.sh"
     CAPRACHELFIRSTINSTALL3="wget -r $gitRachelPlus/install/cap-rachel-first-install-3.sh -O cap-rachel-first-install-3.sh"
     LIGHTTPDFILE="wget -r $gitRachelPlus/scripts/lighttpd.conf -O lighttpd.conf"
@@ -244,10 +248,11 @@ onlineVariables(){
 offlineVariables(){
     GPGKEY1="apt-key add $dirContentOffline/rachelplus/gpg-keys/437D05B5"
     GPGKEY2="apt-key add $dirContentOffline/rachelplus/gpg-keys/3E5C1192"
-    SOURCEUS="rsync -avhz --progress $dirContentOffline/rachelplus/sources.list/sources-$capVersion-us.list /etc/apt/sources.list"
-    SOURCEUK="rsync -avhz --progress $dirContentOffline/rachelplus/sources.list/sources-$capVersion-uk.list /etc/apt/sources.list"
-    SOURCESG="rsync -avhz --progress $dirContentOffline/rachelplus/sources.list/sources-$capVersion-sg.list /etc/apt/sources.list"
-    SOURCECN="rsync -avhz --progress $dirContentOffline/rachelplus/sources.list/sources-$capVersion-cn.list /etc/apt/sources.list"
+    GPGKEY3="apt-key add $dirContentOffline/rachelplus/gpg-keys/A252A784"
+    SOURCEUS="rsync -avhz --progress $dirContentOffline/rachelplus/sources.list/$osName/sources-us.list /etc/apt/sources.list"
+    SOURCEUK="rsync -avhz --progress $dirContentOffline/rachelplus/sources.list/$osName/sources-uk.list /etc/apt/sources.list"
+    SOURCESG="rsync -avhz --progress $dirContentOffline/rachelplus/sources.list/$osName/sources-sg.list /etc/apt/sources.list"
+    SOURCECN="rsync -avhz --progress $dirContentOffline/rachelplus/sources.list/$osName/sources-cn.list /etc/apt/sources.list"
     CAPRACHELFIRSTINSTALL2="rsync -avhz --progress $dirContentOffline/rachelplus/install/cap-rachel-first-install-2.sh ."
     CAPRACHELFIRSTINSTALL3="rsync -avhz --progress $dirContentOffline/rachelplus/install/cap-rachel-first-install-3.sh ."
     LIGHTTPDFILE="rsync -avhz --progress $dirContentOffline/rachelplus/scripts/lighttpd.conf ."
@@ -888,46 +893,6 @@ EOF
         echo; printStatus "Starting first install script...please wait patiently (about 30 secs) for first reboot."
         printStatus "The entire script (with reboots) takes 2-5 minutes."
 
-        # Update CAP package repositories
-        echo; printStatus "Updating CAP package repositories"
-        $GPGKEY1
-        $GPGKEY2
-        apt-get clean; apt-get purge; apt-get update
-        printGood "Done."
-
-        # Install RACHEL required packages
-        echo; printStatus "Installing packages."
-        # Setup root password for mysql install
-        debconf-set-selections <<< 'mysql-server mysql-server/root_password password root'
-        debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password root'
-        chown root:root /tmp
-        chmod 1777 /tmp
-        # Remove old versions of mysql prior to install
-        apt-get -y remove --purge mysql-server mysql-client mysql-common
-        apt-get -y install $debPackageList
-        # Add support for multi-language front page
-        pear clear-cache 2>/dev/null
-        echo "\n" | pecl install stem
-        # Add support for stem extension
-        echo '; configuration for php stem module' > /etc/php5/conf.d/stem.ini
-        echo 'extension=stem.so' >> /etc/php5/conf.d/stem.ini
-        printGood "Done."
-
-        # Add the following line at the end of file
-        grep -q '^cgi.fix_pathinfo = 1' /etc/php5/cgi/php.ini && sed -i '/^cgi.fix_pathinfo = 1/d' /etc/php5/cgi/php.ini; echo 'cgi.fix_pathinfo = 1' >> /etc/php5/cgi/php.ini
-        printGood "Done."
-
-        # Checking contentshell is located at /media/RACHEL/rachel
-        echo; printStatus "Cloning the RACHEL content shell from GitHub into $(pwd)"
-        rm -rf contentshell # in case of previous failed install
-        $GITCLONERACHELCONTENTSHELL
-
-        # Overwrite the lighttpd.conf file with our customized RACHEL version
-        echo; printStatus "Updating lighttpd.conf to RACHEL version"
-        $LIGHTTPDFILE
-        mv $installTmpDir/lighttpd.conf /usr/local/etc/lighttpd.conf
-        printGood "Done."
-
         cat > /etc/fstab << EOF
 # <filesystem> <mountpoint> <type> <options> <dump> <pass>
 proc    /proc   proc    nodev,noexec,nosuid     0       0
@@ -986,7 +951,8 @@ EOF
 
         echo; printGood "RACHEL CAP Install - Script ended at $(date)"
         noCleanup=1
-        reboot
+        exit 1
+        # rebootCAP
     else
         echo; printError "User requests not to continue...exiting at $(date)"
         # Deleting the install script commands
@@ -1807,29 +1773,32 @@ repairBugs(){
 installPkgUpdates(){
     pkgInstaller(){
         dpkg -i *.deb
+        # apt-get -fy install
         pear clear-cache 2>/dev/null
         pecl info stem > /dev/null
         if [[ $? -ge 1 ]]; then 
             echo; printStatus "Installing the stem module."
-            mkdir -p $rachelPartition/offlinepkgs
+            currentDir=$(pwd)
             if [[ internet="1" ]]; then
-                wget -c $stemURL -O $rachelPartition/offlinepkgs/$stemPkg
+                wget -c $stemURL -O $currentDir/offlinepkgs/$stemPkg
             fi
-            echo "\n" | pecl install $rachelPartition/offlinepkgs/$stemPkg
+            echo "\n" | pecl install $currentDir/offlinepkgs/$stemPkg
             echo '; configuration for php stem module' > /etc/php5/conf.d/stem.ini
             echo 'extension=stem.so' >> /etc/php5/conf.d/stem.ini
         fi
     }
-    # Update to the latest contentshell
     mv /etc/init/procps.conf /etc/init/procps.conf.old 2>/dev/null # otherwise quite a lot of pkgs won't install
     if [[ internet="1" ]]; then
-        mkdir -p $rachelPartition/offlinepkgs
+        if [[ $osName="precise" ]]; then
+            $GPGKEY3
+            apt-get update; apt-get -y install python-software-properties; apt-add-repository -y ppa:relan/exfat
+        fi
+        if [[ -d $rachelPartition ]]; then
+            mkdir -p $rachelPartition/offlinepkgs; cd $rachelPartition/offlinepkgs
+        else
+            mkdir -p $installTmpDir/offlinepkgs; cd $installTmpDir/offlinepkgs
+        fi
         apt-get update; apt-get download $debPackageList
-        # mkdir -p $rachelPartition/offlinepkgs
-        # if [[ internet="1" ]]; then
-        #     apt-get update; apt-get download $debPackageList
-
-        # fi
         pkgInstaller
     elif [[ -d $rachelPartition/offlinepkgs ]]; then
         cd $rachelPartition/offlinepkgs
@@ -2454,37 +2423,46 @@ printHelp(){
     echo; stty sane
 }
 
+loggingAndRachelStart(){
+    # Logging
+    loggingStart
+
+    # Display current script version
+    echo; echo "RACHEL CAP Configuration Script - Version $scriptVersion"
+    printGood "Started:  $(date)"
+    printGood "Log directory:  $rachelLogDir"
+    printGood "Temporary file directory:  $installTmpDir"
+}
+
 #### MAIN MENU ####
-# Logging
-loggingStart
-
-# Check for old folder structure
-if [[ -f /root/rachel-scripts.sh ]]; then 
-    echo; printError "Your RACHEL folder structure is outdated!"
-    echo "The configure script will still be located at /root/cap-rachel-configure.sh"
-    echo "All other RACHEL scripts/files will be located in the folder called 'rachel-scripts'"
-    echo "Updating your RACHEL install in 10 seconds."
-    echo; sleep 10
-    echo; printStatus "Beginning RACHEL update..."
-    mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir
-    opMode; repairBugs
-    echo; printGood "Your RACHEL install was successfully updated."
-    exit 1
-fi
-
-# Display current script version
-echo; echo "RACHEL CAP Configuration Script - Version $scriptVersion"
-printGood "Started:  $(date)"
-printGood "Log directory:  $rachelLogDir"
-printGood "Temporary file directory:  $installTmpDir"
-
 if [[ $1 == "" || $1 == "--help" || $1 == "-h" ]]; then
     printHelp
+elif [[ $1 == "--version" ]]; then
+    # Print version only, if requested
+    echo $scriptVersion
+    exit 0
 elif [[ $1 == "--usbrecovery" ]]; then
+    loggingAndRachelStart
     usbRecovery
 elif [[ $1 == "--source-only" ]]; then
     printGood "Only importing source functions."
 else
+    # Check for old folder structure
+    if [[ -f /root/rachel-scripts.sh ]]; then 
+        echo; printError "Your RACHEL folder structure is outdated!"
+        echo "The configure script will still be located at /root/cap-rachel-configure.sh"
+        echo "All other RACHEL scripts/files will be located in the folder called 'rachel-scripts'"
+        echo "Updating your RACHEL install in 10 seconds."
+        echo; sleep 10
+        echo; printStatus "Beginning RACHEL update..."
+        mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir
+        opMode; repairBugs
+        echo; printGood "Your RACHEL install was successfully updated."
+        exit 1
+    fi
+    # Start logging and display RACHEL start info
+    loggingAndRachelStart
+    # MAIN MENU
     IAM=${0##*/} # Short basename
     while getopts ":b:irtu" opt
     do sc=0 #no option or 1 option arguments
@@ -2493,7 +2471,7 @@ else
             # Create temp directories
             mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir
             # Check OS and CAP version
-            osCheck; capCheck
+            osCheck
             if [[ $# -lt $((OPTIND)) ]]; then
                 echo; echo "$IAM -b argument(s) missing...needs 2!" >&2
                 echo; echo "Usage: `basename $0` -b '(en | es | fr) [ rsync host ]'" >&2
@@ -2512,7 +2490,7 @@ else
             # Create temp directories
             mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir
             # Check OS and CAP version
-            osCheck; capCheck
+            osCheck
             # Determine the operational mode - ONLINE or OFFLINE
             opMode
             # Build the hash list 
@@ -2526,7 +2504,7 @@ else
             # Create temp directories
             mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir
             # Check OS and CAP version
-            osCheck; capCheck
+            osCheck
             # Determine the operational mode - ONLINE or OFFLINE
             opMode
             repairBugs
@@ -2535,7 +2513,7 @@ else
             ;;
         (t) # Testing script
             # Check OS and CAP version
-            osCheck; capCheck
+            osCheck
             # Determine the operational mode - ONLINE or OFFLINE
             opMode
             testingScript
@@ -2544,7 +2522,7 @@ else
             # Create temp directories
             mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir
             # Check OS and CAP version
-            osCheck; capCheck
+            osCheck
             # Determine the operational mode - ONLINE or OFFLINE
             opMode
             if [[ $internet == "1" ]]; then
