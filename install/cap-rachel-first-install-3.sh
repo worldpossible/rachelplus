@@ -105,11 +105,16 @@ printGood "Done."
 grep -q '^cgi.fix_pathinfo = 1' /etc/php5/cgi/php.ini && sed -i '/^cgi.fix_pathinfo = 1/d' /etc/php5/cgi/php.ini; echo 'cgi.fix_pathinfo = 1' >> /etc/php5/cgi/php.ini
 printGood "Done."
 
-# Checking contentshell is located at /media/RACHEL/rachel
-echo; printStatus "Cloning the RACHEL content shell from GitHub into $(pwd)"
-rm -rf contentshell # in case of previous failed install
-cd $installTmpDir
-$GITCLONERACHELCONTENTSHELL
+# If $rachelWWW doesn't exist, set it up
+if [[ ! -d $rachelWWW ]]; then
+    echo; printStatus "Cloning the RACHEL content shell from GitHub into $(pwd)"
+    rm -rf contentshell # in case of previous failed install
+    $GITCLONERACHELCONTENTSHELL
+    mv $installTmpDir/contentshell $rachelWWW
+    printGood "Done."
+else
+    printError "RACHEL directory already exists, skipping."
+fi
 
 # Overwrite the lighttpd.conf file with our customized RACHEL version
 echo; printStatus "Updating lighttpd.conf to RACHEL version"
@@ -144,15 +149,6 @@ createKiwixRepairScript
 # Display currently mounted partitions
 echo; printStatus "Listing currently mounted /dev/sda partitions."
 mount | grep sda
-
-# If $rachelWWW doesn't exist, set it up
-if [[ ! -d $rachelWWW ]]; then
-    echo; printStatus "Setting up RACHEL Content Shell."
-    mv $installTmpDir/contentshell $rachelWWW
-    printGood "Done."
-else
-	printError "RACHEL directory already exists, skipping."
-fi
 
 # # Move RACHEL Captive Portal redirect page and images to correct folders
 # cd $installTmpDir

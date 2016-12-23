@@ -951,8 +951,7 @@ EOF
 
         echo; printGood "RACHEL CAP Install - Script ended at $(date)"
         noCleanup=1
-        exit 1
-        # rebootCAP
+        rebootCAP
     else
         echo; printError "User requests not to continue...exiting at $(date)"
         # Deleting the install script commands
