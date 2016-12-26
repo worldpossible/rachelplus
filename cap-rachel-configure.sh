@@ -1758,7 +1758,6 @@ repairBugs(){
 
 installPkgUpdates(){
     pkgInstaller(){
-        errorCheck
         dpkg -i *.deb
         # apt-get -fy install
         pear clear-cache 2>/dev/null
@@ -1773,22 +1772,18 @@ installPkgUpdates(){
             echo '; configuration for php stem module' > /etc/php5/conf.d/stem.ini
             echo 'extension=stem.so' >> /etc/php5/conf.d/stem.ini
         fi
-        errorCheck
     }
-    errorCheck
     mv /etc/init/procps.conf /etc/init/procps.conf.old 2>/dev/null # otherwise quite a lot of pkgs won't install
     if [[ internet="1" ]]; then
         if [[ $osName="precise" ]]; then
             $GPGKEY3
             apt-get update; apt-get -y install python-software-properties; apt-add-repository -y ppa:relan/exfat
         fi
-        errorCheck
         if [[ -d $rachelPartition ]]; then
             mkdir -p $rachelPartition/offlinepkgs; cd $rachelPartition/offlinepkgs
         else
             mkdir -p $installTmpDir/offlinepkgs; cd $installTmpDir/offlinepkgs
         fi
-        errorCheck
         apt-get update; apt-get download $debPackageList
         pkgInstaller
     elif [[ -d $rachelPartition/offlinepkgs ]]; then

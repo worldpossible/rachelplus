@@ -5,6 +5,8 @@ set -x
 
 # Import functions from /root/cap-rachel-configure.sh
 . /root/cap-rachel-configure.sh --source-only
+internet="1"
+onlineVariables
 
 # Logging
 exec 1>> $rachelLog 2>&1
@@ -19,9 +21,7 @@ fi
 echo; printGood "RACHEL CAP Install - Script 3 started at $(date)"
 
 # Change directory into $installTmpDir
-errorCheck
 cd $installTmpDir
-errorCheck
 
 # Delete previous setup commands from the /etc/rc.local
 sudo sed -i '/cap-rachel/d' /etc/rc.local
@@ -47,8 +47,6 @@ $GPGKEY3
 apt-get clean; apt-get purge; apt-get update
 printGood "Done."
 
-errorCheck
-
 # Install RACHEL required packages
 echo; printStatus "Installing packages."
 # Setup root password for mysql install
@@ -67,18 +65,16 @@ installPkgUpdates
 # echo 'extension=stem.so' >> /etc/php5/conf.d/stem.ini
 printGood "Done."
 
-errorCheck
-
 # Add the following line at the end of file
 grep -q '^cgi.fix_pathinfo = 1' /etc/php5/cgi/php.ini && sed -i '/^cgi.fix_pathinfo = 1/d' /etc/php5/cgi/php.ini; echo 'cgi.fix_pathinfo = 1' >> /etc/php5/cgi/php.ini
 
 # If $rachelWWW doesn't exist, set it up
 cd $installTmpDir
-errorCheck
 if [[ ! -d $rachelWWW ]]; then
     echo; printStatus "Cloning the RACHEL content shell from GitHub into $(pwd)"
     rm -rf contentshell # in case of previous failed install
     printStatus "Running $GITCLONERACHELCONTENTSHELL"
+    errorCheck
     $GITCLONERACHELCONTENTSHELL
     mv $installTmpDir/contentshell $rachelWWW
     printGood "Done."
@@ -90,6 +86,7 @@ fi
 echo; printStatus "Updating lighttpd.conf to RACHEL version"
 printStatus "Running $LIGHTTPDFILE"
 $LIGHTTPDFILE
+errorCheck
 mv $installTmpDir/lighttpd.conf /usr/local/etc/lighttpd.conf
 printGood "Done."
 

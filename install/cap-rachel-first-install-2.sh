@@ -5,6 +5,8 @@ set -x
 
 # Import functions from /root/cap-rachel-configure.sh
 . /root/cap-rachel-configure.sh --source-only
+internet="1"
+onlineVariables
 
 # # Close STDOUT file descriptor
 # exec 1<&-
