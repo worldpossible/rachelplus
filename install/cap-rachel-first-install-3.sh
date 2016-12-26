@@ -5,20 +5,20 @@
 # Import functions from /root/cap-rachel-configure.sh
 . /root/cap-rachel-configure.sh --source-only
 
-# Everything below will go to this log directory
-timestamp=$(date +"%b-%d-%Y-%H%M%Z")
-rachelLogDir="/var/log/rachel"
-rachelLogFile="rachel-install.tmp"
-rachelLog="$rachelLogDir/$rachelLogFile"
-rachelPartition="/media/RACHEL"
-rachelWWW="$rachelPartition/rachel"
-kaliteDir="/var/ka-lite"
-kaliteContentDir="/media/RACHEL/kacontent"
-installTmpDir="/root/cap-rachel-install.tmp"
-rachelTmpDir="/media/RACHEL/cap-rachel-install.tmp"
-rachelScriptsDir="/root/rachel-scripts"
-rachelScriptsFile="$rachelScriptsDir/rachelStartup.sh"
-rachelScriptsLog="$rachelLogDir/rachel-scripts.log"
+# # Everything below will go to this log directory
+# timestamp=$(date +"%b-%d-%Y-%H%M%Z")
+# rachelLogDir="/var/log/rachel"
+# rachelLogFile="rachel-install.tmp"
+# rachelLog="$rachelLogDir/$rachelLogFile"
+# rachelPartition="/media/RACHEL"
+# rachelWWW="$rachelPartition/rachel"
+# kaliteDir="/var/ka-lite"
+# kaliteContentDir="/media/RACHEL/kacontent"
+# installTmpDir="/root/cap-rachel-install.tmp"
+# rachelTmpDir="/media/RACHEL/cap-rachel-install.tmp"
+# rachelScriptsDir="/root/rachel-scripts"
+# rachelScriptsFile="$rachelScriptsDir/rachelStartup.sh"
+# rachelScriptsLog="$rachelLogDir/rachel-scripts.log"
 
 # Close STDOUT file descriptor
 exec 1<&-

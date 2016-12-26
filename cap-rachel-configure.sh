@@ -26,7 +26,7 @@ timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
 mkdir -p $rachelLogDir
-rachelLogFile="rachel-install.tmp"
+rachelLogFile="rachel-install.log.tmp"
 rachelLog="$rachelLogDir/$rachelLogFile"
 rachelPartition="/media/RACHEL"
 rachelWWW="$rachelPartition/rachel"
@@ -113,7 +113,8 @@ cleanup(){
     rm -rf $installTmpDir $rachelTmpDir
     printGood "Done."
     # stty sane
-    echo; exit $?
+    noCleanup=1
+    echo; exit 0
 }
 
 testingScript(){
@@ -938,7 +939,6 @@ EOF
         echo; printError "User requests not to continue...exiting at $(date)"
         # Deleting the install script commands
         cleanup
-        echo; exit 1
     fi
 }
 
