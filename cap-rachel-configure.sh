@@ -3,15 +3,6 @@
 # ONELINER Download/Install: sudo wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/cap-rachel-configure.sh -O /root/cap-rachel-configure.sh; bash cap-rachel-configure.sh
 # OFFLINE BUILDS:  Run the Download-Offline-Content script in the Utilities menu.
 
-## DELETE when done testing
-set -x
-rm -f /root/script2.ran
-rm -f /root/script3.ran
-function errorCheck(){
-    echo; printError "Current dir: $(pwd)"
-    echo; ls -la
-}
-
 # COMMON VARIABLES - Change as needed
 dirContentOffline="/media/usbhd-sdb1" # Enter directory of downloaded RACHEL content for offline install (e.g. I mounted my external USB on my CAP but plugging the external USB into and running the command 'fdisk -l' to find the right drive, then 'mkdir /media/RACHEL-Content' to create a folder to mount to, then 'mount /dev/sdb1 /media/RACHEL-Content' to mount the USB drive.)
 rsyncOnline="rsync://dev.worldpossible.org" # The current RACHEL rsync repository
@@ -823,7 +814,7 @@ changePackageRepo(){
 }
 
 newInstall(){
-    if [[ $internet == "0" ]]; then printError "New installs only run when connected to the internet...exiting."; fi
+    if [[ $internet == "0" ]]; then printError "New installs only run when connected to the internet...exiting."; exit 1; fi
     printHeader
     echo; printStatus "Conducting a new install of RACHEL on a CAP."
 
@@ -939,7 +930,7 @@ EOF
         printStatus "Rebooting in 5 seconds..."
         sleep 5
         noCleanup=1
-        # reboot
+        reboot
     else
         echo; printError "User requests not to continue...exiting at $(date)"
         # Deleting the install script commands

@@ -1,22 +1,13 @@
 #!/bin/sh
 # FILE: cap-rachel-first-install-2.sh
 # ONELINER Download/Install: wget https://github.com/rachelproject/rachelplus/raw/master/install/cap-rachel-first-install-2.sh -O - | bash 
-set -x 
 
 # Import functions from /root/cap-rachel-configure.sh
 . /root/cap-rachel-configure.sh --source-only
 internet="1"
 onlineVariables
 
-# # Close STDOUT file descriptor
-# exec 1<&-
-# # Close STDERR FD
-# exec 2<&-
-# # Open STDOUT as $rachelLog file for read and write.
-# exec 1>>$rachelLog
-# # Redirect STDERR to STDOUT
-# exec 2>&1
-
+# Logging
 exec 1>> $rachelLog 2>&1
 
 # Check root
@@ -48,14 +39,10 @@ printGood "Done."
 # Add lines to /etc/rc.local that will start the next script to run on reboot
 sudo sed -i '$e echo "bash '$installTmpDir'\/cap-rachel-first-install-3.sh&"' /etc/rc.local
 
-## DELETE when done testing
-echo 1 > /root/script2.ran
-printGood "Wrote /root/script2.ran file"
-
 # Reboot
 echo; printGood "RACHEL CAP Install - Script 2 ended at $(date)"
 echo; printStatus "I need to reboot; once rebooted, please run the next download/install command."
 printStatus "Rebooting in 5 seconds..."
 sleep 5
 noCleanup=1
-# reboot
+reboot

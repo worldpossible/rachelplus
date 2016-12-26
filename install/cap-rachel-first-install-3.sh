@@ -1,7 +1,6 @@
 #!/bin/sh
 # FILE: cap-rachel-first-install-3.sh
 # ONELINER Download/Install: sudo wget https://github.com/rachelproject/rachelplus/raw/master/install/cap-rachel-first-install-3.sh -O - | bash 
-set -x
 
 # Import functions from /root/cap-rachel-configure.sh
 . /root/cap-rachel-configure.sh --source-only
@@ -73,8 +72,6 @@ cd $installTmpDir
 if [[ ! -d $rachelWWW ]]; then
     echo; printStatus "Cloning the RACHEL content shell from GitHub into $(pwd)"
     rm -rf contentshell # in case of previous failed install
-    printStatus "Running $GITCLONERACHELCONTENTSHELL"
-    errorCheck
     $GITCLONERACHELCONTENTSHELL
     mv $installTmpDir/contentshell $rachelWWW
     printGood "Done."
@@ -84,9 +81,7 @@ fi
 
 # Overwrite the lighttpd.conf file with our customized RACHEL version
 echo; printStatus "Updating lighttpd.conf to RACHEL version"
-printStatus "Running $LIGHTTPDFILE"
 $LIGHTTPDFILE
-errorCheck
 mv $installTmpDir/lighttpd.conf /usr/local/etc/lighttpd.conf
 printGood "Done."
 
@@ -151,13 +146,9 @@ sudo mv $rachelLog $rachelLogDir/rachel-install-$timestamp.log
 echo; printGood "Log file saved to: $rachelLogDir/rachel-install-$timestamp.log"
 printGood "RACHEL CAP Install Complete."
 
-## DELETE when done testing
-echo 1 > /root/script3.ran
-printGood "Wrote /root/script2.ran file"
-
 # Reboot
 echo; printStatus "I need to reboot; once rebooted, your CAP is ready for RACHEL content."
 echo "Download modules from http://dev.worldpossible.org/mods/"
 echo; printStatus "Rebooting..."
 noCleanup=1
-# reboot
+reboot
