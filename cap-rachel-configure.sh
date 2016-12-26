@@ -8,7 +8,8 @@ dirContentOffline="/media/usbhd-sdb1" # Enter directory of downloaded RACHEL con
 rsyncOnline="rsync://dev.worldpossible.org" # The current RACHEL rsync repository
 contentOnline="rsync://rachel.golearn.us/content" # Another RACHEL rsync repository
 wgetOnline="http://rachelfriends.org" # RACHEL large file repo (ka-lite_content, etc)
-gitRachelPlus="https://raw.githubusercontent.com/rachelproject/rachelplus/CAPv2-install" # RACHELPlus Scripts GitHub Repo
+gitRachelPlus="https://raw.githubusercontent.com/rachelproject/rachelplus/master" # RACHELPlus Scripts GitHub Repo
+gitRachelPlusBeta="https://raw.githubusercontent.com/rachelproject/rachelplus/CAPv2-install" # RACHELPlus Scripts GitHub Repo
 gitContentShell="https://raw.githubusercontent.com/rachelproject/contentshell/master" # RACHELPlus ContentShell GitHub Repo
 gitContentShellCommit="b5770d0"
 
@@ -17,7 +18,7 @@ osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20161221.1424 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20161226.1127 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -217,7 +218,8 @@ onlineVariables(){
     WEAVEDUNINSTALLER="wget -c https://github.com/weaved/installer/raw/master/weaved_software/uninstaller.sh -O $rachelScriptsDir/weaved_software/uninstaller.sh"
     DOWNLOADCONTENTSCRIPT="wget -c $gitRachelPlus/scripts"
     CONTENTWIKI="wget -c http://download.kiwix.org/portable/wikipedia/$FILENAME -O $rachelTmpDir/$FILENAME"
-    RACHELSCRIPTSDOWNLOADLINK="wget $gitRachelPlus/cap-rachel-configure.sh -O $installTmpDir/cap-rachel-configure.sh"    
+    DOWNLOADSCRIPT="wget $gitRachelPlus/cap-rachel-configure.sh -O $installTmpDir/cap-rachel-configure.sh"
+    DOWNLOADBETASCRIPT="wget $gitRachelPlusBeta/cap-rachel-configure.sh -O $installTmpDir/cap-rachel-configure.sh"    
 }
 
 offlineVariables(){
@@ -249,7 +251,8 @@ offlineVariables(){
     WEAVEDUNINSTALLER=""
     DOWNLOADCONTENTSCRIPT="rsync -avhz --progress $dirContentOffline/rachelplus/scripts"
     CONTENTWIKIALL=""
-    RACHELSCRIPTSDOWNLOADLINK="rsync -avhz --progress $dirContentOffline/cap-rachel-configure.sh /root/cap-rachel-configure.sh"
+    DOWNLOADSCRIPT="rsync -avhz --progress $dirContentOffline/cap-rachel-configure.sh /root/cap-rachel-configure.sh"
+    DOWNLOADBETASCRIPT=""
 }
 
 printHeader(){
@@ -631,7 +634,7 @@ downloadOfflineContent(){
     done
 
     # Download RACHEL script 
-    $RACHELSCRIPTSDOWNLOADLINK >&2
+    $DOWNLOADSCRIPT >&2
     commandStatus
     if [[ -s $installTmpDir/cap-rachel-configure.sh ]]; then
         mv $installTmpDir/cap-rachel-configure.sh $dirContentOffline/cap-rachel-configure.sh
@@ -2461,7 +2464,7 @@ else
     loggingAndRachelStart
     # MAIN MENU
     IAM=${0##*/} # Short basename
-    while getopts ":b:irtu" opt
+    while getopts ":b:irtuz" opt
     do sc=0 #no option or 1 option arguments
         case $opt in
         (b) # Build - Quick build
@@ -2515,7 +2518,7 @@ else
             opMode
             testingScript
             ;;
-        (u) # UPDATE - Update setips.sh to the latest release build.
+        (u) # UPDATE - Update the RACHEL configure script to the latest master (release) build.
             # Create temp directories
             mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir
             # Check OS and CAP version
@@ -2523,7 +2526,7 @@ else
             # Determine the operational mode - ONLINE or OFFLINE
             opMode
             if [[ $internet == "1" ]]; then
-                $RACHELSCRIPTSDOWNLOADLINK >&2
+                $DOWNLOADSCRIPT >&2
                 commandStatus
                 if [[ -s $installTmpDir/cap-rachel-configure.sh ]]; then
                     mv $installTmpDir/cap-rachel-configure.sh /root/cap-rachel-configure.sh
@@ -2539,12 +2542,37 @@ else
                     echo; printError "You don't have a copy of the rachel script in your offline content location."
                     echo; exit 1
                 fi
-                $RACHELSCRIPTSDOWNLOADLINK >&2
+                $DOWNLOADSCRIPT >&2
                 commandStatus
                 chmod +x /root/cap-rachel-configure.sh
                 versionNum=$(cat /root/cap-rachel-configure.sh |grep ^scriptVersion|head -n 1|cut -d"=" -f2|cut -d" " -f1)
                 printGood "Success! Your script was updated to $versionNum; RE-RUN the script to use the new version."
 #                    echo; printError "You need to be connected to the internet to update this script."
+            fi
+            exit 1
+            ;;
+        (z) # UPDATE to BETA - Update the RACHEL configure script to the latest BETA build.
+            # Create temp directories
+            mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir
+            # Check OS and CAP version
+            osCheck
+            # Determine the operational mode - ONLINE or OFFLINE
+            opMode
+            if [[ $internet == "1" ]]; then
+                $DOWNLOADBETASCRIPT >&2
+                commandStatus
+                if [[ -s $installTmpDir/cap-rachel-configure.sh ]]; then
+                    mv $installTmpDir/cap-rachel-configure.sh /root/cap-rachel-configure.sh
+                    chmod +x /root/cap-rachel-configure.sh
+                    versionNum=$(cat /root/cap-rachel-configure.sh |grep ^scriptVersion|head -n 1|cut -d"=" -f2|cut -d" " -f1)
+                    printGood "Success! Your script was updated to $versionNum; RE-RUN the script to use the new version."
+                else
+                    printStatus "Fail! Check the log file for more info on what happened:  $rachelLog"
+                    echo
+                fi
+            else
+                echo; printError "You must be online to download the current BETA version of the configure script."
+                echo; exit 1
             fi
             exit 1
             ;;
