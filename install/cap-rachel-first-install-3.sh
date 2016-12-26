@@ -74,9 +74,11 @@ grep -q '^cgi.fix_pathinfo = 1' /etc/php5/cgi/php.ini && sed -i '/^cgi.fix_pathi
 
 # If $rachelWWW doesn't exist, set it up
 cd $installTmpDir
+errorCheck
 if [[ ! -d $rachelWWW ]]; then
     echo; printStatus "Cloning the RACHEL content shell from GitHub into $(pwd)"
     rm -rf contentshell # in case of previous failed install
+    printStatus "Running $GITCLONERACHELCONTENTSHELL"
     $GITCLONERACHELCONTENTSHELL
     mv $installTmpDir/contentshell $rachelWWW
     printGood "Done."
@@ -86,6 +88,7 @@ fi
 
 # Overwrite the lighttpd.conf file with our customized RACHEL version
 echo; printStatus "Updating lighttpd.conf to RACHEL version"
+printStatus "Running $LIGHTTPDFILE"
 $LIGHTTPDFILE
 mv $installTmpDir/lighttpd.conf /usr/local/etc/lighttpd.conf
 printGood "Done."
