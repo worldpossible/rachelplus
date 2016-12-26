@@ -89,29 +89,6 @@ printQuestion(){
     echo -e "\x1B[01;33m[?]\x1B[0m $1"
 }
 
-if [ -z $BASH_VERSION ]; then
-    clear
-    echo "[!] You didn't execute this script with bash!"
-    echo "Unfortunately, not all shells are the same. \n"
-    echo "Please execute \"bash "$0"\" \n"
-    echo "Thank you! \n"
-    exit 1
-fi
-
-# Check root
-if [ "$(id -u)" != "0" ]; then
-    echo "[!] This script must be run as root; sudo password is 123lkj"
-    exit 1
-fi
-
-# Reset terminal
-stty sane
-#reset
-
-#in case you wish to kill it
-#trap 'exit 3' 1 2 3 15
-trap cleanup EXIT
-
 # Logging
 loggingStart(){
     exec &> >(tee "$rachelLog")
@@ -951,8 +928,11 @@ EOF
         sudo sed -i '$e echo "bash '$installTmpDir'\/cap-rachel-first-install-2.sh&"' /etc/rc.local
 
         echo; printGood "RACHEL CAP Install - Script ended at $(date)"
+        echo; printStatus "I need to reboot; once rebooted, please run the next download/install command."
+        printStatus "Rebooting in 5 seconds..."
+        sleep 5
         noCleanup=1
-        rebootCAP
+        reboot
     else
         echo; printError "User requests not to continue...exiting at $(date)"
         # Deleting the install script commands
@@ -2435,6 +2415,31 @@ loggingAndRachelStart(){
 }
 
 #### MAIN MENU ####
+# Check for bash
+if [ -z $BASH_VERSION ]; then
+    clear
+    echo "[!] You didn't execute this script with bash!"
+    echo "Unfortunately, not all shells are the same. \n"
+    echo "Please execute \"bash "$0"\" \n"
+    echo "Thank you! \n"
+    exit 1
+fi
+
+# Check root
+if [ "$(id -u)" != "0" ]; then
+    echo "[!] This script must be run as root; sudo password is 123lkj"
+    exit 1
+fi
+
+# Reset terminal
+stty sane
+#reset
+
+# In case you wish to kill it
+#trap 'exit 3' 1 2 3 15
+trap cleanup EXIT
+
+# Menu
 if [[ $1 == "" || $1 == "--help" || $1 == "-h" ]]; then
     printHelp
 elif [[ $1 == "--version" ]]; then
