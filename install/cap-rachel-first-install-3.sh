@@ -158,7 +158,7 @@ mount | grep sda
 # mv $installTmpDir/*captive.* $rachelWWW/art/
 # printGood "Moved captive portal images to $rachelWWW/art folder."
 # printGood "Done."
-
+set -x
 # # Copy over files needed for Captive Portal redirect to work (these are the same ones used by the CAP)
 # if [[ ! -f $rachelWWW/pass_ticket.shtml && ! -f $rachelWWW/redirect.shtml ]]; then
 #     cp /www/pass_ticket.shtml /www/redirect.shtml $rachelWWW/.

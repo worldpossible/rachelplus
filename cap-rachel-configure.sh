@@ -817,6 +817,7 @@ changePackageRepo(){
 }
 
 newInstall(){
+    set -x
     printHeader
     echo; printStatus "Conducting a new install of RACHEL on a CAP."
 
