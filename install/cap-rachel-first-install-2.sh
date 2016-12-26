@@ -64,7 +64,9 @@ printGood "Done."
 # Add lines to /etc/rc.local that will start the next script to run on reboot
 sudo sed -i '$e echo "bash '$installTmpDir'\/cap-rachel-first-install-3.sh&"' /etc/rc.local
 
+## DELETE when done testing
 echo 1 > /root/script2.ran
+printGood "Wrote /root/script2.ran file"
 
 # Reboot
 echo; printGood "RACHEL CAP Install - Script 2 ended at $(date)"

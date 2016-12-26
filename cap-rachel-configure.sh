@@ -3,7 +3,7 @@
 # ONELINER Download/Install: sudo wget https://raw.githubusercontent.com/rachelproject/rachelplus/master/cap-rachel-configure.sh -O /root/cap-rachel-configure.sh; bash cap-rachel-configure.sh
 # OFFLINE BUILDS:  Run the Download-Offline-Content script in the Utilities menu.
 
-## TESTING
+## DELETE when done testing
 rm -f /root/script2.ran
 rm -f /root/script3.ran
 
@@ -118,9 +118,10 @@ loggingStart(){
 }
 
 cleanup(){
-    kill $!; trap 'kill $1' SIGTERM
     # If requested, do not ask to cleanup
-    if [[ $noCleanup == "1" ]]; then exit 1; fi
+    if [[ $noCleanup == "1" ]]; then exit 0; fi
+    # Continue, if cleanup required
+    kill $!; trap 'kill $1' SIGTERM
     # Store log file
     mv $rachelLog $rachelLogDir/cap-rachel-configure-$timestamp.log
     echo; printGood "Log file saved to: $rachelLogDir/cap-rachel-configure-$timestamp.log"
@@ -2439,12 +2440,14 @@ if [[ $1 == "" || $1 == "--help" || $1 == "-h" ]]; then
 elif [[ $1 == "--version" ]]; then
     # Print version only, if requested
     echo $scriptVersion
-    exit 0
+    noCleanup=1
 elif [[ $1 == "--usbrecovery" ]]; then
     loggingAndRachelStart
     usbRecovery
+    noCleanup=1
 elif [[ $1 == "--source-only" ]]; then
     printGood "Only importing source functions."
+    noCleanup=1
 else
     # Check for old folder structure
     if [[ -f /root/rachel-scripts.sh ]]; then 

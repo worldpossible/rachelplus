@@ -106,6 +106,7 @@ grep -q '^cgi.fix_pathinfo = 1' /etc/php5/cgi/php.ini && sed -i '/^cgi.fix_pathi
 printGood "Done."
 
 # If $rachelWWW doesn't exist, set it up
+cd $installTmpDir
 if [[ ! -d $rachelWWW ]]; then
     echo; printStatus "Cloning the RACHEL content shell from GitHub into $(pwd)"
     rm -rf contentshell # in case of previous failed install
@@ -118,7 +119,6 @@ fi
 
 # Overwrite the lighttpd.conf file with our customized RACHEL version
 echo; printStatus "Updating lighttpd.conf to RACHEL version"
-cd $installTmpDir
 $LIGHTTPDFILE
 mv $installTmpDir/lighttpd.conf /usr/local/etc/lighttpd.conf
 printGood "Done."
@@ -184,7 +184,9 @@ sudo mv $rachelLog $rachelLogDir/rachel-install-$timestamp.log
 echo; printGood "Log file saved to: $rachelLogDir/rachel-install-$timestamp.log"
 printGood "RACHEL CAP Install Complete."
 
+## DELETE when done testing
 echo 1 > /root/script3.ran
+printGood "Wrote /root/script2.ran file"
 
 # Reboot
 echo; printStatus "I need to reboot; once rebooted, your CAP is ready for RACHEL content."
