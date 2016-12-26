@@ -74,4 +74,4 @@ echo; printStatus "I need to reboot; once rebooted, please run the next download
 printStatus "Rebooting in 5 seconds..."
 sleep 5
 noCleanup=1
-reboot
+# reboot

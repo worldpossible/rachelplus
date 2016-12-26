@@ -820,7 +820,7 @@ newInstall(){
     printHeader
     echo; printStatus "Conducting a new install of RACHEL on a CAP."
 
-    cd $installTmpDir
+    mkdir -p $installTmpDir; cd $installTmpDir
 
     # Show location of the log file
     echo; printStatus "Directory of RACHEL install log files with date/time stamps:"
@@ -932,7 +932,7 @@ EOF
         printStatus "Rebooting in 5 seconds..."
         sleep 5
         noCleanup=1
-        reboot
+        # reboot
     else
         echo; printError "User requests not to continue...exiting at $(date)"
         # Deleting the install script commands

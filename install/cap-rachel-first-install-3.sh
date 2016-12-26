@@ -193,4 +193,4 @@ echo; printStatus "I need to reboot; once rebooted, your CAP is ready for RACHEL
 echo "Download modules from http://dev.worldpossible.org/mods/"
 echo; printStatus "Rebooting..."
 noCleanup=1
-reboot
+# reboot
