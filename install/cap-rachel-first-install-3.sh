@@ -1,51 +1,13 @@
 #!/bin/sh
 # FILE: cap-rachel-first-install-3.sh
 # ONELINER Download/Install: sudo wget https://github.com/rachelproject/rachelplus/raw/master/install/cap-rachel-first-install-3.sh -O - | bash 
+set -x
 
 # Import functions from /root/cap-rachel-configure.sh
 . /root/cap-rachel-configure.sh --source-only
 
-# # Everything below will go to this log directory
-# timestamp=$(date +"%b-%d-%Y-%H%M%Z")
-# rachelLogDir="/var/log/rachel"
-# rachelLogFile="rachel-install.tmp"
-# rachelLog="$rachelLogDir/$rachelLogFile"
-# rachelPartition="/media/RACHEL"
-# rachelWWW="$rachelPartition/rachel"
-# kaliteDir="/var/ka-lite"
-# kaliteContentDir="/media/RACHEL/kacontent"
-# installTmpDir="/root/cap-rachel-install.tmp"
-# rachelTmpDir="/media/RACHEL/cap-rachel-install.tmp"
-# rachelScriptsDir="/root/rachel-scripts"
-# rachelScriptsFile="$rachelScriptsDir/rachelStartup.sh"
-# rachelScriptsLog="$rachelLogDir/rachel-scripts.log"
-
-# Close STDOUT file descriptor
-exec 1<&-
-# Close STDERR FD
-exec 2<&-
-# Open STDOUT as $rachelLog file for read and write.
-exec 1>>$rachelLog
-# Redirect STDERR to STDOUT
-exec 2>&1
-
-# exec 1>> $rachelLog 2>&1
-
-function printGood () {
-    echo -e "\x1B[01;32m[+]\x1B[0m $1"
-}
-
-function printError () {
-    echo -e "\x1B[01;31m[-]\x1B[0m $1"
-}
-
-function printStatus () {
-    echo -e "\x1B[01;35m[*]\x1B[0m $1"
-}
-
-function printQuestion () {
-    echo -e "\x1B[01;33m[?]\x1B[0m $1"
-}
+# Logging
+exec 1>> $rachelLog 2>&1
 
 # Check root
 if [ "$(id -u)" != "0" ]; then
@@ -57,7 +19,9 @@ fi
 echo; printGood "RACHEL CAP Install - Script 3 started at $(date)"
 
 # Change directory into $installTmpDir
+errorCheck
 cd $installTmpDir
+errorCheck
 
 # Delete previous setup commands from the /etc/rc.local
 sudo sed -i '/cap-rachel/d' /etc/rc.local
@@ -83,6 +47,8 @@ $GPGKEY3
 apt-get clean; apt-get purge; apt-get update
 printGood "Done."
 
+errorCheck
+
 # Install RACHEL required packages
 echo; printStatus "Installing packages."
 # Setup root password for mysql install
@@ -101,9 +67,10 @@ installPkgUpdates
 # echo 'extension=stem.so' >> /etc/php5/conf.d/stem.ini
 printGood "Done."
 
+errorCheck
+
 # Add the following line at the end of file
 grep -q '^cgi.fix_pathinfo = 1' /etc/php5/cgi/php.ini && sed -i '/^cgi.fix_pathinfo = 1/d' /etc/php5/cgi/php.ini; echo 'cgi.fix_pathinfo = 1' >> /etc/php5/cgi/php.ini
-printGood "Done."
 
 # If $rachelWWW doesn't exist, set it up
 cd $installTmpDir

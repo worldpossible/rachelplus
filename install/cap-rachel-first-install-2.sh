@@ -1,42 +1,21 @@
 #!/bin/sh
 # FILE: cap-rachel-first-install-2.sh
 # ONELINER Download/Install: wget https://github.com/rachelproject/rachelplus/raw/master/install/cap-rachel-first-install-2.sh -O - | bash 
+set -x 
 
 # Import functions from /root/cap-rachel-configure.sh
 . /root/cap-rachel-configure.sh --source-only
 
-# # Everything below will go to this log directory
-# rachelLogDir="/var/log/rachel"
-# rachelLogFile="rachel-install.tmp"
-# rachelLog="$rachelLogDir/$rachelLogFile"
-# installTmpDir="/root/cap-rachel-install.tmp"
+# # Close STDOUT file descriptor
+# exec 1<&-
+# # Close STDERR FD
+# exec 2<&-
+# # Open STDOUT as $rachelLog file for read and write.
+# exec 1>>$rachelLog
+# # Redirect STDERR to STDOUT
+# exec 2>&1
 
-# Close STDOUT file descriptor
-exec 1<&-
-# Close STDERR FD
-exec 2<&-
-# Open STDOUT as $rachelLog file for read and write.
-exec 1>>$rachelLog
-# Redirect STDERR to STDOUT
-exec 2>&1
-
-# exec 1>> $rachelLog 2>&1
-
-function printGood () {
-    echo -e "\x1B[01;32m[+]\x1B[0m $1"
-}
-
-function printError () {
-    echo -e "\x1B[01;31m[-]\x1B[0m $1"
-}
-
-function printStatus () {
-    echo -e "\x1B[01;35m[*]\x1B[0m $1"
-}
-
-function printQuestion () {
-    echo -e "\x1B[01;33m[?]\x1B[0m $1"
-}
+exec 1>> $rachelLog 2>&1
 
 # Check root
 if [ "$(id -u)" != "0" ]; then

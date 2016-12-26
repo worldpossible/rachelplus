@@ -4,8 +4,13 @@
 # OFFLINE BUILDS:  Run the Download-Offline-Content script in the Utilities menu.
 
 ## DELETE when done testing
+set -x
 rm -f /root/script2.ran
 rm -f /root/script3.ran
+function errorCheck(){
+    echo; printError "Current dir: $(pwd)"
+    echo; ls -la
+}
 
 # COMMON VARIABLES - Change as needed
 dirContentOffline="/media/usbhd-sdb1" # Enter directory of downloaded RACHEL content for offline install (e.g. I mounted my external USB on my CAP but plugging the external USB into and running the command 'fdisk -l' to find the right drive, then 'mkdir /media/RACHEL-Content' to create a folder to mount to, then 'mount /dev/sdb1 /media/RACHEL-Content' to mount the USB drive.)
@@ -818,7 +823,7 @@ changePackageRepo(){
 }
 
 newInstall(){
-    set -x
+    if [[ $internet == "0" ]]; then printError "New installs only run when connected to the internet...exiting."; fi
     printHeader
     echo; printStatus "Conducting a new install of RACHEL on a CAP."
 
@@ -1753,6 +1758,7 @@ repairBugs(){
 
 installPkgUpdates(){
     pkgInstaller(){
+        errorCheck
         dpkg -i *.deb
         # apt-get -fy install
         pear clear-cache 2>/dev/null
@@ -1767,18 +1773,22 @@ installPkgUpdates(){
             echo '; configuration for php stem module' > /etc/php5/conf.d/stem.ini
             echo 'extension=stem.so' >> /etc/php5/conf.d/stem.ini
         fi
+        errorCheck
     }
+    errorCheck
     mv /etc/init/procps.conf /etc/init/procps.conf.old 2>/dev/null # otherwise quite a lot of pkgs won't install
     if [[ internet="1" ]]; then
         if [[ $osName="precise" ]]; then
             $GPGKEY3
             apt-get update; apt-get -y install python-software-properties; apt-add-repository -y ppa:relan/exfat
         fi
+        errorCheck
         if [[ -d $rachelPartition ]]; then
             mkdir -p $rachelPartition/offlinepkgs; cd $rachelPartition/offlinepkgs
         else
             mkdir -p $installTmpDir/offlinepkgs; cd $installTmpDir/offlinepkgs
         fi
+        errorCheck
         apt-get update; apt-get download $debPackageList
         pkgInstaller
     elif [[ -d $rachelPartition/offlinepkgs ]]; then
