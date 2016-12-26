@@ -818,8 +818,6 @@ newInstall(){
     printHeader
     echo; printStatus "Conducting a new install of RACHEL on a CAP."
 
-    mkdir -p $installTmpDir; cd $installTmpDir
-
     # Show location of the log file
     echo; printStatus "Directory of RACHEL install log files with date/time stamps:"
     echo "$rachelLogDir"
@@ -885,8 +883,6 @@ EOF
         echo; printStatus "Unmounting any mounted partitions."
         umount /dev/sda1 /dev/sda2
         echo; printStatus "Repartitioning hard drive"
-        # Turn logging off - might cause issues
-#        exec &>/dev/tty
         sgdisk -p /dev/sda
         sgdisk -o /dev/sda
         parted -s /dev/sda mklabel gpt
@@ -902,8 +898,6 @@ EOF
         #sgdisk -n 3:+122G:-1M -c 3:"RACHEL" -u 3:99999999-9999-9999-9999-999999999999 -t 3:8300 /dev/sda # RACHEL 343.8GB
         #sgdisk -n 3:255852544:-1M -c 3:"RACHEL" -u 3:99999999-9999-9999-9999-999999999999 -t 3:8300 /dev/sda # RACHEL 343.8GB
         sgdisk -n 3:41945088:-1M -c 3:"RACHEL" -u 3:99999999-9999-9999-9999-999999999999 -t 3:8300 /dev/sda
-        # Turn logging back on
-#        exec &> >(tee -a "$rachelLog")
         sgdisk -p /dev/sda
         printGood "Done."
 
@@ -920,12 +914,11 @@ EOF
         sudo sed -i '$e echo "# Add rachel startup scripts"' /etc/rc.local
         sudo sed -i '$e echo "bash '$rachelScriptsDir'/rachelStartup.sh&"' /etc/rc.local
 
-#        # Add lines to $rachelScriptsFile that will start the next script to run on reboot
-#        sudo sed -i '$e echo "bash '$installTmpDir'\/cap-rachel-first-install-2.sh&"' $rachelScriptsFile
         # Add lines to /etc/rc.local that will start the next script to run on reboot
         sudo sed -i '$e echo "bash '$installTmpDir'\/cap-rachel-first-install-2.sh&"' /etc/rc.local
 
-        echo; printGood "RACHEL CAP Install - Script ended at $(date)"
+        # Script 1 end
+        echo; printGood "RACHEL CAP Install - Script 1 of 3 ended at $(date)"
         echo; printStatus "I need to reboot; once rebooted, please run the next download/install command."
         printStatus "Rebooting in 5 seconds..."
         sleep 5

@@ -142,6 +142,7 @@ rm -rf $installTmpDir $rachelTmpDir
 printGood "Done."
 
 # Add header/date/time to install log file
+echo; printGood "RACHEL CAP Install - Script 3 of 3 ended at $(date)"
 sudo mv $rachelLog $rachelLogDir/rachel-install-$timestamp.log
 echo; printGood "Log file saved to: $rachelLogDir/rachel-install-$timestamp.log"
 printGood "RACHEL CAP Install Complete."

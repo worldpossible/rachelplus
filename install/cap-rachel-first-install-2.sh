@@ -40,7 +40,7 @@ printGood "Done."
 sudo sed -i '$e echo "bash '$installTmpDir'\/cap-rachel-first-install-3.sh&"' /etc/rc.local
 
 # Reboot
-echo; printGood "RACHEL CAP Install - Script 2 ended at $(date)"
+echo; printGood "RACHEL CAP Install - Script 2 of 3 ended at $(date)"
 echo; printStatus "I need to reboot; once rebooted, please run the next download/install command."
 printStatus "Rebooting in 5 seconds..."
 sleep 5
