@@ -2215,7 +2215,8 @@ interactiveMode(){
     echo "    - Testing script"
     echo "  - [Exit] the installation script"
     echo
-    select menu in "Base-Install" "Install-Upgrade-KALite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Module" "Add-Language" "Update-Modules" "Utilities" "Exit"; do
+    # select menu in "Initial-Install" "Install-Upgrade-KALite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Module" "Add-Language" "Update-Modules" "Utilities" "Exit"; do
+    select menu in "Base-Install" "Install-Upgrade-KALite" "Install-Kiwix" "Install-ESP" "Add-Module" "Add-Language" "Update-Modules" "Utilities" "Exit"; do
             case $menu in
             Base-Install)
             newInstall
