@@ -53,6 +53,7 @@ debconf-set-selections <<< 'mysql-server mysql-server/root_password password roo
 debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password root'
 chown root:root /tmp
 chmod 1777 /tmp
+osCheck
 installPkgUpdates
 # Force install of failed packages
 apt-get -fy install
