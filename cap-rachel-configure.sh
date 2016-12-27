@@ -2458,18 +2458,22 @@ interactiveMode(){
 }
 
 printHelp(){
-    echo; echo "Usage:  cap-rachel-configure.sh [-h] [-i] [-r] [-u]"
+    echo; echo "Usage:  cap-rachel-configure.sh [-b <lang> <source>] [-h] [-i] [-n] [-r] [-u] [-z]"
     echo; echo "Examples:"
     echo "./cap-rachel-configure.sh -b (en | es | fr) [dev | jeremy | jfield | host/ip | usb]"
-    echo "Build a RACHEL-Plus"
+    echo "Build a RACHEL-Plus after base RACHEL install."
     echo; echo "./cap-rachel-configure.sh -h"
     echo "Displays this help menu."
     echo; echo "./cap-rachel-configure.sh -i"
     echo "Interactive mode."
+    echo; echo "./cap-rachel-configure.sh -n"
+    echo "Base RACHEL Install on a raw Intel CAP."
     echo; echo "./cap-rachel-configure.sh -r"
     echo "Repair issues found in the RACHEL-Plus."
     echo; echo "./cap-rachel-configure.sh -u"
     echo "Update this script with the latest RELEASE version from GitHub."
+    echo; echo "./cap-rachel-configure.sh -z"
+    echo "Update this script with the latest BETA version from GitHub."
     echo; echo "To EXIT the interactive script at anytime, press Ctrl-C"
     echo; stty sane
 }
@@ -2505,7 +2509,7 @@ else
         echo; printError "While you have root privileges, you are not root.  Adjusting sudo permissions."
         echo; echo "You MUST log out and back in for sudo permissions to update."
         echo; printStatus "After login, re-run this script using the following command:"
-        echo "sudo ./cap-rachel-configure.sh -i"
+        echo "sudo ./cap-rachel-configure.sh -i <or -n for base RACHEL installs>"
         awk 'BEGIN{OFS=FS=":"} $1~/sudo/ {$4="cap";}1' /etc/group > tmp; mv tmp /etc/group
         noCleanup=1
         echo; exit 1
@@ -2552,7 +2556,7 @@ else
     loggingAndRachelStart
     # MAIN MENU
     IAM=${0##*/} # Short basename
-    while getopts ":b:irtuz" opt
+    while getopts ":b:inrtuz" opt
     do sc=0 #no option or 1 option arguments
         case $opt in
         (b) # Build - Quick build
@@ -2587,6 +2591,19 @@ else
             cd $installTmpDir
             echo; printStatus "If needed, you may EXIT the interactive script at anytime, press Ctrl-C"
             interactiveMode
+            ;;
+        (n) # Interactive mode
+            # Create temp directories
+            mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir 2>/dev/null
+            # Check OS and CAP version
+            osCheck
+            # Determine the operational mode - ONLINE or OFFLINE
+            opMode
+            # Build the hash list 
+            buildHashList
+            # Change directory into $installTmpDir
+            cd $installTmpDir
+            newInstall
             ;;
         (r) # REPAIR - quick repair; doesn't hurt if run multiple times.
             # Create temp directories
