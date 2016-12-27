@@ -833,6 +833,9 @@ newInstall(){
     echo; read -p "Are you ready to start the install? (y/N) " REPLY
     if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
 
+        # Create RACHEL Scripts Directory
+        mkdir -p $rachelScriptsDir
+        
         # Create the shell of the rachel-scripts.sh script - because it doesn't exist
         sed "s,%rachelScriptsLog%,$rachelScriptsLog,g" > $rachelScriptsFile << 'EOF'
 #!/bin/bash
@@ -1514,7 +1517,7 @@ updateModuleNames(){
 repairRachelScripts(){
     # Fixing $rachelScriptsFile
     echo; printStatus "Updating $rachelScriptsFile"
-
+    mkdir -p $rachelScriptsDir
     # Add rachel-scripts.sh script
     sed "s,%rachelScriptsLog%,$rachelScriptsLog,g;s,%rachelPartition%,$rachelPartition,g" > $rachelScriptsFile << 'EOF'
 #!/bin/bash

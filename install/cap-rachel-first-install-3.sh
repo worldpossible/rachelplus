@@ -38,6 +38,13 @@ echo "/dev/sda3       439G   71M  417G   1% /media/RACHEL"
 #echo "/dev/sda2        99G   60M   94G   1% /media/uploaded"
 #echo "/dev/sda3       339G   67M  321G   1% /media/RACHEL"
 
+# Wait for network connection
+pingTest(){
+    ping -q -c 1 -W 1 google.com
+}
+pingTest 1>/dev/null 2>&1
+while [[ $? -ge 1 ]]; do sleep 2; echo "Waiting for network..."; pingTest; done
+
 # Update CAP package repositories
 echo; printStatus "Updating CAP package repositories"
 $GPGKEY1
@@ -110,6 +117,10 @@ echo "rsyncOnline=$rsyncOnline"
 echo "Executing -> rsync -avz $rsyncOnline/rachelmods/en-local_content $rachelWWW/modules/" 
 rsync -avz $rsyncOnline/rachelmods/en-local_content $rachelWWW/modules/
 printGood "Done."
+
+# update RACHEL installer version
+if [[ ! -f /etc/rachelinstaller-version ]]; then $(cat /etc/version | cut -d- -f1 > /etc/rachelinstaller-version); fi
+echo $(cat /etc/rachelinstaller-version | cut -d_ -f1)-$(date +%Y%m%d.%H%M) > /etc/rachelinstaller-version
 
 # Deleting the install script commands
 echo; printStatus "Deleting the install scripts."
