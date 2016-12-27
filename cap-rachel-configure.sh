@@ -19,7 +19,7 @@ osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20161227.0742 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20161227.1105 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -110,7 +110,7 @@ cleanup(){
     echo; printStatus "Cleaning up install scripts."
     rm -rf $installTmpDir $rachelTmpDir
     printGood "Done."
-    # stty sane
+    stty sane
     noCleanup=1
     echo; exit 0
 }
@@ -2497,9 +2497,19 @@ if [ -z $BASH_VERSION ]; then
 fi
 
 # Check root
-if [[ $(groups | grep root) ]]; then
+if [[ ! $(groups | grep root) ]]; then
     echo "[!] This script must be run as root; sudo password is 123lkj"
     exit 1
+else
+    if [ "$(id -u)" != "0" ]; then
+        echo; printError "While you have root privileges, you are not root.  Adjusting sudo permissions."
+        echo; echo "You MUST log out and back in for sudo permissions to update."
+        echo; printStatus "After login, re-run this script using the following command:"
+        echo "sudo ./cap-rachel-configure.sh -i"
+        awk 'BEGIN{OFS=FS=":"} $1~/sudo/ {$4="cap";}1' /etc/group > tmp; mv tmp /etc/group
+        noCleanup=1
+        echo; exit 1
+    fi
 fi
 
 # Reset terminal
@@ -2547,7 +2557,7 @@ else
         case $opt in
         (b) # Build - Quick build
             # Create temp directories
-            mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir
+            mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir 2>/dev/null
             # Check OS and CAP version
             osCheck
             if [[ $# -lt $((OPTIND)) ]]; then
@@ -2566,7 +2576,7 @@ else
             ;;
         (i) # Interactive mode
             # Create temp directories
-            mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir
+            mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir 2>/dev/null
             # Check OS and CAP version
             osCheck
             # Determine the operational mode - ONLINE or OFFLINE
