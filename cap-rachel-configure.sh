@@ -10,7 +10,7 @@ contentOnline="rsync://rachel.golearn.us/content" # Another RACHEL rsync reposit
 wgetOnline="http://rachelfriends.org" # RACHEL large file repo (ka-lite_content, etc)
 gitESP="https://raw.githubusercontent.com/rachelproject/esp/master" # ESP GitHub Repo
 gitRachelPlus="https://raw.githubusercontent.com/rachelproject/rachelplus/master" # RACHELPlus Scripts GitHub Repo
-gitRachelPlusBeta="https://raw.githubusercontent.com/rachelproject/rachelplus/CAPv2-install" # RACHELPlus Scripts GitHub Repo
+gitRachelPlusBeta="https://raw.githubusercontent.com/rachelproject/rachelplus/beta" # RACHELPlus Scripts GitHub Repo
 gitContentShell="https://raw.githubusercontent.com/rachelproject/contentshell/master" # RACHELPlus ContentShell GitHub Repo
 gitContentShellCommit="b5770d0"
 
@@ -2132,10 +2132,12 @@ freshContentShell(){
 }
 
 installESP(){
+    if [[ ! -d $rachelScriptsDir ]]; then echo; printError "Can not install; this is not a RACHEL CAP..exiting."; exit 1; fi
+    mkdir -p $rachelScriptsDir
     echo; printStatus "Installing ESP."
     # download files and set permissions
     wget -q $gitESP/client/checker.php -O $rachelScriptsDir/checker.php
-    rsync -av --del $RSYNCDIR/rachelmods/extra-build-files/esp.sshkey $rachelScriptsDir
+    rsync -av --del $RSYNCDIR/rachelmods/extra-build-files/esp.sshkey $rachelScriptsDir/
     chmod 600 $rachelScriptsDir/esp.sshkey
     # create startup process
     cat > /etc/init/esp.conf << 'EOF'
