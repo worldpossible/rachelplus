@@ -48,9 +48,7 @@ printGood "Network up...continuing install."
 
 # Update CAP package repositories
 echo; printStatus "Updating CAP package repositories"
-$GPGKEY1
-$GPGKEY2
-$GPGKEY3
+for i in $(echo $gpgKeys); do $GPGKEY$i; done
 apt-get clean; apt-get purge; apt-get update
 printGood "Done."
 
