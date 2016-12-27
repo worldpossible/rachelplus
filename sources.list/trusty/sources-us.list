@@ -16,14 +16,3 @@ deb http://archive.canonical.com/ubuntu trusty partner
 
 ###### Ubuntu Extras Repo
 deb http://extras.ubuntu.com/ubuntu trusty main
-
-#------------------------------------------------------------------------------#
-#                           UNOFFICIAL UBUNTU REPOS                            #
-#------------------------------------------------------------------------------#
-
-
-###### 3rd Party Binary Repos
-
-#### Google Chrome Browser - http://www.google.com/linuxrepositories/
-## Run this command: wget -q https://dl-ssl.google.com/linux/linux_signing_key.pub -O- | sudo apt-key add -
-deb http://dl.google.com/linux/chrome/deb/ stable main

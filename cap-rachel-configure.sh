@@ -43,7 +43,9 @@ rachelTmpDir="/media/RACHEL/cap-rachel-install.tmp"
 rachelRecoveryDir="/media/RACHEL/recovery"
 stemPkg="stem-1.5.1.tgz"
 stemURL="https://pecl.php.net/get/$stemPkg"
-debPackageList="php5-cgi php5-common php5-mysql php5-sqlite php5-curl php5-dev php-pear pdftk make git git-core git-man liberror-perl python-m2crypto mysql-server mysql-client libapache2-mod-auth-mysql sqlite3 gcc-multilib gcj-4.6-jre-lib libgcj12 libgcj-common gcj-4.6-base libasound2 fuse-utils fuse-exfat exfat-utils"
+debPrecisePackageList="php5-cgi php5-common php5-mysql php5-sqlite php5-curl php5-dev php-pear pdftk make git git-core git-man liberror-perl python-m2crypto mysql-server mysql-client libapache2-mod-auth-mysql sqlite3 gcc-multilib gcj-4.6-base gcj-4.6-jre-lib libgcj12 libgcj-common libasound2 fuse-utils fuse-exfat exfat-utils"
+debTrustyPackageList="php5-cgi php5-common php5-mysql php5-sqlite php5-curl php5-dev php-pear pdftk make git git-core git-man liberror-perl python-m2crypto mysql-server mysql-client libapache2-mod-auth-mysql sqlite3 gcc-multilib gcc-4.8-base gcj-4.8-jre-lib libgcj14 libgcj-common libasound2 exfat-fuse exfat-utils"
+gpgKeys="40976EAF437D05B5 16126D3A3E5C1192 4DF9B28CA252A784 1655A0AB68576280 1397BC53640DB551 A040830F7FAC5991"
 errorCode="0"
 
 # MD5 hash list
@@ -105,7 +107,7 @@ cleanup(){
     read -p "Enter 'y' to exit without cleaning up temporary folders/files. (y/N) " REPLY
     if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then exit 1; fi
     # Ensure the start script are executable
-    chmod +x /etc/rc.local $rachelScriptsFile
+    chmod +x /etc/rc.local $rachelScriptsFile 2>/dev/null
     # Deleting the install script commands
     echo; printStatus "Cleaning up install scripts."
     rm -rf $installTmpDir $rachelTmpDir
@@ -190,9 +192,13 @@ osCheck(){
 }
 
 onlineVariables(){
-    GPGKEY1="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 40976EAF437D05B5"
-    GPGKEY2="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 16126D3A3E5C1192"
-    GPGKEY3="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DF9B28CA252A784"
+    GPGKEY="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys "
+    # GPGKEY1="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 40976EAF437D05B5"
+    # GPGKEY2="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 16126D3A3E5C1192"
+    # GPGKEY3="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DF9B28CA252A784"
+    # GPGKEY4="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 1655A0AB68576280"
+    # GPGKEY5="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 1397BC53640DB551"
+    # GPGKEY6="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys A040830F7FAC5991"
     SOURCEUS="wget -r $gitRachelPlus/sources.list/$osName/sources-us.list -O /etc/apt/sources.list"
     SOURCEUK="wget -r $gitRachelPlus/sources.list/$osName/sources-uk.list -O /etc/apt/sources.list"
     SOURCESG="wget -r $gitRachelPlus/sources.list/$osName/sources-sg.list -O /etc/apt/sources.list"
@@ -224,9 +230,9 @@ onlineVariables(){
 }
 
 offlineVariables(){
-    GPGKEY1="apt-key add $dirContentOffline/rachelplus/gpg-keys/437D05B5"
-    GPGKEY2="apt-key add $dirContentOffline/rachelplus/gpg-keys/3E5C1192"
-    GPGKEY3="apt-key add $dirContentOffline/rachelplus/gpg-keys/A252A784"
+    GPGKEY="apt-key add $dirContentOffline/rachelplus/gpg-keys/"
+    # GPGKEY2="apt-key add $dirContentOffline/rachelplus/gpg-keys/3E5C1192"
+    # GPGKEY3="apt-key add $dirContentOffline/rachelplus/gpg-keys/A252A784"
     SOURCEUS="rsync -avhz --progress $dirContentOffline/rachelplus/sources.list/$osName/sources-us.list /etc/apt/sources.list"
     SOURCEUK="rsync -avhz --progress $dirContentOffline/rachelplus/sources.list/$osName/sources-uk.list /etc/apt/sources.list"
     SOURCESG="rsync -avhz --progress $dirContentOffline/rachelplus/sources.list/$osName/sources-sg.list /etc/apt/sources.list"
@@ -755,7 +761,7 @@ downloadOfflineContent(){
     echo; printStatus "Downloading/updating debian packages."
     mkdir -p $dirContentOffline/offlinepkgs
     cd $dirContentOffline/offlinepkgs
-    apt-get download $debPackageList
+    apt-get download $debPrecisePackageList
     commandStatus
     printGood "Done."
 
@@ -1570,19 +1576,19 @@ EOF
         printGood "Done."
     fi
 
-    # Add Weaved restore back into rachel-scripts.sh
-    # Clean rachel-scripts.sh
-    sed -i '/Weaved/d' $rachelScriptsFile
-    # Write restore commands to rachel-scripts.sh
-    sudo sed -i '10 a # Restore Weaved configs, if needed' $rachelScriptsFile
-    sudo sed -i '11 a echo \$(date) - Checking Weaved install' $rachelScriptsFile
-    sudo sed -i '12 a if [[ -d '$rachelRecoveryDir'/Weaved ]] && [[ `ls /usr/bin/Weaved*.sh 2>/dev/null | wc -l` == 0 ]]; then' $rachelScriptsFile
-    sudo sed -i '13 a echo \$(date) - Weaved backup files found but not installed, recovering now' $rachelScriptsFile
-    sudo sed -i '14 a mkdir -p /etc/weaved/services #Weaved' $rachelScriptsFile
-    sudo sed -i '15 a cp '$rachelRecoveryDir'/Weaved/Weaved*.conf /etc/weaved/services/' $rachelScriptsFile
-    sudo sed -i '16 a cp '$rachelRecoveryDir'/Weaved/*.sh /usr/bin/' $rachelScriptsFile
-    sudo sed -i '17 a reboot #Weaved' $rachelScriptsFile
-    sudo sed -i '18 a fi #Weaved' $rachelScriptsFile
+    # # Add Weaved restore back into rachel-scripts.sh
+    # # Clean rachel-scripts.sh
+    # sed -i '/Weaved/d' $rachelScriptsFile
+    # # Write restore commands to rachel-scripts.sh
+    # sudo sed -i '10 a # Restore Weaved configs, if needed' $rachelScriptsFile
+    # sudo sed -i '11 a echo \$(date) - Checking Weaved install' $rachelScriptsFile
+    # sudo sed -i '12 a if [[ -d '$rachelRecoveryDir'/Weaved ]] && [[ `ls /usr/bin/Weaved*.sh 2>/dev/null | wc -l` == 0 ]]; then' $rachelScriptsFile
+    # sudo sed -i '13 a echo \$(date) - Weaved backup files found but not installed, recovering now' $rachelScriptsFile
+    # sudo sed -i '14 a mkdir -p /etc/weaved/services #Weaved' $rachelScriptsFile
+    # sudo sed -i '15 a cp '$rachelRecoveryDir'/Weaved/Weaved*.conf /etc/weaved/services/' $rachelScriptsFile
+    # sudo sed -i '16 a cp '$rachelRecoveryDir'/Weaved/*.sh /usr/bin/' $rachelScriptsFile
+    # sudo sed -i '17 a reboot #Weaved' $rachelScriptsFile
+    # sudo sed -i '18 a fi #Weaved' $rachelScriptsFile
 
     # Add battery monitoring start line 
     if [[ -f $rachelScriptsDir/batteryWatcher.sh ]]; then
@@ -1767,7 +1773,7 @@ installPkgUpdates(){
     mv /etc/init/procps.conf /etc/init/procps.conf.old 2>/dev/null # otherwise quite a lot of pkgs won't install
     if [[ internet="1" ]]; then
         if [[ $osName="precise" ]]; then
-            $GPGKEY3
+            for i in $(echo $gpgKeys); do apt-key adv --keyserver keyserver.ubuntu.com --recv-keys $i; done
             apt-get update; apt-get -y install python-software-properties; apt-add-repository -y ppa:relan/exfat
         fi
         if [[ -d $rachelPartition ]]; then
@@ -1775,7 +1781,7 @@ installPkgUpdates(){
         else
             mkdir -p $installTmpDir/offlinepkgs; cd $installTmpDir/offlinepkgs
         fi
-        apt-get update; apt-get download $debPackageList
+        apt-get update; apt-get download $debPrecisePackageList
         pkgInstaller
     elif [[ -d $rachelPartition/offlinepkgs ]]; then
         cd $rachelPartition/offlinepkgs

@@ -9,13 +9,3 @@ deb-src http://ftp.us.debian.org/debian/ jessie main
 ###### Debian Update Repos
 deb http://security.debian.org/ jessie/updates main contrib non-free 
 deb http://ftp.us.debian.org/debian/ jessie-proposed-updates main contrib non-free 
-
-#------------------------------------------------------------------------------#
-#                      UNOFFICIAL  REPOS                       #
-#------------------------------------------------------------------------------#
-
-###### 3rd Party Binary Repos
-
-#### Google Chrome Browser - http://www.google.com/linuxrepositories/
-## Run this command: wget -q https://dl-ssl.google.com/linux/linux_signing_key.pub -O- | apt-key add -
-deb http://dl.google.com/linux/chrome/deb/ stable main
