@@ -1771,9 +1771,9 @@ installPkgUpdates(){
         fi
     }
     mv /etc/init/procps.conf /etc/init/procps.conf.old 2>/dev/null # otherwise quite a lot of pkgs won't install
+    for i in $(echo $gpgKeys); do $GPGKEY$i; done
     if [[ internet="1" ]]; then
         if [[ $osName="precise" ]]; then
-            for i in $(echo $gpgKeys); do apt-key adv --keyserver keyserver.ubuntu.com --recv-keys $i; done
             apt-get update; apt-get -y install python-software-properties; apt-add-repository -y ppa:relan/exfat
         fi
         if [[ -d $rachelPartition ]]; then
@@ -1781,7 +1781,14 @@ installPkgUpdates(){
         else
             mkdir -p $installTmpDir/offlinepkgs; cd $installTmpDir/offlinepkgs
         fi
-        apt-get update; apt-get download $debPrecisePackageList
+        apt-get update
+        if [[ $osName == "precise" ]]; then
+            apt-get download $debPrecisePackageList
+        elif [[ $osName == "trusty" ]]; then
+            apt-get download $debTrustyPackageList
+        else
+            apt-get download $debPrecisePackageList
+        fi
         pkgInstaller
     elif [[ -d $rachelPartition/offlinepkgs ]]; then
         cd $rachelPartition/offlinepkgs

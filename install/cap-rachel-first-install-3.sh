@@ -46,12 +46,6 @@ pingTest 1>/dev/null 2>&1
 while [[ $? -ge 1 ]]; do sleep 2; echo; printStatus "Waiting for network..."; pingTest; done
 printGood "Network up...continuing install."
 
-# Update CAP package repositories
-echo; printStatus "Updating CAP package repositories"
-for i in $(echo $gpgKeys); do $GPGKEY$i; done
-apt-get clean; apt-get purge; apt-get update
-printGood "Done."
-
 # Install RACHEL required packages
 echo; printStatus "Installing packages."
 # Setup root password for mysql install
