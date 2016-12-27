@@ -43,7 +43,8 @@ pingTest(){
     ping -q -c 1 -W 1 google.com
 }
 pingTest 1>/dev/null 2>&1
-while [[ $? -ge 1 ]]; do sleep 2; echo "Waiting for network..."; pingTest; done
+while [[ $? -ge 1 ]]; do sleep 2; echo; printStatus "Waiting for network..."; pingTest; done
+printGood "Network up...continuing install."
 
 # Update CAP package repositories
 echo; printStatus "Updating CAP package repositories"
@@ -61,6 +62,8 @@ debconf-set-selections <<< 'mysql-server mysql-server/root_password_again passwo
 chown root:root /tmp
 chmod 1777 /tmp
 installPkgUpdates
+# Force install of failed packages
+apt-get -fy install
 printGood "Done."
 
 # Add the following line at the end of file

@@ -835,7 +835,7 @@ newInstall(){
 
         # Create RACHEL Scripts Directory
         mkdir -p $rachelScriptsDir
-        
+
         # Create the shell of the rachel-scripts.sh script - because it doesn't exist
         sed "s,%rachelScriptsLog%,$rachelScriptsLog,g" > $rachelScriptsFile << 'EOF'
 #!/bin/bash
@@ -2497,7 +2497,7 @@ if [ -z $BASH_VERSION ]; then
 fi
 
 # Check root
-if [ "$(id -u)" != "0" ]; then
+if [[ $(groups | grep root) ]]; then
     echo "[!] This script must be run as root; sudo password is 123lkj"
     exit 1
 fi
