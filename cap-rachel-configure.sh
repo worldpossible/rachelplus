@@ -1000,7 +1000,8 @@ contentModuleInstall(){
     SELECTMODULE=1
 #    MODULELIST=$(rsync --list-only $RSYNCDIR/rachelmods/ | egrep '^d' | awk '{print $5}' | tail -n +2)
 #    MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" --include-from "$rachelScriptsDir/rsyncInclude.list" --exclude '*' $RSYNCDIR/rachelmods/ | awk '{print $5}' | tail -n +2)
-    MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" --include-from "$rachelScriptsDir/rsyncInclude.list" $RSYNCDIR/rachelmods/ | awk '{print $5}' | tail -n +2)
+    buildRsyncModuleExcludeList
+    MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" $RSYNCDIR/rachelmods/ | awk '{print $5}' | tail -n +2)
     while [[ $SELECTMODULE == 1 ]]; do
         echo; printStatus "What RACHEL module would you like to select for download or update?"
         echo "(Ctrl-C to cancel module install)"
@@ -2120,7 +2121,6 @@ buildRACHEL(){
     installESP
 
     # update RACHEL installer version
-    if [[ ! -f /etc/rachelinstaller-version ]]; then $(cat /etc/version | cut -d- -f1 > /etc/rachelinstaller-version); fi
     echo $(cat /etc/rachelinstaller-version | cut -d_ -f1)-$(date +%Y%m%d.%H%M) > /etc/rachelinstaller-version
 }
 

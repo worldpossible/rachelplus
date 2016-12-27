@@ -115,8 +115,7 @@ rsync -avz $rsyncOnline/rachelmods/en-local_content $rachelWWW/modules/
 printGood "Done."
 
 # update RACHEL installer version
-if [[ ! -f /etc/rachelinstaller-version ]]; then $(cat /etc/version | cut -d- -f1 > /etc/rachelinstaller-version); fi
-echo $(cat /etc/rachelinstaller-version | cut -d_ -f1)-$(date +%Y%m%d.%H%M) > /etc/rachelinstaller-version
+echo $(cat /etc/version | cut -d- -f1)-$(date +%Y%m%d.%H%M) > /etc/rachelinstaller-version
 
 # Deleting the install script commands
 echo; printStatus "Deleting the install scripts."
