@@ -19,7 +19,7 @@ osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20161227.1105 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20170301.2325 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -33,10 +33,11 @@ rachelScriptsFile="$rachelScriptsDir/rachelStartup.sh"
 rachelScriptsLog="/var/log/rachel/rachel-scripts.log"
 kaliteUser="root"
 kaliteDir="/root/.kalite" # Installed as user 'root'
-kaliteContentDir="/media/RACHEL/kacontent"
-kaliteCurrentVersion="0.16.9-0ubuntu3"
+kaliteContentDir="$rachelPartition/kacontent"
+kaliteMajorVersion="0.17"
+kaliteCurrentVersion="$kaliteMajorVersion.0-0ubuntu1"
 kaliteInstaller=ka-lite-bundle_"$kaliteCurrentVersion"_all.deb
-kalitePrimaryDownload="http://pantry.learningequality.org/downloads/ka-lite/0.16/installers/debian/$kaliteInstaller"
+kalitePrimaryDownload="http://pantry.learningequality.org/downloads/ka-lite/$kaliteMajorVersion/installers/debian/$kaliteInstaller"
 kaliteSettings="$kaliteDir/settings.py"
 installTmpDir="/root/cap-rachel-install.tmp"
 rachelTmpDir="/media/RACHEL/cap-rachel-install.tmp"
@@ -51,6 +52,7 @@ errorCode="0"
 # MD5 hash list
 buildHashList(){
     cat > $installTmpDir/hashes.md5 << 'EOF'
+ef4e2741b145a21179eed83867cb531a ka-lite-bundle_0.17.0-0ubuntu1_all.deb
 619248e8838e21c28b97f1e33b230436 ka-lite-bundle_0.16.9-0ubuntu2_all.deb
 1768a68a0b09089a5b72abf8377d6865 ka-lite-bundle_0.16.9-0ubuntu3_all.deb
 b61fdc3937aa226f34f685ba0bc29db1 kiwix-0.9-linux-i686.tar.bz2
@@ -1764,6 +1766,7 @@ installPkgUpdates(){
             echo; printStatus "Installing the stem module."
             currentDir=$(pwd)
             if [[ internet="1" ]]; then
+                echo; printStatus "Downloading stem module."
                 wget -c $stemURL -O $currentDir/offlinepkgs/$stemPkg
             fi
             echo "\n" | pecl install $currentDir/offlinepkgs/$stemPkg
