@@ -19,7 +19,7 @@ osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20170327.2159 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20170327.2338 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -1785,9 +1785,9 @@ installPkgUpdates(){
             currentDir=$(pwd)
             if [[ internet="1" ]]; then
                 echo; printStatus "Downloading stem module."
-                wget -c $stemURL -O $currentDir/offlinepkgs/$stemPkg
+                wget -c $stemURL -O $currentDir/$stemPkg
             fi
-            echo "\n" | pecl install $currentDir/offlinepkgs/$stemPkg
+            echo "\n" | pecl install $currentDir/$stemPkg
             echo '; configuration for php stem module' > /etc/php5/conf.d/stem.ini
             echo 'extension=stem.so' >> /etc/php5/conf.d/stem.ini
         fi
@@ -2628,7 +2628,7 @@ else
             echo; printStatus "If needed, you may EXIT the interactive script at anytime, press Ctrl-C"
             interactiveMode
             ;;
-        (n) # Interactive mode
+        (n) # Scratch install mode
             # Create temp directories
             mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir 2>/dev/null
             # Check OS and CAP version
