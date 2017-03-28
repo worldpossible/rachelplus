@@ -42,7 +42,7 @@ loggingStart(){
 }
 
 identifyOS(){
-	if [[ $(cat /etc/hostname) == "WRTD-303N-Server" ]]; then
+	if [[ $(cat /etc/hostname) == "WRTD-303N-Server" ]] || [[ $(cat /etc/hostname) == "WAPD-235N-Server" ]]; then
 		os=cap
 	elif [[ -f /etc/issue ]]; then
 		os=linux
@@ -288,7 +288,7 @@ compressHashUSBImage(){
 	# Compress the .img file (should reduce the image from 3.76GB to about 2.1GB)
 	echo; printStatus "Compressing .img file (on RACHEL-Plus CAP = ~14min)."
 	echo "Running cmd:  zip -9 -o $imageName.zip $imageName"
-	time zip -9 -o $imageName.zip $imageName
+	time zip -9 -y -r -q -o $imageName.zip $imageName
 
 	# MD5 hash the files
 	echo; printStatus "Calculating MD5 hash of both the .img and .img.zip files (on RACHEL-Plus CAP = ~51s)."

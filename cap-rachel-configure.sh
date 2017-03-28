@@ -19,7 +19,7 @@ osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20170301.2325 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20170327.2159 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -39,6 +39,8 @@ kaliteCurrentVersion="$kaliteMajorVersion.0-0ubuntu1"
 kaliteInstaller=ka-lite-bundle_"$kaliteCurrentVersion"_all.deb
 kalitePrimaryDownload="http://pantry.learningequality.org/downloads/ka-lite/$kaliteMajorVersion/installers/debian/$kaliteInstaller"
 kaliteSettings="$kaliteDir/settings.py"
+kiwixInstallerCAPv1="kiwix-0.9-linux-i686.tar.bz2"
+kiwixInstallerCAPv2="kiwix-0.9-linux-x86_64.tar.bz2"
 installTmpDir="/root/cap-rachel-install.tmp"
 rachelTmpDir="/media/RACHEL/cap-rachel-install.tmp"
 rachelRecoveryDir="/media/RACHEL/recovery"
@@ -56,6 +58,7 @@ ef4e2741b145a21179eed83867cb531a ka-lite-bundle_0.17.0-0ubuntu1_all.deb
 619248e8838e21c28b97f1e33b230436 ka-lite-bundle_0.16.9-0ubuntu2_all.deb
 1768a68a0b09089a5b72abf8377d6865 ka-lite-bundle_0.16.9-0ubuntu3_all.deb
 b61fdc3937aa226f34f685ba0bc29db1 kiwix-0.9-linux-i686.tar.bz2
+df6216ba851819d9c3d0208d3ea639df kiwix-0.9-linux-x86_64.tar.bz2
 EOF
 }
 
@@ -193,6 +196,20 @@ osCheck(){
     fi
 }
 
+capCheck(){
+    if [[ $(cat /etc/hostname) == "WRTD-303N-Server" ]]; then
+        os=cap_v1
+        KiwixInstaller="$kiwixInstallerCAPv1"
+    elif [[ $(cat /etc/hostname) == "WAPD-235N-Server" ]]; then
+        os=cap_v2
+        KiwixInstaller="$kiwixInstallerCAPv2"
+    else
+        echo; printError "This isn't a CAP; sorry, I can not continue."
+        echo; exit 1
+    fi
+}
+
+
 onlineVariables(){
     GPGKEY="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys "
     # GPGKEY1="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 40976EAF437D05B5"
@@ -221,7 +238,7 @@ onlineVariables(){
     # Pull from KA Lite directly rather than from our server   
     # KALITEINSTALL="rsync -avhz --progress $contentOnline/$kaliteInstaller $installTmpDir/$kaliteInstaller"
     KALITECONTENTINSTALL="rsync -avhz --progress $contentOnline/kacontent/ /media/RACHEL/kacontent/"
-    KIWIXINSTALL="wget -c $wgetOnline/downloads/public_ftp/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $rachelTmpDir/kiwix-0.9-linux-i686.tar.bz2"
+    KIWIXINSTALL="wget -c $wgetOnline/downloads/public_ftp/old/z-holding/$KiwixInstaller -O $rachelTmpDir/$KiwixInstaller"
     WEAVEDINSTALL="wget -c https://github.com/weaved/installer/raw/master/Intel_CAP/weaved_IntelCAP.tar -O $rachelScriptsDir/weaved_IntelCAP.tar"
     WEAVEDSINGLEINSTALL="wget -c https://github.com/weaved/installer/raw/master/weaved_software/installer.sh -O $rachelScriptsDir/weaved_software/installer.sh"
     WEAVEDUNINSTALLER="wget -c https://github.com/weaved/installer/raw/master/weaved_software/uninstaller.sh -O $rachelScriptsDir/weaved_software/uninstaller.sh"
@@ -375,7 +392,7 @@ installKiwix(){
     echo; printStatus "Installing kiwix."
     $KIWIXINSTALL
     if [[ $internet == "0" ]]; then cd $dirContentOffline; else cd $rachelTmpDir; fi
-    tar -C /var -xjvf kiwix-0.9-linux-i686.tar.bz2
+    tar -C /var -xjvf $KiwixInstaller
     chown -R root:root /var/kiwix
     # Make content directory
     mkdir -p /media/RACHEL/kiwix
@@ -755,7 +772,8 @@ downloadOfflineContent(){
 
     # Downloading kiwix
     echo; printStatus "Downloading/updating kiwix."
-    wget -c $wgetOnline/downloads/public_ftp/z-holding/kiwix-0.9-linux-i686.tar.bz2 -O $dirContentOffline/kiwix-0.9-linux-i686.tar.bz2
+
+    wget -c $wgetOnline/downloads/public_ftp/old/z-holding/$KiwixInstaller -O $dirContentOffline/$KiwixInstaller
     commandStatus
     printGood "Done."
 
@@ -2580,6 +2598,7 @@ else
             mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir 2>/dev/null
             # Check OS and CAP version
             osCheck
+            capCheck
             if [[ $# -lt $((OPTIND)) ]]; then
                 echo; echo "$IAM -b argument(s) missing...needs 2!" >&2
                 echo; echo "Usage: `basename $0` -b '(en | es | fr) [ rsync host ]'" >&2
@@ -2599,6 +2618,7 @@ else
             mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir 2>/dev/null
             # Check OS and CAP version
             osCheck
+            capCheck
             # Determine the operational mode - ONLINE or OFFLINE
             opMode
             # Build the hash list 
@@ -2613,6 +2633,7 @@ else
             mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir 2>/dev/null
             # Check OS and CAP version
             osCheck
+            capCheck
             # Determine the operational mode - ONLINE or OFFLINE
             opMode
             # Build the hash list 
@@ -2626,6 +2647,7 @@ else
             mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir
             # Check OS and CAP version
             osCheck
+            capCheck
             # Determine the operational mode - ONLINE or OFFLINE
             opMode
             repairBugs
@@ -2635,6 +2657,7 @@ else
         (t) # Testing script
             # Check OS and CAP version
             osCheck
+            capCheck
             # Determine the operational mode - ONLINE or OFFLINE
             opMode
             testingScript
@@ -2644,6 +2667,7 @@ else
             mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir
             # Check OS and CAP version
             osCheck
+            capCheck
             # Determine the operational mode - ONLINE or OFFLINE
             opMode
             if [[ $internet == "1" ]]; then
@@ -2677,6 +2701,7 @@ else
             mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir
             # Check OS and CAP version
             osCheck
+            capCheck
             # Determine the operational mode - ONLINE or OFFLINE
             opMode
             if [[ $internet == "1" ]]; then
