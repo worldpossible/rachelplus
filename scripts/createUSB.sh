@@ -19,7 +19,7 @@ printQuestion(){
 	echo -e "\x1B[01;33m[?]\x1B[0m $1"
 }
 
-version=1.10.2
+version=1.11.0
 timestamp=$(date +"%Y%m%d.%H%M")
 usbDate=$(date +"%Y%m%d")
 imageSavePath="$HOME"
@@ -33,7 +33,7 @@ rachelRecoveryDir="/media/RACHEL/recovery"
 rsyncDIR="rsync://dev.worldpossible.org"
 
 loggingStart(){
-	if [[ $os == "cap" ]]; then
+	if [[ $os == "cap_v1" ]] || [[ $os == "cap_v2" ]]; then
 		createLog="/media/RACHEL/recovery/createUSB-$timestamp.log"
 	else
 		createLog="./createUSB-$timestamp.log"
@@ -42,8 +42,10 @@ loggingStart(){
 }
 
 identifyOS(){
-	if [[ $(cat /etc/hostname) == "WRTD-303N-Server" ]] || [[ $(cat /etc/hostname) == "WAPD-235N-Server" ]]; then
-		os=cap
+	if [[ $(cat /etc/hostname) == "WRTD-303N-Server" ]]; then
+		os=cap_v1
+	elif [[ $(cat /etc/hostname) == "WAPD-235N-Server" ]]; then
+		os=cap_v2
 	elif [[ -f /etc/issue ]]; then
 		os=linux
 	elif [[ -d /Volumes ]]; then
@@ -55,30 +57,26 @@ identifyOS(){
 }
 
 identifySavePath(){
-	if [[ $os == "cap" ]]; then
+	if [[ $os == "cap_v1" ]] || [[ $os == "cap_v2" ]]; then
 		imageSavePath=$imageSavePathCAP
-		printGood "You are running the script on a RACHEL-Plus CAP."
 	else
 		imageSavePath=$imageSavePath
-		if [[ $os == "linux" ]]; then
-			printGood "You are running the script on a Unix variant."
-		elif [[ $os == "osx" ]]; then
-			printGood "You are running the script on OSX."
-		fi
 	fi
 	printGood "Saving image to $imageSavePath"
 }
 
 identifyUSBVersion(){
 	# Identify the device name
-	echo; printQuestion "What will be the version number for the RACHEL Recovery USB (e.g. 1-2-16_v2)? "; read usbVersion
+	echo; printQuestion "What will be the version number for the RACHEL Recovery USB?"
+	echo "Normally, we use [firmware]_v[version#]...for example, 2-2-12_v1"
+	echo "Enter the version number: "; read usbVersion
 	imageName="RACHEL_Recovery_USB_"$usbVersion"_$usbDate.img"
 	echo; printGood "Image name:  $imageName"
 }
 
 identifyDeviceNum(){
 	# Identify the device name
-	if [[ $os == "linux" ]] || [[ $os == "cap" ]]; then
+	if [[ $os == "linux" ]] || [[ $os == "cap_v1" ]] || [[ $os == "cap_v2" ]]; then
 		fdisk -l
 		echo; printQuestion "What is the device name that you want to image (for /dev/sdb, enter 'sdb')? "; read diskNum
 		usbDeviceName="/dev/$diskNum"
@@ -93,7 +91,7 @@ identifyDeviceNum(){
 confirmRecoveryUSB(){
 	# Confirm RACHEL Recovery USB
 	echo; printStatus "Confirming the USB is a RACHEL Recovery USB."
-	if [[ $os == "linux" ]] || [[ $os == "cap" ]]; then
+	if [[ $os == "linux" ]] || [[ $os == "cap_v1" ]] || [[ $os == "cap_v2" ]]; then
 		mountName=$(mount | grep "$usbDeviceName"1 | awk '{print $3}')
 	elif [[ $os == "osx" ]]; then
 		mountName=$(mount | grep "$usbDeviceName"s1 | awk '{print $3}')
@@ -126,13 +124,13 @@ sanitize(){
 	echo "" > /root/.bash_history
 	echo "" > /root/.viminfo
 	echo "" > /root/.nano_history
-	echo "" > /root/.mysql_history	
-	# Remove previous Weaved installs
+	echo "" > /root/.mysql_history
+	# Remove previous Weaved installs; we use ESP now
 	rm -rf /usr/bin/notify_Weaved*.sh /usr/bin/Weaved*.sh /etc/weaved /root/Weaved*.log
 }
 
 buildUSBImage(){
-	if [[ $os == "cap" ]]; then
+	if [[ $os == "cap_v1" ]] || [[ $os == "cap_v2" ]]; then
 		echo; printStatus "You are running this script from a RACHEL-Plus CAP."
 		echo; printQuestion "Do you want to create/build the *.tar.xz files from this device? (y/N)"
 		echo "Select 'n' if you already have the three .tar.xz images on the USB."; read REPLY
@@ -260,7 +258,7 @@ unmountUSB(){
 	echo; printStatus "Unmounting USB."
 	cd ~
 	sync
-	if [[ $os == "linux" ]] || [[ $os == "cap" ]]; then
+	if [[ $os == "linux" ]] || [[ $os == "cap_v1" ]] || [[ $os == "cap_v2" ]]; then
 		umount $usbDeviceName*
 	elif [[ $os == "osx" ]]; then
 		diskutil umountDisk $usbDeviceName
@@ -271,13 +269,17 @@ imageUSB(){
 	# Image the USB - show the imaging time when complete; only copy our first 2 partitions to minimize space
 	echo; printStatus "Creating image of USB drive (on USB 2.0 = ~60min; on USB 3.0 = ~3min)."
 	echo "File location:  $imageSavePath/$imageName"
-	if [[ $os == "linux" ]] || [[ $os == "cap" ]]; then
+	if [[ $os == "cap_v1" ]]; then
 #		usbDeviceName=$usbDeviceName
 		partCount=$(( $(fdisk -l $usbDeviceName | grep ${usbDeviceName}2 | awk '{ print $3 }') + 1 ))
+	elif [[ $os == "cap_v2" ]]; then
+#		partCount=$(( $(fdisk -l $usbDeviceName | grep ${usbDeviceName}2 | awk '{ print $3 }') + 1 ))
+		partCount=7714816 # I don't have an easy way to get this info yet
+	elif [[ $os == "linux" ]]; then # Because linux tags the 2nd part as bootable
+		partCount=$(( $(fdisk -l $usbDeviceName | grep ${usbDeviceName}2 | awk '{ print $4 }') + 1 ))
 	elif [[ $os == "osx" ]]; then
 		usbDeviceName=/dev/rdisk$diskNum
 		partCount=$(( $(sudo fdisk $usbDeviceName | grep 2: | awk '{ print $13 }' | cut -d] -f1) + 1 ))
-		#partCount=7337984
 	fi
 	echo "Running cmd:  time sudo dd if=$usbDeviceName of=$imageSavePath/$imageName count=$partCount bs=512"
 	time sudo dd if=$usbDeviceName of=$imageSavePath/$imageName count=$partCount bs=512
@@ -292,7 +294,7 @@ compressHashUSBImage(){
 
 	# MD5 hash the files
 	echo; printStatus "Calculating MD5 hash of both the .img and .img.zip files (on RACHEL-Plus CAP = ~51s)."
-	if [[ $os == "linux" ]] || [[ $os == "cap" ]]; then
+	if [[ $os == "linux" ]] || [[ $os == "cap_v1" ]] || [[ $os == "cap_v2" ]]; then
 		md5app=md5sum
 	elif [[ $os == "osx" ]]; then
 		md5app=md5
@@ -307,6 +309,15 @@ loggingStart
 echo; echo "RACHEL Recovery USB Image Creation Script"
 printGood "Script started:  $(date)"
 printGood "Log file:  $createLog"
+if [[ $(cat /etc/hostname) == "WRTD-303N-Server" ]]; then
+	printGood "Hardware:  RACHEL-Plus (CAP v1)"
+elif [[ $(cat /etc/hostname) == "WAPD-235N-Server" ]]; then
+	printGood "Hardware:  RACHEL-Plus (CAP v2)"
+elif [[ -f /etc/issue ]]; then
+	printGood "Hardware:  Linux/Unix"
+elif [[ -d /Volumes ]]; then
+	printGood "Hardware:  OSX"
+fi
 identifySavePath
 identifyUSBVersion
 identifyDeviceNum
