@@ -19,7 +19,7 @@ osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20170413.2059 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20170419.2347 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -35,7 +35,7 @@ kaliteUser="root"
 kaliteDir="/root/.kalite" # Installed as user 'root'
 kaliteContentDir="$rachelPartition/kacontent"
 kaliteMajorVersion="0.17"
-kaliteCurrentVersion="$kaliteMajorVersion.0-0ubuntu2"
+kaliteCurrentVersion="$kaliteMajorVersion.0-0ubuntu3"
 kaliteInstaller=ka-lite-bundle_"$kaliteCurrentVersion"_all.deb
 kalitePrimaryDownload="http://pantry.learningequality.org/downloads/ka-lite/$kaliteMajorVersion/installers/debian/$kaliteInstaller"
 kaliteSettings="$kaliteDir/settings.py"
@@ -56,6 +56,7 @@ buildHashList(){
     cat > $installTmpDir/hashes.md5 << 'EOF'
 ef4e2741b145a21179eed83867cb531a ka-lite-bundle_0.17.0-0ubuntu1_all.deb
 13c447a2e78ad67a06caaded00d01701 ka-lite-bundle_0.17.0-0ubuntu2_all.deb
+34fb1b8df07db49de04bc5faaae6497d ka-lite-bundle_0.17.0-0ubuntu3_all.deb
 619248e8838e21c28b97f1e33b230436 ka-lite-bundle_0.16.9-0ubuntu2_all.deb
 1768a68a0b09089a5b72abf8377d6865 ka-lite-bundle_0.16.9-0ubuntu3_all.deb
 b61fdc3937aa226f34f685ba0bc29db1 kiwix-0.9-linux-i686.tar.bz2
@@ -394,7 +395,7 @@ installKiwix(){
     $KIWIXINSTALL
     if [[ $internet == "0" ]]; then cd $dirContentOffline; else cd $rachelTmpDir; fi
     tar -C /var -xjvf $KiwixInstaller
-    chown -R root:root /var/kiwix
+    chown -fR root:root /var/kiwix
     # Make content directory
     mkdir -p /media/RACHEL/kiwix
     # Start up Kiwix
@@ -724,13 +725,15 @@ downloadOfflineContent(){
         if [[ $REPLY =~ ^[Nn]$ ]]; then
             break
         fi
+        echo; printQuestion "What additional language would you like to select?"
+        echo "1)Arabic  2)Deutsch  3)English  4)Español  5)Français  6)Português  7)Hindi"
     done
     buildRsyncModuleExcludeList
     MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" --include-from "$rachelScriptsDir/rsyncInclude.list" --exclude '*' $RSYNCDIR/rachelmods/ | awk '{print $5}' | tail -n +2)
     echo; printStatus "Rsyncing core RACHEL content from $RSYNCDIR"
     while IFS= read -r module; do
         echo; printStatus "Downloading $module"
-        rsync -avz --update --delete-after $RSYNCDIR/rachelmods/$module $dirContentOffline/rachelmods
+        rsync -qavz --update --delete-after $RSYNCDIR/rachelmods/$module $dirContentOffline/rachelmods
         commandStatus
         printGood "Done."
     done <<< "$MODULELIST"
