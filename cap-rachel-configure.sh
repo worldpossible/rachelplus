@@ -19,7 +19,7 @@ osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20170419.2347 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20170420.2053 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -733,7 +733,7 @@ downloadOfflineContent(){
     echo; printStatus "Rsyncing core RACHEL content from $RSYNCDIR"
     while IFS= read -r module; do
         echo; printStatus "Downloading $module"
-        rsync -qavz --update --delete-after $RSYNCDIR/rachelmods/$module $dirContentOffline/rachelmods
+        rsync -rltzuv --delete-after $RSYNCDIR/rachelmods/$module $dirContentOffline/rachelmods
         commandStatus
         printGood "Done."
     done <<< "$MODULELIST"
