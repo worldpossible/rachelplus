@@ -19,7 +19,7 @@ osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20170420.2053 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20170424.2338 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -181,6 +181,7 @@ opMode(){
 osCheck(){
     if [[ -z "$osID" ]] || [[ -z "$osVersion" ]]; then
         printError "Internal issue. Couldn't detect OS information."
+        # Default to precise
         osName="precise"
     elif [[ "$osID" == "ubuntu" ]]; then
         # osVersion=$(awk -F '["=]' '/^VERSION_ID=/ {print $3}' /etc/os-release 2>&- | cut -d'.' -f1)
@@ -201,9 +202,11 @@ osCheck(){
 capCheck(){
     if [[ $(cat /etc/hostname) == "WRTD-303N-Server" ]]; then
         os=cap_v1
+        osName="precise"
         KiwixInstaller="$kiwixInstallerCAPv1"
     elif [[ $(cat /etc/hostname) == "WAPD-235N-Server" ]]; then
         os=cap_v2
+        osName="trusty"
         KiwixInstaller="$kiwixInstallerCAPv2"
     else
         echo; printError "This isn't a CAP; sorry, I can not continue."
@@ -646,22 +649,27 @@ backupWeavedService(){
 }
 
 downloadOfflineContent(){
+    # Check for internet
     if [[ $internet == 0 ]]; then echo; printError "You need to be online to download/update your OFFLINE content."; break; fi
-    echo; printQuestion "The OFFLINE RACHEL content folder is set to:  $dirContentOffline"
-    echo "Do you want to change the default location? (y/N) "; read REPLY
-    if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
-        echo; printQuestion "What is the location of your content folder (no trailing slash; example, /media/usb)? "; read dirContentOffline
-    fi
+    echo; printStatus "Here is list of your currently mounted USB drives:"
+    lsblk|grep -v mmc|grep -v sda
+    echo; printQuestion "What is the mountpoint name of your content folder (no trailing slash; example, /media/usb)? "; read dirContentOffline
     while :; do
         if [[ ! -d $dirContentOffline ]]; then
             printError "The folder location does not exist!  Please check the path to your OFFLINE content folder and try again."
-            echo; printQuestion "What is the location of your content folder (no trailing slash; example, /media/usb)? "; read dirContentOffline
+            echo; printQuestion "What is the mountpoint name of your content folder (no trailing slash; example, /media/usb)? "; read dirContentOffline
         else
             break
         fi
     done
-
+    # Check if USB is formatted with ext2, ext3 or ext4
+    usbFileSystem=$(df -T|grep $dirContentOffline |awk '{ print $2 }')
+    if [[ "$usbFileSystem" != "ext2" && "$usbFileSystem" != "ext3" && "$usbFileSystem" != "ext4" ]]; then
+        echo; printError "ERROR:  USB is not formatted in ext2, ext3, or ext4.  For a successful offline update, your external USB must be formatted in one of those file systems or symbolic links will not work and your offline update will not correctly update RACHEL modules.  Sorry, I cannot continue; reformat your USB to one of those file systems and try again."
+        break 
+    fi
     # Download RACHEL script 
+    echo; printStatus "Downloading/updating the latest RACHEL configure script:  cap-rachel-configure.sh"
     $DOWNLOADSCRIPT >&2
     commandStatus
     if [[ -s $installTmpDir/cap-rachel-configure.sh ]]; then
@@ -673,6 +681,83 @@ downloadOfflineContent(){
         printStatus "Fail! Check the log file for more info on what happened:  $rachelLog"
         echo
     fi
+
+    # Downloading Github repo:  rachelplus
+    echo; printStatus "Downloading/updating the GitHub repo:  rachelplus"
+    if [[ -d $dirContentOffline/rachelplus ]]; then 
+        cd $dirContentOffline/rachelplus; git fetch; git reset --hard origin
+    else
+        git clone https://github.com/rachelproject/rachelplus $dirContentOffline/rachelplus
+    fi
+    commandStatus
+    printGood "Done."
+
+    # Downloading Github repo:  contentshell
+    echo; printStatus "Downloading/updating the GitHub repo:  contentshell"
+    if [[ -d $dirContentOffline/contentshell ]]; then 
+        cd $dirContentOffline/contentshell; git fetch; git reset --hard origin
+    else
+        git clone https://github.com/rachelproject/contentshell $dirContentOffline/contentshell
+    fi
+    commandStatus
+    printGood "Done."
+
+    # Downloading Github repo:  kalite
+    echo; printStatus "Checking/downloading:  KA Lite"
+    if [[ -f $dirContentOffline/$kaliteInstaller ]]; then
+        # Checking user provided file MD5 against known good version
+        checkMD5 $dirContentOffline/$kaliteInstaller
+        if [[ $md5Status == 0 ]]; then
+            # Downloading current version of KA Lite
+            echo; printStatus "Downloading KA Lite Version $kaliteCurrentVersion"
+            $KALITEINSTALL
+            commandStatus
+            mv $installTmpDir/$kaliteInstaller $dirContentOffline/$kaliteInstaller
+        fi
+    fi
+    commandStatus
+    printGood "Done."
+
+    # Downloading kiwix
+    echo; printStatus "Downloading/updating kiwix."
+    wget -c $wgetOnline/downloads/public_ftp/old/z-holding/$KiwixInstaller -O $dirContentOffline/$KiwixInstaller
+    commandStatus
+    printGood "Done."
+
+    # Downloading deb packages
+    echo; printStatus "Downloading/updating debian packages."
+    if [[ $osName="precise" ]]; then
+        apt-get update; apt-get -y install python-software-properties; apt-add-repository -y ppa:relan/exfat
+    fi
+    mkdir -p $dirContentOffline/offlinepkgs/precise $dirContentOffline/offlinepkgs/trusty
+    # Download trusty packages
+    cd $dirContentOffline/offlinepkgs
+    osName="trusty"
+    wget -r $gitRachelPlus/sources.list/$osName/sources-us.list -O /etc/apt/sources.list
+    apt-get update
+    rm -f trusty/*.deb
+    downloadPackages
+    commandStatus
+    # Download precise packages
+    cd $dirContentOffline/offlinepkgs
+    osName="precise"
+    wget -r $gitRachelPlus/sources.list/$osName/sources-us.list -O /etc/apt/sources.list
+    apt-get update
+    rm -f precise/*.deb
+    downloadPackages
+    commandStatus
+    printGood "Done."
+    # Put things back
+    capCheck
+    $SOURCEUS
+    apt-get update
+
+    # Downloading Stem module
+    echo; printStatus "Downloading stem module."
+    cd $dirContentOffline/offlinepkgs
+    wget -c $stemURL -O $stemPkg
+    commandStatus
+    printGood "Done."
 
     # Download RACHEL modules
     echo "" > $rachelScriptsDir/rsyncInclude.list
@@ -738,61 +823,11 @@ downloadOfflineContent(){
         printGood "Done."
     done <<< "$MODULELIST"
 
-    # Downloading Github repo:  rachelplus
-    printStatus "Downloading/updating the GitHub repo:  rachelplus"
-    if [[ -d $dirContentOffline/rachelplus ]]; then 
-        cd $dirContentOffline/rachelplus; git fetch; git reset --hard origin
-    else
-        echo; git clone https://github.com/rachelproject/rachelplus $dirContentOffline/rachelplus
-    fi
-    commandStatus
-    printGood "Done."
-
-    # Downloading Github repo:  contentshell
-    echo; printStatus "Downloading/updating the GitHub repo:  contentshell"
-    if [[ -d $dirContentOffline/contentshell ]]; then 
-        cd $dirContentOffline/contentshell; git fetch; git reset --hard origin
-    else
-        echo; git clone https://github.com/rachelproject/contentshell $dirContentOffline/contentshell
-    fi
-    commandStatus
-    printGood "Done."
-
-    # Downloading Github repo:  kalite
-    echo; printStatus "Checking/downloading:  KA Lite"
-    if [[ -f $dirContentOffline/$kaliteInstaller ]]; then
-        # Checking user provided file MD5 against known good version
-        checkMD5 $dirContentOffline/$kaliteInstaller
-        if [[ $md5Status == 0 ]]; then
-            # Downloading current version of KA Lite
-            echo; printStatus "Downloading KA Lite Version $kaliteCurrentVersion"
-            $KALITEINSTALL
-            commandStatus
-            mv $installTmpDir/$kaliteInstaller $dirContentOffline/$kaliteInstaller
-        fi
-    fi
-    commandStatus
-    printGood "Done."
-
-    # Downloading kiwix
-    echo; printStatus "Downloading/updating kiwix."
-
-    wget -c $wgetOnline/downloads/public_ftp/old/z-holding/$KiwixInstaller -O $dirContentOffline/$KiwixInstaller
-    commandStatus
-    printGood "Done."
-
-    # Downloading deb packages
-    echo; printStatus "Downloading/updating debian packages."
-    mkdir -p $dirContentOffline/offlinepkgs
-    cd $dirContentOffline/offlinepkgs
-    apt-get download $debPrecisePackageList
-    commandStatus
-    printGood "Done."
-
     echo; printStatus "This is your current offline directory listing:"
     echo "- - - - - - - - - - - -" 
     ls -l $dirContentOffline/ | awk '{ print $9 }'
     echo; echo "Modules downloaded:"
+    echo "- - - - - - - - - - - -" 
     ls -l $dirContentOffline/rachelmods/ | awk '{ print $9 }'
 }
 
@@ -845,6 +880,16 @@ changePackageRepo(){
         printGood "Done."
         break
     done    
+}
+
+downloadPackages(){
+    if [[ $osName == "precise" ]]; then
+        cd precise; apt-get download $debPrecisePackageList
+    elif [[ $osName == "trusty" ]]; then
+        cd trusty; apt-get download $debTrustyPackageList
+    else
+        cd precise; apt-get download $debPrecisePackageList
+    fi
 }
 
 newInstall(){
@@ -1789,9 +1834,10 @@ installPkgUpdates(){
             currentDir=$(pwd)
             if [[ internet="1" ]]; then
                 echo; printStatus "Downloading stem module."
-                wget -c $stemURL -O $currentDir/$stemPkg
+                cd $rachelPartition/offlinepkgs
+                wget -c $stemURL -O $stemPkg
             fi
-            echo "\n" | pecl install $currentDir/$stemPkg
+            echo "\n" | pecl install $stemPkg
             echo '; configuration for php stem module' > /etc/php5/conf.d/stem.ini
             echo 'extension=stem.so' >> /etc/php5/conf.d/stem.ini
         fi
@@ -1803,18 +1849,12 @@ installPkgUpdates(){
             apt-get update; apt-get -y install python-software-properties; apt-add-repository -y ppa:relan/exfat
         fi
         if [[ -d $rachelPartition ]]; then
-            mkdir -p $rachelPartition/offlinepkgs; cd $rachelPartition/offlinepkgs
+            mkdir -p $rachelPartition/offlinepkgs/precise $rachelPartition/offlinepkgs/trusty; cd $rachelPartition/offlinepkgs
         else
-            mkdir -p $installTmpDir/offlinepkgs; cd $installTmpDir/offlinepkgs
+            mkdir -p $rachelPartition/offlinepkgs/precise $rachelPartition/offlinepkgs/trusty; cd $installTmpDir/offlinepkgs
         fi
         apt-get update
-        if [[ $osName == "precise" ]]; then
-            apt-get download $debPrecisePackageList
-        elif [[ $osName == "trusty" ]]; then
-            apt-get download $debTrustyPackageList
-        else
-            apt-get download $debPrecisePackageList
-        fi
+        downloadPackages
         pkgInstaller
     elif [[ -d $rachelPartition/offlinepkgs ]]; then
         cd $rachelPartition/offlinepkgs
@@ -1822,11 +1862,6 @@ installPkgUpdates(){
     else
         printError "Packages not found for installation."
     fi
-}
-
-installOSUpdates(){
-    cd $dirContentOffline/offlinepkgs
-    dpkg -i *.deb
 }
 
 usbRecovery(){
@@ -1859,6 +1894,13 @@ chmod +x /root/cap-rachel-configure.sh
 # Install OS updates (some needed for the new contentshell)
 echo; echo "[*] Installing OS updates."
 cd $dirContentOffline/offlinepkgs
+if [[ $osName == "precise" ]]; then
+    cd precise
+elif [[ $osName == "trusty" ]]; then
+    cd trusty
+else
+    cd precise
+fi
 dpkg -i *.deb
 # Install kalite sqlite database(s)
 #echo; echo "[*] If available, installing kalite sqlite databases."

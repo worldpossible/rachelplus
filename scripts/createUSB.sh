@@ -66,11 +66,27 @@ identifySavePath(){
 }
 
 identifyUSBVersion(){
-	# Identify the device name
-	echo; printQuestion "What will be the version number for the RACHEL Recovery USB?"
-	echo "Normally, we use [firmware]_v[version#]...for example, 2-2-12_v1"
-	echo "Enter the version number: "; read usbVersion
-	imageName="RACHEL_Recovery_USB_"$usbVersion"_$usbDate.img"
+	# Identify the device name # OUTDATED
+	# echo; printQuestion "What will be the version number for the RACHEL Recovery USB?"
+	# echo "Normally, we use [date in format yyyymmdd]...for example, 20170122"
+	# echo "Enter the version number: "; read usbVersion
+	if [[ $os == "cap_v1" ]]; then 
+        imageName="CAPv1_RACHEL_Recovery_USB_$usbDate.img"
+	elif [[ $os == "cap_v2" ]]; then
+        imageName="CAPv2_RACHEL_Recovery_USB_$usbDate.img"
+	else 
+		printQuestion "What model of CAP (v1 or v2) are you creating an recovery image for?"
+	    select menu in "CAPv1" "CAPv2"; do
+			case $menu in
+			CAPv1)
+				imageName="CAPv1_RACHEL_Recovery_USB_$usbDate.img"
+			;;
+			CAPv2)
+			    imageName="CAPv2_RACHEL_Recovery_USB_$usbDate.img"
+			;;
+			esac
+	    done
+	fi
 	echo; printGood "Image name:  $imageName"
 }
 
@@ -103,7 +119,16 @@ confirmRecoveryUSB(){
 	# Check for update.sh; if not found, exit
 	if [[ ! -f $mountName/update.sh ]]; then
 		echo; printError "This does not appear to be a valid RACHEL Recovery USB; 'update.sh' was not found."
-		echo; exit 1
+		printQuestion "Would you like to prepare this USB as a RACHEL Recovery USB? "; read REPLY
+		if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
+			# Add ability to create a USB from scratch using git pull?
+			cd $mountName
+			git clone https://github.com/rachelproject/usbrecoveryshell.git
+			cp -r usbrecoveryshell .
+			rmdir usbrecoveryshell
+		else
+			echo; exit 1
+		fi
 	else
 		printGood "This is a RACHEL Recovery USB."
 	fi
