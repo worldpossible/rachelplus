@@ -150,11 +150,9 @@ opMode(){
             echo; printGood "Script set for 'OFFLINE' mode."
             internet="0"
             offlineVariables
-            echo; printQuestion "The OFFLINE RACHEL content folder is set to:  $dirContentOffline"
-            read -p "Do you want to change the default location? (y/N) " -r
-            if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
-                echo; printQuestion "What is the location of your content folder? "; read dirContentOffline
-            fi
+            echo; printStatus "Here is list of your current partitions and their mountpoints (if applicable):"
+            lsblk|grep -v mmc|grep -v sda
+            echo; printQuestion "What is the location of your content folder? "; read dirContentOffline
             if [[ ! -d $dirContentOffline ]]; then
                 echo; printError "The folder location does not exist!  Do you want to continue?"
                 read -p "    Enter (y/N) " REPLY
@@ -662,12 +660,17 @@ downloadOfflineContent(){
             break
         fi
     done
+
     # Check if USB is formatted with ext2, ext3 or ext4
     usbFileSystem=$(df -T|grep $dirContentOffline |awk '{ print $2 }')
     if [[ "$usbFileSystem" != "ext2" && "$usbFileSystem" != "ext3" && "$usbFileSystem" != "ext4" ]]; then
         echo; printError "ERROR:  USB is not formatted in ext2, ext3, or ext4.  For a successful offline update, your external USB must be formatted in one of those file systems or symbolic links will not work and your offline update will not correctly update RACHEL modules.  Sorry, I cannot continue; reformat your USB to one of those file systems and try again."
         break 
     fi
+
+    # Download gpg keys
+    for i in $(echo $gpgKeys); do apt-key export $i > $dirContentOffline/rachelplus/gpg-keys/$i; done
+
     # Download RACHEL script 
     echo; printStatus "Downloading/updating the latest RACHEL configure script:  cap-rachel-configure.sh"
     $DOWNLOADSCRIPT >&2
