@@ -1147,13 +1147,18 @@ contentLanguageInstall(){
     done
     buildRsyncModuleExcludeList
     MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" --include-from "$rachelScriptsDir/rsyncInclude.list" --exclude '*' $RSYNCDIR/rachelmods/ | awk '{print $5}' | tail -n +2)
-    echo; printStatus "Rsyncing core RACHEL content from $RSYNCDIR"
-    while IFS= read -r module; do
-        echo; printStatus "Downloading $module"
-        rsync -rltzuv --delete-after $RSYNCDIR/rachelmods/$module $dirContentOffline/rachelmods
-        commandStatus
-        printGood "Done."
-    done <<< "$MODULELIST"
+    if [[ ! -z $MODULELIST ]]; then
+        echo; printStatus "Rsyncing core RACHEL content from $RSYNCDIR"
+        while IFS= read -r module; do
+            echo; printStatus "Downloading $module"
+            rsync -rltzuv --delete-after $RSYNCDIR/rachelmods/$module $dirContentOffline/rachelmods
+            commandStatus
+            printGood "Done."
+        done <<< "$MODULELIST"
+    else
+        printError "No modules to download, exiting language install."
+        break
+    fi
 }
 
 contentUpdate(){
