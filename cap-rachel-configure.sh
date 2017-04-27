@@ -19,7 +19,7 @@ osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20170424.2338 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20170426.2317 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -1108,13 +1108,10 @@ contentModuleInstall(){
 }
 
 contentLanguageInstall(){
-    languageMenu(){
-        echo; printQuestion "What additional language would like to download/update?"
-        echo "1)Arabic  2)Deutsch  3)English  4)Español  5)Français  6)Kannada  7)Português  8)Hindi"        
-    }
+    # Download RACHEL modules
+    echo "" > $rachelScriptsDir/rsyncInclude.list
     ## Add user input to languages they want to support
-    echo; printStatus "The language install will install essential modules from the language(s) you choose."
-    echo; printQuestion "What language content you would like to download for OFFLINE install:"
+    echo; printStatus "Languages available:"
     echo "  - [Arabic] - Arabic content"
     echo "  - [Deutsch] - German content"
     echo "  - [English] - English content"
@@ -1123,50 +1120,40 @@ contentLanguageInstall(){
     echo "  - [Kannada] - Kannada content"
     echo "  - [Português] - Portuguese content"
     echo "  - [Hindi] - Hindi content"
-    echo
-    select menu in "Arabic" "Deutsch" "English" "Español" "Français" "Kannada" "Português" "Hindi"; do
-        case $menu in
-        Arabic)
-            lang="ar"
-            break
-        ;;
-        Deutsch)
-            lang="de"
-            break
-        ;;
-        English)
-            lang="en"
-            break
-        ;;
-        Español)
-            lang="es"
-            break
-        ;;
-        Français)
-            lang="fr"
-            break
-        ;;
-        Kannada)
-            lang="kn"
-            break
-        ;;
-        Português)
-            lang="pt"
-            break
-        ;;
-        Hindi)
-            lang="hi"
-            break
-        ;;
-        esac
+    echo "  - [None]"
+    echo; printQuestion "What language content you would like to download for OFFLINE install:"
+    allDone=0
+    while (( !allDone )); do
+        select menu in "Arabic" "Deutsch" "English" "Español" "Français" "Kannada" "Português" "Hindi" "None"; do
+            case $menu in
+                Arabic) echo "#Arabic" >> $rachelScriptsDir/rsyncInclude.list; echo "ar-*" >> $rachelScriptsDir/rsyncInclude.list ;;
+                Deutsch) echo "#German" >> $rachelScriptsDir/rsyncInclude.list; echo "de-*" >> $rachelScriptsDir/rsyncInclude.list ;;
+                English) echo "#English" >> $rachelScriptsDir/rsyncInclude.list; echo "en-*" >> $rachelScriptsDir/rsyncInclude.list ;;
+                Español) echo "#Spanish" >> $rachelScriptsDir/rsyncInclude.list; echo "es-*" >> $rachelScriptsDir/rsyncInclude.list ;;
+                Français) echo "#French" >> $rachelScriptsDir/rsyncInclude.list; echo "fr-*" >> $rachelScriptsDir/rsyncInclude.list ;;
+                Kannada) echo "#Kannada" >> $rachelScriptsDir/rsyncInclude.list; echo "kn-*" >> $rachelScriptsDir/rsyncInclude.list ;;
+                Português) echo "#Portuguese" >> $rachelScriptsDir/rsyncInclude.list; echo "pt-*" >> $rachelScriptsDir/rsyncInclude.list ;;
+                Hindi) echo "#Hindi" >> $rachelScriptsDir/rsyncInclude.list; echo "hi-*" >> $rachelScriptsDir/rsyncInclude.list ;;
+                None) allDone=1; break ;;
+                *) printError "That really isn't an answer I am looking for..." ;;
+            esac
+            echo; printStatus "Language modules included:"
+            sed -i '/^\x*$/d' $rachelScriptsDir/rsyncInclude.list
+            sort -u $rachelScriptsDir/rsyncInclude.list > $rachelScriptsDir/rsyncInclude.list.tmp; mv $rachelScriptsDir/rsyncInclude.list.tmp $rachelScriptsDir/rsyncInclude.list
+            echo "$(cat $rachelScriptsDir/rsyncInclude.list | grep \# | cut -d"#" -f2)"
+            echo; printQuestion "What additional language would you like to select?"
+            echo "1)Arabic  2)Deutsch  3)English  4)Español  5)Français  6)Kannada  7)Português  8)Hindi  9)None"
+        done
     done
-    # get content
-    echo; printStatus "Installing/updating $lang content modules"
-    contentModuleListInstall $rachelWWW/scripts/"$lang"_plus.modules
-    commandStatus
-    # Since we are installing the entire language (which includes KA Lite); set the kaliteUpdate flag to install contentpack
-    touch $rachelPartition/kaliteUpdate
-    printGood "Done."
+    buildRsyncModuleExcludeList
+    MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" --include-from "$rachelScriptsDir/rsyncInclude.list" --exclude '*' $RSYNCDIR/rachelmods/ | awk '{print $5}' | tail -n +2)
+    echo; printStatus "Rsyncing core RACHEL content from $RSYNCDIR"
+    while IFS= read -r module; do
+        echo; printStatus "Downloading $module"
+        rsync -rltzuv --delete-after $RSYNCDIR/rachelmods/$module $dirContentOffline/rachelmods
+        commandStatus
+        printGood "Done."
+    done <<< "$MODULELIST"
 }
 
 contentUpdate(){
@@ -1846,7 +1833,9 @@ installPkgUpdates(){
         fi
     }
     mv /etc/init/procps.conf /etc/init/procps.conf.old 2>/dev/null # otherwise quite a lot of pkgs won't install
-    for i in $(echo $gpgKeys); do $GPGKEY$i; done
+    echo; printStatus "Updating pgp keys."
+    for i in $(echo $gpgKeys); do $GPGKEY$i 2>/dev/null; done
+    echo; printStatus "Updating packages."
     if [[ internet="1" ]]; then
         if [[ $osName="precise" ]]; then
             apt-get update; apt-get -y install python-software-properties; apt-add-repository -y ppa:relan/exfat
@@ -2395,7 +2384,7 @@ interactiveMode(){
             echo; printQuestion "What utility would you like to use?"
             echo "  - [Install-Battery-Watcher] monitors battery and shutdowns the device with less than 3% battery"
             echo "  - [Enable-Wifi] enables the wifi access point (if disabled)"
-            echo "  - [Disable-Wifi] disables the wifi instantly and on reboot"
+            echo "  - [Disable-Wifi] disables the wifi instantly AND persistently on reboot"
             echo "  - [Disable-Reset-Button] removes the ability to reset the device by use of the reset button"
             echo "  - [Download-OFFLINE-Content] to stage for OFFLINE (i.e. local) RACHEL installs"
             # echo "  - [Backup-Weaved-Services] backs up configs and restores them if they are not found on boot"
