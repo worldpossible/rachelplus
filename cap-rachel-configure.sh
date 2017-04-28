@@ -19,7 +19,7 @@ osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20170426.2317 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20170427.2133 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -77,6 +77,7 @@ extra-build-files
 .gitignore
 README.txt
 peewee.db
+en-GCF2013
 EOF
 }
 
@@ -157,7 +158,8 @@ opMode(){
                 echo; printError "The folder location does not exist!  Do you want to continue?"
                 read -p "    Enter (y/N) " REPLY
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
-                    dirContentOffline=""
+                    echo; printStatus "CAUTION:  Any action that requires USB content will not function as expected."
+                    dirContentOffline="/dev/null"
                     offlineVariables
                 else
                     printError "Exiting on user request."
@@ -774,36 +776,18 @@ downloadOfflineContent(){
     echo "  - [Português] - Portuguese content"
     echo "  - [Hindi] - Hindi content"
     echo
-    select menu in "Arabic" "Deutsch" "English" "Español" "Français" "Português" "Hindi"; do
+    select menu in "Arabic" "Deutsch" "English" "Español" "Français" "Português" "Hindi" "None"; do
         case $menu in
-        Arabic)
-            echo "#Arabic" >> $rachelScriptsDir/rsyncInclude.list
-            echo "ar-*" >> $rachelScriptsDir/rsyncInclude.list
-        ;;
-        Deutsch)
-            echo "#German" >> $rachelScriptsDir/rsyncInclude.list
-            echo "de-*" >> $rachelScriptsDir/rsyncInclude.list
-        ;;
-        English)
-            echo "#English" >> $rachelScriptsDir/rsyncInclude.list
-            echo "en-*" >> $rachelScriptsDir/rsyncInclude.list
-        ;;
-        Español)
-            echo "#Spanish" >> $rachelScriptsDir/rsyncInclude.list
-            echo "es-*" >> $rachelScriptsDir/rsyncInclude.list
-        ;;
-        Français)
-            echo "#French" >> $rachelScriptsDir/rsyncInclude.list
-            echo "fr-*" >> $rachelScriptsDir/rsyncInclude.list
-        ;;
-        Português)
-            echo "#Portuguese" >> $rachelScriptsDir/rsyncInclude.list
-            echo "pt-*" >> $rachelScriptsDir/rsyncInclude.list
-        ;;
-        Hindi)
-            echo "#Hindi" >> $rachelScriptsDir/rsyncInclude.list
-            echo "hi-*" >> $rachelScriptsDir/rsyncInclude.list
-        ;;
+            Arabic) echo "#Arabic" >> $rachelScriptsDir/rsyncInclude.list; echo "ar-*" >> $rachelScriptsDir/rsyncInclude.list ;;
+            Deutsch) echo "#German" >> $rachelScriptsDir/rsyncInclude.list; echo "de-*" >> $rachelScriptsDir/rsyncInclude.list ;;
+            English) echo "#English" >> $rachelScriptsDir/rsyncInclude.list; echo "en-*" >> $rachelScriptsDir/rsyncInclude.list ;;
+            Español) echo "#Spanish" >> $rachelScriptsDir/rsyncInclude.list; echo "es-*" >> $rachelScriptsDir/rsyncInclude.list ;;
+            Français) echo "#French" >> $rachelScriptsDir/rsyncInclude.list; echo "fr-*" >> $rachelScriptsDir/rsyncInclude.list ;;
+            Kannada) echo "#Kannada" >> $rachelScriptsDir/rsyncInclude.list; echo "kn-*" >> $rachelScriptsDir/rsyncInclude.list ;;
+            Português) echo "#Portuguese" >> $rachelScriptsDir/rsyncInclude.list; echo "pt-*" >> $rachelScriptsDir/rsyncInclude.list ;;
+            Hindi) echo "#Hindi" >> $rachelScriptsDir/rsyncInclude.list; echo "hi-*" >> $rachelScriptsDir/rsyncInclude.list ;;
+            None) sleep 0 ;;
+            *) printError "That really isn't an answer I am looking for..." ;;
         esac
         echo; printStatus "Language modules included:"
         sed -i '/^\x*$/d' $rachelScriptsDir/rsyncInclude.list
@@ -814,7 +798,7 @@ downloadOfflineContent(){
             break
         fi
         echo; printQuestion "What additional language would you like to select?"
-        echo "1)Arabic  2)Deutsch  3)English  4)Español  5)Français  6)Português  7)Hindi"
+        echo "1)Arabic  2)Deutsch  3)English  4)Español  5)Français  6)Português  7)Hindi  8)None"
     done
     buildRsyncModuleExcludeList
     MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" --include-from "$rachelScriptsDir/rsyncInclude.list" --exclude '*' $RSYNCDIR/rachelmods/ | awk '{print $5}' | tail -n +2)
@@ -1108,57 +1092,30 @@ contentModuleInstall(){
 }
 
 contentLanguageInstall(){
-    # Download RACHEL modules
-    echo "" > $rachelScriptsDir/rsyncInclude.list
     ## Add user input to languages they want to support
-    echo; printStatus "Languages available:"
-    echo "  - [Arabic] - Arabic content"
-    echo "  - [Deutsch] - German content"
+    echo; printStatus "The language install will install essential modules from the language(s) you choose."
+    echo; printQuestion "What language content you would like to install:"
     echo "  - [English] - English content"
     echo "  - [Español] - Spanish content"
     echo "  - [Français] - French content"
-    echo "  - [Kannada] - Kannada content"
-    echo "  - [Português] - Portuguese content"
-    echo "  - [Hindi] - Hindi content"
-    echo "  - [None]"
-    echo; printQuestion "What language content you would like to download for OFFLINE install:"
-    allDone=0
-    while (( !allDone )); do
-        select menu in "Arabic" "Deutsch" "English" "Español" "Français" "Kannada" "Português" "Hindi" "None"; do
-            case $menu in
-                Arabic) echo "#Arabic" >> $rachelScriptsDir/rsyncInclude.list; echo "ar-*" >> $rachelScriptsDir/rsyncInclude.list ;;
-                Deutsch) echo "#German" >> $rachelScriptsDir/rsyncInclude.list; echo "de-*" >> $rachelScriptsDir/rsyncInclude.list ;;
-                English) echo "#English" >> $rachelScriptsDir/rsyncInclude.list; echo "en-*" >> $rachelScriptsDir/rsyncInclude.list ;;
-                Español) echo "#Spanish" >> $rachelScriptsDir/rsyncInclude.list; echo "es-*" >> $rachelScriptsDir/rsyncInclude.list ;;
-                Français) echo "#French" >> $rachelScriptsDir/rsyncInclude.list; echo "fr-*" >> $rachelScriptsDir/rsyncInclude.list ;;
-                Kannada) echo "#Kannada" >> $rachelScriptsDir/rsyncInclude.list; echo "kn-*" >> $rachelScriptsDir/rsyncInclude.list ;;
-                Português) echo "#Portuguese" >> $rachelScriptsDir/rsyncInclude.list; echo "pt-*" >> $rachelScriptsDir/rsyncInclude.list ;;
-                Hindi) echo "#Hindi" >> $rachelScriptsDir/rsyncInclude.list; echo "hi-*" >> $rachelScriptsDir/rsyncInclude.list ;;
-                None) allDone=1; break ;;
-                *) printError "That really isn't an answer I am looking for..." ;;
-            esac
-            echo; printStatus "Language modules included:"
-            sed -i '/^\x*$/d' $rachelScriptsDir/rsyncInclude.list
-            sort -u $rachelScriptsDir/rsyncInclude.list > $rachelScriptsDir/rsyncInclude.list.tmp; mv $rachelScriptsDir/rsyncInclude.list.tmp $rachelScriptsDir/rsyncInclude.list
-            echo "$(cat $rachelScriptsDir/rsyncInclude.list | grep \# | cut -d"#" -f2)"
-            echo; printQuestion "What additional language would you like to select?"
-            echo "1)Arabic  2)Deutsch  3)English  4)Español  5)Français  6)Kannada  7)Português  8)Hindi  9)None"
-        done
+    echo "  - [Exit] Install"
+    echo
+    select menu in "English" "Español" "Français" "Exit"; do
+        case $menu in
+        English) lang="en"; break ;;
+        Español)  lang="es"; break ;;
+        Français) lang="fr"; break ;;
+        Exit) lang="none"; break ;;
+        esac
     done
-    buildRsyncModuleExcludeList
-    MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" --include-from "$rachelScriptsDir/rsyncInclude.list" --exclude '*' $RSYNCDIR/rachelmods/ | awk '{print $5}' | tail -n +2)
-    if [[ ! -z $MODULELIST ]]; then
-        echo; printStatus "Rsyncing core RACHEL content from $RSYNCDIR"
-        while IFS= read -r module; do
-            echo; printStatus "Downloading $module"
-            rsync -rltzuv --delete-after $RSYNCDIR/rachelmods/$module $dirContentOffline/rachelmods
-            commandStatus
-            printGood "Done."
-        done <<< "$MODULELIST"
-    else
-        printError "No modules to download, exiting language install."
-        break
-    fi
+    # get content
+    if [[ $lang="none" ]]; then printError "Exiting on user request."; break; fi
+    echo; printStatus "Installing/updating $lang content modules"
+    contentModuleListInstall $rachelWWW/scripts/"$lang"_plus.modules
+    commandStatus
+    # Since we are installing the entire language (which includes KA Lite); set the kaliteUpdate flag to install contentpack
+    touch $rachelPartition/kaliteUpdate
+    printGood "Done."
 }
 
 contentUpdate(){
@@ -1166,7 +1123,7 @@ contentUpdate(){
     MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" $rachelWWW/modules/ | awk '{print $5}' | tail -n +2)
     while IFS= read -r module; do
         echo; printStatus "Downloading $module"
-        rsync -avzP --update --delete-after --exclude-from "$rachelScriptsDir/rsyncExclude.list" $RSYNCDIR/rachelmods/$module $rachelWWW/modules/
+        rsync -rltzuv --delete-after --exclude-from "$rachelScriptsDir/rsyncExclude.list" $RSYNCDIR/rachelmods/$module $rachelWWW/modules/
         commandStatus
         # If KA Lite module, than set the kaliteUpdate "flag" to install the contentpack
         if [[ $module == *kalite ]]; then
@@ -1841,8 +1798,8 @@ installPkgUpdates(){
     echo; printStatus "Updating pgp keys."
     for i in $(echo $gpgKeys); do $GPGKEY$i 2>/dev/null; done
     echo; printStatus "Updating packages."
-    if [[ internet="1" ]]; then
-        if [[ $osName="precise" ]]; then
+    if [[ $internet == 1 ]]; then
+        if [[ $osName == "precise" ]]; then
             apt-get update; apt-get -y install python-software-properties; apt-add-repository -y ppa:relan/exfat
         fi
         if [[ -d $rachelPartition ]]; then
@@ -1853,8 +1810,9 @@ installPkgUpdates(){
         apt-get update
         downloadPackages
         pkgInstaller
-    elif [[ -d $rachelPartition/offlinepkgs ]]; then
-        cd $rachelPartition/offlinepkgs
+    elif [[ -d $dirContentOffline/offlinepkgs ]]; then
+        echo $osName
+        if [[ $osName == "trusty" ]]; then cd $dirContentOffline/offlinepkgs/trusty; else cd $dirContentOffline/offlinepkgs/precise; fi
         pkgInstaller
     else
         printError "Packages not found for installation."
