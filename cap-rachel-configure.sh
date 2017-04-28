@@ -1109,7 +1109,7 @@ contentLanguageInstall(){
         esac
     done
     # get content
-    if [[ $lang="none" ]]; then printError "Exiting on user request."; break; fi
+    if [[ $lang == "none" ]]; then printError "Exiting on user request."; break; fi
     echo; printStatus "Installing/updating $lang content modules"
     contentModuleListInstall $rachelWWW/scripts/"$lang"_plus.modules
     commandStatus
