@@ -19,7 +19,8 @@ osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20170505.0030 # To get current version - date +%Y%m%d.%H%M
+# To get current version - date +%Y%m%d.%H%M
+scriptVersion=20170505.0030
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -1718,6 +1719,9 @@ repairKalite(){
 }
 
 repairBugs(){
+    # Check/update package repo
+    changePackageRepo
+    
     # Update rachel folder structure
     updateRachelFolders
 
