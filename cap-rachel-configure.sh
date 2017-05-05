@@ -19,7 +19,7 @@ osID="$(awk -F '=' '/^ID=/ {print $2}' /etc/os-release 2>&-)"
 osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
-scriptVersion=20170427.2133 # To get current version - date +%Y%m%d.%H%M
+scriptVersion=20170505.0030 # To get current version - date +%Y%m%d.%H%M
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -1725,7 +1725,7 @@ repairBugs(){
     updateModuleNames
 
     # Update to the latest contentshell
-    installPkgUpdates
+    # installPkgUpdates
     checkContentShell
 
     # Update KA Lite root directory location
@@ -2282,27 +2282,6 @@ interactiveMode(){
             whatToDo
             ;;
 
-            # Install-Default-Weaved-Services)
-            # if [[ $internet != "1" ]]; then
-            #     echo; printError "You must be online the internet to register this device with Weaved."
-            #     exit 1
-            # else
-            #     echo; printQuestion "This process will remove any installed Weaved services; do you want to continue? (y/N) "; read REPLY
-            #     if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
-            #         uninstallAllWeavedServices; sleep 2
-            #         installDefaultWeavedServices
-            #         backupWeavedService
-            #     fi
-            # fi
-            # whatToDo
-            # ;;
-
-            # Install-Weaved-Service)
-            # installWeavedService
-            # backupWeavedService
-            # whatToDo
-            # ;;
-
             Install-ESP)
             installESP
             whatToDo
@@ -2321,7 +2300,7 @@ interactiveMode(){
 
             Add-Language)
             updateModuleNames
-            installPkgUpdates
+            # installPkgUpdates
             checkContentShell
             contentLanguageInstall
             kaliteCheckFiles
@@ -2401,32 +2380,9 @@ interactiveMode(){
                     break
                     ;;
 
-                    # Backup-Weaved-Services)
-                    # backupWeavedService
-                    # break
-                    # ;;
-
-                    # Uninstall-Weaved-Service)
-                    # uninstallWeavedService
-                    # break
-                    # ;;
-
-                    # Uninstall-ALL-Weaved-Services)
-                    # echo; printError "This uninstaller will completely remove Weaved from your CAP."
-                    # echo; printQuestion "Do you still wish to continue?"
-                    # read -p "    Enter (y/N) " REPLY
-                    # if [[ $REPLY =~ ^[Yy]$ ]]; then
-                    #     uninstallAllWeavedServices
-                    #     backupWeavedService
-                    # else
-                    #     printError "Uninstall cancelled."
-                    # fi
-                    # break
-                    # ;;
-
                     Update-Content-Shell)
                     echo; printStatus "Updating the RACHEL content shell."
-                    installPkgUpdates
+                    # installPkgUpdates
                     checkContentShell
                     break
                     ;;

@@ -7,7 +7,7 @@ deb http://us.archive.ubuntu.com/ubuntu/ precise-security main restricted univer
 deb http://us.archive.ubuntu.com/ubuntu/ precise-updates main restricted universe multiverse 
 
 ###### Ubuntu Partner Repo
-deb http://archive.canonical.com/ubuntu precise partner
+#deb http://archive.canonical.com/ubuntu precise partner
 
 ###### Ubuntu Extras Repo
-deb http://extras.ubuntu.com/ubuntu precise main
+#deb http://extras.ubuntu.com/ubuntu precise main
