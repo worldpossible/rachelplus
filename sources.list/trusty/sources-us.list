@@ -12,7 +12,7 @@ deb http://us.archive.ubuntu.com/ubuntu/ trusty-security main restricted univers
 deb http://us.archive.ubuntu.com/ubuntu/ trusty-updates main restricted universe multiverse 
 
 ###### Ubuntu Partner Repo
-deb http://archive.canonical.com/ubuntu trusty partner
+#deb http://archive.canonical.com/ubuntu trusty partner
 
 ###### Ubuntu Extras Repo
-deb http://extras.ubuntu.com/ubuntu trusty main
+#deb http://extras.ubuntu.com/ubuntu trusty main
