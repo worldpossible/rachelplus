@@ -20,7 +20,7 @@ osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
 # To get current version - date +%Y%m%d.%H%M
-scriptVersion=20170508.2030
+scriptVersion=20170508.2221
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -154,7 +154,7 @@ opMode(){
             offlineVariables
             echo; printStatus "Here is list of your current partitions and their mountpoints (if applicable):"
             lsblk|grep -v mmc|grep -v sda
-            echo; printQuestion "What is the location of your content folder? "; read dirContentOffline
+            echo; printQuestion "What is the location of your content folder (for example, /media/usb)? "; read dirContentOffline
             grep -qs $dirContentOffline /proc/mounts
             if [[ $? != 0 ]]; then
                 echo; printError "The folder location does not exist!  Do you want to continue?"
@@ -1896,8 +1896,8 @@ echo; echo "[*] Add symlink for en-local_content."
 ln -s $rachelWWW/modules/en-local_content/rachel-index.php $rachelWWW/modules/en-local_content/index.htmlf
 echo; echo "[*] Add symlinks for .kalite admin directory."
 ln -s $rachelWWW/modules/en-kalite/content_khan_en.sqlite $rachelPartition/.kalite/content_khan_en.sqlite
-ln -s $rachelWWW/modules/en-kalite/content_khan_es.sqlite $rachelPartition/.kalite/content_khan_es.sqlite
-ln -s $rachelWWW/modules/en-kalite/content_khan_fr.sqlite $rachelPartition/.kalite/content_khan_fr.sqlite
+ln -s $rachelWWW/modules/es-kalite/content_khan_es.sqlite $rachelPartition/.kalite/content_khan_es.sqlite
+ln -s $rachelWWW/modules/fr-kalite/content_khan_fr.sqlite $rachelPartition/.kalite/content_khan_fr.sqlite
 # Update to the latest contentshell
 echo; echo "[*] Updating to latest contentshell."
 cd $dirContentOffline/contentshell
