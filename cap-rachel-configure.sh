@@ -1759,6 +1759,13 @@ repairBugs(){
     # Update KA Lite root directory location
     kaliteLocationUpdate
 
+    # Check soft links for kalite content files
+    rm $rachelPartition/.kalite/content_khan_es.sqlite
+    rm $rachelPartition/.kalite/content_khan_fr.sqlite
+    ln -s $rachelWWW/modules/en-kalite/content_khan_en.sqlite $rachelPartition/.kalite/content_khan_en.sqlite
+    ln -s $rachelWWW/modules/es-kalite/content_khan_es.sqlite $rachelPartition/.kalite/content_khan_es.sqlite
+    ln -s $rachelWWW/modules/fr-kalite/content_khan_fr.sqlite $rachelPartition/.kalite/content_khan_fr.sqlite
+
     # Add local content module
     echo; printStatus "Adding the local content module."
     rsync -avz $RSYNCDIR/rachelmods/en-local_content $rachelWWW/modules/
@@ -1885,16 +1892,12 @@ else
     cd precise
 fi
 dpkg -i *.deb
-# Install kalite sqlite database(s)
-#echo; echo "[*] If available, installing kalite sqlite databases."
-#if [[ -f $dirContentOffline/kalitedb/content_khan_en.sqlite ]]; then cp $dirContentOffline/kalitedb/content_khan_en.sqlite /root/.kalite/database/; fi
-#if [[ -f $dirContentOffline/kalitedb/content_khan_es.sqlite ]]; then cp $dirContentOffline/kalitedb/content_khan_es.sqlite /root/.kalite/database/; fi
-#if [[ -f $dirContentOffline/kalitedb/content_khan_fr.sqlite ]]; then cp $dirContentOffline/kalitedb/content_khan_fr.sqlite /root/.kalite/database/; fi
-#if [[ -f $dirContentOffline/kalitedb/data.sqlite ]]; then cp $dirContentOffline/kalitedb/data.sqlite /root/.kalite/database/; fi
 # Add symlinks - when running the Recovery USB, symlinks are not permitted on FAT partitions, so we have to create them after recovery runs
 echo; echo "[*] Add symlink for en-local_content."
 ln -s $rachelWWW/modules/en-local_content/rachel-index.php $rachelWWW/modules/en-local_content/index.htmlf
 echo; echo "[*] Add symlinks for .kalite admin directory."
+rm $rachelPartition/.kalite/content_khan_es.sqlite
+rm $rachelPartition/.kalite/content_khan_fr.sqlite
 ln -s $rachelWWW/modules/en-kalite/content_khan_en.sqlite $rachelPartition/.kalite/content_khan_en.sqlite
 ln -s $rachelWWW/modules/es-kalite/content_khan_es.sqlite $rachelPartition/.kalite/content_khan_es.sqlite
 ln -s $rachelWWW/modules/fr-kalite/content_khan_fr.sqlite $rachelPartition/.kalite/content_khan_fr.sqlite
