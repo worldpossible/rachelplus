@@ -20,7 +20,7 @@ osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
 # To get current version - date +%Y%m%d.%H%M
-scriptVersion=20170505.0030
+scriptVersion=20170508.2030
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -155,7 +155,8 @@ opMode(){
             echo; printStatus "Here is list of your current partitions and their mountpoints (if applicable):"
             lsblk|grep -v mmc|grep -v sda
             echo; printQuestion "What is the location of your content folder? "; read dirContentOffline
-            if [[ ! -d $dirContentOffline ]]; then
+            grep -qs $dirContentOffline /proc/mounts
+            if [[ $? != 0 ]]; then
                 echo; printError "The folder location does not exist!  Do you want to continue?"
                 read -p "    Enter (y/N) " REPLY
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -1045,7 +1046,7 @@ checkContentShell(){
     printGood "Done."
 }
 
-contentModuleInstall(){
+addModule(){
     if [[ -f /tmp/module.lst ]]; then
         echo; printStatus "Your selected module list:"
         # Sort/unique the module list
@@ -1092,31 +1093,54 @@ contentModuleInstall(){
     rm -f /tmp/module.lst
 }
 
-contentLanguageInstall(){
+addMultipleModules(){
     ## Add user input to languages they want to support
     echo; printStatus "The language install will install essential modules from the language(s) you choose."
     echo; printQuestion "What language content you would like to install:"
     echo "  - [English] - English content"
     echo "  - [Español] - Spanish content"
     echo "  - [Français] - French content"
+    echo "  - [Full-EN-ES-FR] - The core content in English, Español, and Français"
+    echo "  - [Justice] - Justice default content"
+    echo "  - [Justice-OYA] - Justice Oregon Youth Authority content"
+    echo "  - [Custom] - Your own custom list of modules (1 module name/line)"
     echo "  - [Exit] Install"
     echo
-    select menu in "English" "Español" "Français" "Exit"; do
+    select menu in "English-Core" "Español-Core" "Français-Core" "Full-EN-ES-FR" "Justice" "Justice-OYA" "Custom" "Exit"; do
         case $menu in
-        English) lang="en"; break ;;
-        Español)  lang="es"; break ;;
-        Français) lang="fr"; break ;;
-        Exit) lang="none"; break ;;
+        English-Core) option="en_plus.modules"; break ;;
+        Español-Core)  option="es_plus.modules"; break ;;
+        Français-Core) option="fr_plus.modules"; break ;;
+        Full-EN-ES-FR) option="full.modules"; break ;;
+        Justice) option="justice.modules"; break ;;
+        Justice-OYA) option="justice-oya.modules"; break ;;
+        Custom) option="custom"; break ;;
+        Exit) option="exit"; break ;;
         esac
     done
     # get content
-    if [[ $lang == "none" ]]; then printError "Exiting on user request."; break; fi
-    echo; printStatus "Installing/updating $lang content modules"
-    contentModuleListInstall $rachelWWW/scripts/"$lang"_plus.modules
-    commandStatus
-    # Since we are installing the entire language (which includes KA Lite); set the kaliteUpdate flag to install contentpack
-    touch $rachelPartition/kaliteUpdate
-    printGood "Done."
+    if [[ $option == "exit" ]]; then printError "Exiting on user request."; fi
+    if [[ $option == "custom" ]]; then
+        echo; printStatus "Here is list of your current partitions and their mountpoints (if applicable):"
+        lsblk|grep -v mmc|grep -v sda
+        echo; printQuestion "What is the full path to your custom module list file (example: /media/usb/customList.modules)?"; read option
+        grep -qs $option /proc/mounts
+        if [[ $? != 0 ]]; then
+            echo; printError "The folder location does not exist!  Try mounting a partition and trying again."
+        else
+            contentModuleListInstall $option
+            # Since we are installing the entire language (which includes KA Lite); set the kaliteUpdate flag to install contentpack
+            touch $rachelPartition/kaliteUpdate
+            printGood "Done."
+        fi
+    else
+        echo; printStatus "Installing/updating content from $option"
+        contentModuleListInstall $rachelWWW/scripts/"$option"
+        commandStatus
+        # Since we are installing the entire language (which includes KA Lite); set the kaliteUpdate flag to install contentpack
+        touch $rachelPartition/kaliteUpdate
+        printGood "Done."
+    fi
 }
 
 contentUpdate(){
@@ -2016,7 +2040,6 @@ contentModuleListInstall(){
         [[ -z $m ]] && continue    # skip blanks
         m=${m#"."}                 # remove leading dot (download but hidden (later))
         echo; printStatus "Downloading $m"
-
         # it is faster without zip unless we're going to dev
         # (i.e. LAN or USB)
         if [[ $RSYNCDIR == $rsyncOnline ]]; then
@@ -2024,14 +2047,12 @@ contentModuleListInstall(){
         else
             rsync -av --del $RSYNCDIR/rachelmods/$m $rachelWWW/modules/
         fi
-
         commandStatus
         printGood "Done."
     done < $1
 }
 
 buildRACHEL(){
-
     # figure out which language we're doing
     case $1 in
         "" )
@@ -2046,7 +2067,6 @@ buildRACHEL(){
             shift
             ;;
     esac
-
     # figure out which server we're doing
     case $1 in
         dev | "" )
@@ -2075,14 +2095,13 @@ buildRACHEL(){
             RSYNCDIR="rsync://$1"
             ;;
     esac
-
     echo; printStatus "Starting RACHEL build script"
     echo "Building CAP with file: $modulesFile"
     echo "Using rsync source: $RSYNCDIR"
 
     # fix known RACHEL bugs
-# jfield checked - none of this is needed after a Recovery USB method 3 (format)
-#    echo; repairBugs
+    # jfield checked - none of this is needed after a Recovery USB method 3 (format)
+    # echo; repairBugs
 
     echo; printStatus "Installing fresh contentshell"
     freshContentShell
@@ -2232,7 +2251,7 @@ uninstallESP(){
 whatToDo(){
     echo; printQuestion "What would you like to do next?"
     # echo "1)Base Install  2)Install/Upgrade KALite  3)Install Kiwix  4)Install Default Weaved Services  5)Install Weaved Service  6)Add Module  7)Add Language  8)Update Modules  9)Utilities  10)Exit"
-    echo "1)Base Install  2)Install/Upgrade KALite  3)Install Kiwix  4)Install ESP  5)Add Module  6)Add Language  7)Update Modules  8)Utilities  9)Exit"
+    echo "1)Base Install  2)Install/Upgrade KALite  3)Install Kiwix  4)Install ESP  5)Add Module  6)Add Multiple Modules  7)Update Modules  8)Utilities  9)Exit"
 }
 
 # Interactive mode menu
@@ -2245,7 +2264,7 @@ interactiveMode(){
     # echo "  - [Install-Weaved-Service] adds a Weaved service to an online account you provide during install"
     echo "  - [Install-ESP]"
     echo "  - [Add-Module] lists current available modules; installs one at a time"
-    echo "  - [Add-Language] installs all modules of a language (does not install KA Lite or full Wikipedia)"
+    echo "  - [Add-Multiple-Modules] installs groups of modules"
     echo "  - [Update-Modules] updates the currently installed modules"
     echo "  - Other [Utilities]"
     echo "    - Install a battery monitor that cleanly shuts down this device with less than 3% battery"
@@ -2259,8 +2278,7 @@ interactiveMode(){
     echo "    - Testing script"
     echo "  - [Exit] the installation script"
     echo
-    # select menu in "Initial-Install" "Install-Upgrade-KALite" "Install-Kiwix" "Install-Default-Weaved-Services" "Install-Weaved-Service" "Add-Module" "Add-Language" "Update-Modules" "Utilities" "Exit"; do
-    select menu in "Base-Install" "Install-Upgrade-KALite" "Install-Kiwix" "Install-ESP" "Add-Module" "Add-Language" "Update-Modules" "Utilities" "Exit"; do
+    select menu in "Base-Install" "Install-Upgrade-KALite" "Install-Kiwix" "Install-ESP" "Add-Module" "Add-Multiple-Modules" "Update-Modules" "Utilities" "Exit"; do
             case $menu in
             Base-Install)
             newInstall
@@ -2293,7 +2311,7 @@ interactiveMode(){
 
             Add-Module)
             updateModuleNames
-            contentModuleInstall
+            addModule
             kaliteCheckFiles
             # update rachelKiwixStart.sh
             createKiwixRepairScript
@@ -2302,11 +2320,11 @@ interactiveMode(){
             whatToDo
             ;;
 
-            Add-Language)
+            Add-Multiple-Modules)
             updateModuleNames
             # installPkgUpdates
             checkContentShell
-            contentLanguageInstall
+            addMultipleModules
             kaliteCheckFiles
             # update rachelKiwixStart.sh
             createKiwixRepairScript
