@@ -20,7 +20,7 @@ osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
 # To get current version - date +%Y%m%d.%H%M
-scriptVersion=20170508.2221
+scriptVersion=20170510.2341
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -36,9 +36,10 @@ kaliteUser="root"
 kaliteDir="/root/.kalite" # Installed as user 'root'
 kaliteContentDir="$rachelPartition/kacontent"
 kaliteMajorVersion="0.17"
-kaliteCurrentVersion="$kaliteMajorVersion.0-0ubuntu3"
+kaliteCurrentVersion="$kaliteMajorVersion.1-0ubuntu1"
 kaliteInstaller=ka-lite-bundle_"$kaliteCurrentVersion"_all.deb
 kalitePrimaryDownload="http://pantry.learningequality.org/downloads/ka-lite/$kaliteMajorVersion/installers/debian/$kaliteInstaller"
+kalitePrimaryContent="http://pantry.learningequality.org/downloads/ka-lite/$kaliteMajorVersion/content"
 kaliteSettings="$kaliteDir/settings.py"
 kiwixInstallerCAPv1="kiwix-0.9-linux-i686.tar.bz2"
 kiwixInstallerCAPv2="kiwix-0.9-linux-x86_64.tar.bz2"
@@ -55,11 +56,10 @@ errorCode="0"
 # MD5 hash list
 buildHashList(){
     cat > $installTmpDir/hashes.md5 << 'EOF'
+d17736647f2d94f7c7dd428d19a64237 ka-lite-bundle_0.17.1-0ubuntu1_all.deb
 ef4e2741b145a21179eed83867cb531a ka-lite-bundle_0.17.0-0ubuntu1_all.deb
 13c447a2e78ad67a06caaded00d01701 ka-lite-bundle_0.17.0-0ubuntu2_all.deb
 34fb1b8df07db49de04bc5faaae6497d ka-lite-bundle_0.17.0-0ubuntu3_all.deb
-619248e8838e21c28b97f1e33b230436 ka-lite-bundle_0.16.9-0ubuntu2_all.deb
-1768a68a0b09089a5b72abf8377d6865 ka-lite-bundle_0.16.9-0ubuntu3_all.deb
 b61fdc3937aa226f34f685ba0bc29db1 kiwix-0.9-linux-i686.tar.bz2
 df6216ba851819d9c3d0208d3ea639df kiwix-0.9-linux-x86_64.tar.bz2
 EOF
@@ -219,12 +219,6 @@ capCheck(){
 
 onlineVariables(){
     GPGKEY="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys "
-    # GPGKEY1="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 40976EAF437D05B5"
-    # GPGKEY2="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 16126D3A3E5C1192"
-    # GPGKEY3="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DF9B28CA252A784"
-    # GPGKEY4="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 1655A0AB68576280"
-    # GPGKEY5="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 1397BC53640DB551"
-    # GPGKEY6="apt-key adv --keyserver keyserver.ubuntu.com --recv-keys A040830F7FAC5991"
     SOURCEUS="wget -r $gitRachelPlus/sources.list/$osName/sources-us.list -O /etc/apt/sources.list"
     SOURCEUK="wget -r $gitRachelPlus/sources.list/$osName/sources-uk.list -O /etc/apt/sources.list"
     SOURCESG="wget -r $gitRachelPlus/sources.list/$osName/sources-sg.list -O /etc/apt/sources.list"
@@ -242,8 +236,7 @@ onlineVariables(){
     RSYNCDIR="$rsyncOnline"
     KACONTENTFOLDER=""
     KALITEINSTALL="wget -c $kalitePrimaryDownload -O $installTmpDir/$kaliteInstaller"
-    # Pull from KA Lite directly rather than from our server   
-    # KALITEINSTALL="rsync -avhz --progress $contentOnline/$kaliteInstaller $installTmpDir/$kaliteInstaller"
+    KALITECONTENT="wget -c $kalitePrimaryContent"
     KALITECONTENTINSTALL="rsync -avhz --progress $contentOnline/kacontent/ /media/RACHEL/kacontent/"
     KIWIXINSTALL="wget -c $wgetOnline/downloads/public_ftp/old/z-holding/$KiwixInstaller -O $rachelTmpDir/$KiwixInstaller"
     WEAVEDINSTALL="wget -c https://github.com/weaved/installer/raw/master/Intel_CAP/weaved_IntelCAP.tar -O $rachelScriptsDir/weaved_IntelCAP.tar"
@@ -257,8 +250,6 @@ onlineVariables(){
 
 offlineVariables(){
     GPGKEY="apt-key add $dirContentOffline/rachelplus/gpg-keys/"
-    # GPGKEY2="apt-key add $dirContentOffline/rachelplus/gpg-keys/3E5C1192"
-    # GPGKEY3="apt-key add $dirContentOffline/rachelplus/gpg-keys/A252A784"
     SOURCEUS="rsync -avhz --progress $dirContentOffline/rachelplus/sources.list/$osName/sources-us.list /etc/apt/sources.list"
     SOURCEUK="rsync -avhz --progress $dirContentOffline/rachelplus/sources.list/$osName/sources-uk.list /etc/apt/sources.list"
     SOURCESG="rsync -avhz --progress $dirContentOffline/rachelplus/sources.list/$osName/sources-sg.list /etc/apt/sources.list"
@@ -274,9 +265,9 @@ offlineVariables(){
     WORLDPOSSIBLEBRANDLOGOCAPTIVE="rsync -avhz --progress $dirContentOffline/contentshell/art/World-Possible-Logo-300x120.png ."
     GITCLONERACHELCONTENTSHELL=""
     RSYNCDIR="$dirContentOffline"
-#    ASSESSMENTITEMSJSON="rsync -avhz --progress $dirContentOffline/rachelplus/assessmentitems.json /var/ka-lite/data/khan/assessmentitems.json"
     KACONTENTFOLDER="$dirContentOffline/kacontent"
     KALITEINSTALL="rsync -avhz --progress $dirContentOffline/$kaliteInstaller $installTmpDir/$kaliteInstaller"
+    KALITECONTENT="wget -c $dirContentOffline"
     KALITECONTENTINSTALL="rsync -avhz --progress $dirContentOffline/kacontent/ /media/RACHEL/kacontent/"
     KIWIXINSTALL=""
     WEAVEDINSTALL=""
@@ -1219,6 +1210,9 @@ kaliteInstall(){
     $KALITEINSTALL
     # Checking user provided file MD5 against known good version
     checkMD5 $installTmpDir/$kaliteInstaller
+    # Download contentpacks
+    echo; printStatus "Downloading KA Lite contentpack(s)"
+    downloadKAContentPacks
     # !!! Need to add offline method
 #    # Fix for 0.6.8-0.6.9v1 versions of KA Lite
 #    apt-get install python-pip
@@ -1251,7 +1245,6 @@ kaliteInstall(){
 
 kaliteSetup(){
     echo; printStatus "Setting up KA Lite."
-
     # Determine version of KA Lite --> kaliteVersionDate (0=No KA LITE, 1=Version prior to 0.15, 2=Version greater than/equal to 0.15)
     if [[ -f /var/ka-lite/kalite/local_settings.py ]]; then
         kaliteVersion=$(/var/ka-lite/bin/kalite manage --version)
@@ -1339,10 +1332,11 @@ kaliteCheckFiles(){
     # check/install kalite content packs (this covers subtitles)
     if [[ -f $rachelPartition/kaliteUpdate ]]; then
         echo; printStatus "Installing content packs"
-        for i in `ls $rachelWWW/modules/*-kalite/*-contentpack.zip`; do
-            if [[ $i =~ ([a-z]{2})-contentpack.zip ]]; then
+        # Install new format contentpacks
+        for i in `ls $rachelWWW/modules/*-kalite/*.zip`; do
+            if [[ $i =~ ([a-z]{2}).zip ]]; then
                 thislang=${BASH_REMATCH[1]}
-                kalite manage retrievecontentpack local $thislang $rachelWWW/modules/"$thislang"-kalite/"$thislang"-contentpack.zip
+                kalite manage retrievecontentpack local $thislang $rachelWWW/modules/"$thislang"-kalite/"$thislang".zip
             fi
         done
         rm -f $rachelPartition/kaliteUpdate
@@ -1374,15 +1368,15 @@ downloadKAContent(){
     select menu in "English" "Español" "Français" "Skip"; do
         case $menu in
         English)
-            lang="en-kalite"
+            lang="en"
             break
         ;;
         Español)
-            lang="es-kalite"
+            lang="es"
             break
         ;;
         Français)
-            lang="fr-kalite"
+            lang="fr"
             break
         ;;
         Skip)
@@ -1393,11 +1387,28 @@ downloadKAContent(){
     done
     if [[ ! -z $lang ]]; then
         echo; printStatus "Downloading KA Lite content from $RSYNCDIR"
-        rsync -Pavz --include *.mp4 --exclude assessment --exclude locale $RSYNCDIR/rachelmods/$lang/content/ $kaliteContentDir
+        rsync -Pavz --include *.mp4 --exclude assessment --exclude locale $RSYNCDIR/rachelmods/$lang-kalite/content/ /media/RACHEL/rachel/modules/$lang-kalite/content
+        echo; printStatus "Downloading KA Lite contentpack"
+        $KALITECONTENT/contentpacks/$lang.zip -O /media/RACHEL/rachel/modules/$lang-kalite/$lang.zip
     fi
     touch $rachelPartition/kaliteUpdate
     kaliteCheckFiles
     commandStatus
+    printGood "Done."
+}
+
+downloadKAContentPacks(){
+    echo; printStatus "Downloading contentpacks for KA Lite installed languages."
+    for i in `ls $rachelWWW/modules/*-kalite/rachel-index.php`; do
+        if [[ $i =~ ([a-z]{2})-kalite ]]; then
+            thislang=${BASH_REMATCH[1]}
+            echo; printStatus "Downloading KA Lite contentpack"
+            $KALITECONTENT/contentpacks/$thislang.zip -O $rachelWWW/modules/$thislang-kalite/$thislang.zip
+        fi
+        commandStatus
+        rm $rachelWWW/modules/$thislang-kalite/$thislang-contentpack.zip 2>/dev/null
+        ln -s $rachelWWW/modules/$thislang-kalite/$thislang.zip $rachelWWW/modules/$thislang-kalite/$thislang-contentpack.zip 2>/dev/null
+    done
     printGood "Done."
 }
 
@@ -1765,6 +1776,8 @@ repairBugs(){
     ln -s $rachelWWW/modules/en-kalite/content_khan_en.sqlite $rachelPartition/.kalite/content_khan_en.sqlite
     ln -s $rachelWWW/modules/es-kalite/content_khan_es.sqlite $rachelPartition/.kalite/content_khan_es.sqlite
     ln -s $rachelWWW/modules/fr-kalite/content_khan_fr.sqlite $rachelPartition/.kalite/content_khan_fr.sqlite
+    touch $rachelPartition/kaliteUpdate
+    kaliteCheckFiles
 
     # Add local content module
     echo; printStatus "Adding the local content module."
@@ -2354,9 +2367,7 @@ interactiveMode(){
             echo "  - [Disable-Wifi] disables the wifi instantly AND persistently on reboot"
             echo "  - [Disable-Reset-Button] removes the ability to reset the device by use of the reset button"
             echo "  - [Download-OFFLINE-Content] to stage for OFFLINE (i.e. local) RACHEL installs"
-            # echo "  - [Backup-Weaved-Services] backs up configs and restores them if they are not found on boot"
-            # echo "  - [Uninstall-Weaved-Service] removes Weaved services, one at a time"
-            # echo "  - [Uninstall-ALL-Weaved-Services] removes ALL Weaved services"
+            echo "  - [Download-KA-Contentpacks] to download & install KA Lite contentpacks"
             echo "  - [Uninstall-ESP] removes ESP service"
             echo "  - [Update-Content-Shell] updates the RACHEL contentshell from GitHub"
             echo "  - [Repair-Kiwix-Library] rebuilds the Kiwix Library"
@@ -2369,8 +2380,7 @@ interactiveMode(){
             echo "  - [Testing] script"
             echo "  - Return to [Main Menu]"
             echo
-            # select util in "Install-Battery-Watcher" "Enable-Wifi" "Disable-Wifi" "Disable-Reset-Button" "Download-OFFLINE-Content" "Backup-Weaved-Services" "Uninstall-Weaved-Service" "Uninstall-ALL-Weaved-Services" "Update-Content-Shell" "Repair-Kiwix-Library" "Repair-Firmware" "Repair-KA-Lite" "Repair-Bugs" "Sanitize" "Change-Package-Repo" "Check-MD5" "Test" "Main-Menu"; do
-            select util in "Install-Battery-Watcher" "Enable-Wifi" "Disable-Wifi" "Disable-Reset-Button" "Download-OFFLINE-Content" "Uninstall-ESP" "Update-Content-Shell" "Repair-Kiwix-Library" "Repair-Firmware" "Repair-KA-Lite" "Repair-Bugs" "Sanitize" "Change-Package-Repo" "Check-MD5" "Test" "Main-Menu"; do
+            select util in "Install-Battery-Watcher" "Enable-Wifi" "Disable-Wifi" "Disable-Reset-Button" "Download-OFFLINE-Content" "Download-KA-Contentpacks" "Uninstall-ESP" "Update-Content-Shell" "Repair-Kiwix-Library" "Repair-Firmware" "Repair-KA-Lite" "Repair-Bugs" "Sanitize" "Change-Package-Repo" "Check-MD5" "Test" "Main-Menu"; do
                 case $util in
                     Install-Battery-Watcher)
                     installBatteryWatch
@@ -2397,6 +2407,12 @@ interactiveMode(){
 
                     Download-OFFLINE-Content)
                     downloadOfflineContent
+                    break
+                    ;;
+
+                    Download-KA-Contentpacks)
+                    downloadKAContentPacks
+                    kaliteCheckFiles
                     break
                     ;;
 
