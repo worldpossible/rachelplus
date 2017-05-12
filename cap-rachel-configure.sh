@@ -20,7 +20,7 @@ osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
 # To get current version - date +%Y%m%d.%H%M
-scriptVersion=20170510.2341
+scriptVersion=20170511.2106
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -155,7 +155,7 @@ opMode(){
             echo; printStatus "Here is list of your current partitions and their mountpoints (if applicable):"
             lsblk|grep -v mmc|grep -v sda
             echo; printQuestion "What is the location of your content folder (for example, /media/usb)? "; read dirContentOffline
-            grep -qs $dirContentOffline /proc/mounts
+            grep -qs " $dirContentOffline " /proc/mounts
             if [[ $? != 0 ]]; then
                 echo; printError "The folder location does not exist!  Do you want to continue?"
                 read -p "    Enter (y/N) " REPLY
@@ -2074,7 +2074,7 @@ buildRACHEL(){
         "" )
             echo "Usage: bash "`basename $0`" .modules_file [ rsync source ]"
             echo "       .modules files in $rachelWWW/scripts or current directory ("`pwd`")"
-            echo "       rsync source: dev, jeremy, jfield, actual hostname/ip, OR usb"
+            echo "       rsync source: dev, jeremy, jfield, usb, OR actual hostname/ip"
             exit 1
             ;;
         * )
@@ -2097,14 +2097,17 @@ buildRACHEL(){
             RSYNCDIR="rsync://192.168.1.6"
             ;;
         usb )
+            echo; printStatus "Here is list of your current partitions and their mountpoints (if applicable):"
+            lsblk|grep -v mmc|grep -v sda
             echo; printQuestion "What is the location of your content folder (for example, /media/usb)? "; read dirContentOffline
-            if [[ ! -d $dirContentOffline ]]; then
-                echo; printError "The folder location does not exist!  Sorry, ensure the usb drive is mounted (type 'df -h')"
+            grep -qs " $dirContentOffline " /proc/mounts
+            if [[ $? != 0 ]]; then
+                echo; printError "The folder location does not exist!  Connect a USB drive and try again."
                 rm -rf $installTmpDir $rachelTmpDir
                 exit 1
             fi
             offlineVariables
-            RSYNCDIR="$1"
+            RSYNCDIR="$dirContentOffline"
             ;;
         * )
             offlineVariables
