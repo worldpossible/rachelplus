@@ -20,7 +20,7 @@ osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
 # To get current version - date +%Y%m%d.%H%M
-scriptVersion=20170511.2106
+scriptVersion=20170512.0020
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -239,9 +239,6 @@ onlineVariables(){
     KALITECONTENT="wget -c $kalitePrimaryContent"
     KALITECONTENTINSTALL="rsync -avhz --progress $contentOnline/kacontent/ /media/RACHEL/kacontent/"
     KIWIXINSTALL="wget -c $wgetOnline/downloads/public_ftp/old/z-holding/$KiwixInstaller -O $rachelTmpDir/$KiwixInstaller"
-    WEAVEDINSTALL="wget -c https://github.com/weaved/installer/raw/master/Intel_CAP/weaved_IntelCAP.tar -O $rachelScriptsDir/weaved_IntelCAP.tar"
-    WEAVEDSINGLEINSTALL="wget -c https://github.com/weaved/installer/raw/master/weaved_software/installer.sh -O $rachelScriptsDir/weaved_software/installer.sh"
-    WEAVEDUNINSTALLER="wget -c https://github.com/weaved/installer/raw/master/weaved_software/uninstaller.sh -O $rachelScriptsDir/weaved_software/uninstaller.sh"
     DOWNLOADCONTENTSCRIPT="wget -c $gitRachelPlus/scripts"
     CONTENTWIKI="wget -c http://download.kiwix.org/portable/wikipedia/$FILENAME -O $rachelTmpDir/$FILENAME"
     DOWNLOADSCRIPT="wget $gitRachelPlus/cap-rachel-configure.sh -O $installTmpDir/cap-rachel-configure.sh"
@@ -270,9 +267,6 @@ offlineVariables(){
     KALITECONTENT="wget -c $dirContentOffline"
     KALITECONTENTINSTALL="rsync -avhz --progress $dirContentOffline/kacontent/ /media/RACHEL/kacontent/"
     KIWIXINSTALL=""
-    WEAVEDINSTALL=""
-    WEAVEDSINGLEINSTALL=""
-    WEAVEDUNINSTALLER=""
     DOWNLOADCONTENTSCRIPT="rsync -avhz --progress $dirContentOffline/rachelplus/scripts"
     CONTENTWIKIALL=""
     DOWNLOADSCRIPT="rsync -avhz --progress $dirContentOffline/cap-rachel-configure.sh /root/cap-rachel-configure.sh"
@@ -374,16 +368,15 @@ sanitize(){
     rm -rf /recovery/20* $rachelRecoveryDir/20*
     # Clean bash history
     echo "" > /root/.bash_history
-    echo; printQuestion "Do you want to remove any currently activated Weaved services and run the default Weaved setup?"
-    echo "If you enter 'y', we will install the staged default Weaved services for ports 22, 80, and 8080."
+    echo; printQuestion "Do you want to remove any currently activated Weaved services and run the ESP installer?"
     read -p "    Enter (y/N) " REPLY
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         # Remove previous Weaved installs
         rm -rf /usr/bin/notify_Weaved*.sh /usr/bin/Weaved*.sh /etc/weaved/services/Weaved*.conf /root/Weaved*.log
-        # Install default weaved services
-        installDefaultWeavedServices
+        # Install ESP
+        installESP
     fi
-    echo; printGood "All ready for a customer; register Weaved services, if needed."
+    echo; printGood "All cleaned up for the customer."
 }
 
 installKiwix(){
@@ -477,170 +470,6 @@ EOF
     printGood "Done."
 }
 
-installDefaultWeavedServices(){
-    weavedSoftware="/root/rachel-scripts/weaved_software"
-    echo; printStatus "Installing Weaved service."
-    cd $rachelScriptsDir
-    # Download weaved files
-    echo; printStatus "Downloading required files."
-    $WEAVEDINSTALL
-    commandStatus
-    tar xvf weaved_IntelCAP.tar
-    commandStatus
-    if [[ $errorCode == 0 ]] && [[ -d $rachelScriptsDir/weaved_software ]]; then
-        rm -f $rachelScriptsDir/weaved_IntelCAP.tar
-        echo; printGood "Done."
-        # Run installer for port 22 - sets the alias to 0-xxxx (where xxxx is the last four of the MAC)
-        cd $rachelScriptsDir/weaved_software
-        wget -c https://raw.githubusercontent.com/rachelproject/rachelplus/master/scripts/auto-installer.sh -O $weavedSoftware/auto-installer.sh
-        if [[ ! -f $weavedSoftware/auto-installer.conf ]]; then 
-            printError "MISSING FILE:  You need to create the file $weavedSoftware/auto-installer.conf"
-            echo "Create the file and add the following lines to it:"
-            echo "USERNAME='Weaved-website-username'"
-            echo "PASSWD='Weaved-website-password'"
-            exit
-        fi
-        bash $weavedSoftware/auto-installer.sh 
-        echo; printGood "Weaved service install complete."
-        echo "NOTE: A Weaved service uninstaller is available from the Utilities menu of this script."
-        # Remove config file
-        rm -f $rachelScriptsDir/weaved_software/auto-installer.conf
-    else
-        echo; printError "One or more files did not download correctly; check log file ($rachelLog) and try again."
-        echo; exit 1
-    fi
-}
-
-installWeavedService(){
-    if [[ $internet == "0" ]]; then
-        echo; printError "The CAP must be online to install/remove Weaved services."
-    else
-        echo; printStatus "Installing Weaved service."
-        cd $rachelScriptsDir
-
-        # Download weaved files
-        echo; printStatus "Downloading required files."
-        $WEAVEDSINGLEINSTALL
-        commandStatus
-
-        if [[ $errorCode == 0 ]] && [[ -f $rachelScriptsDir/weaved_software/installer.sh ]]; then
-            # Fix OS Arch check in installer.sh
-            sed -i 's/\[ "$machineType" = "x86_64" \] && \[ "$osName" = "Linux" \]/\[ "$osName" = "Linux" \]/g' $rachelScriptsDir/weaved_software/installer.sh
-            sed -i 's/\.\/bin/\./g' $rachelScriptsDir/weaved_software/installer.sh
-            # Download required files
-            mkdir -p $rachelScriptsDir/weaved_software/enablements
-            wget -c https://github.com/weaved/installer/raw/master/weaved_software/enablements/ssh.linux -O $rachelScriptsDir/weaved_software/enablements/ssh.linux
-            wget -c https://github.com/weaved/installer/raw/master/weaved_software/enablements/tcp.linux -O $rachelScriptsDir/weaved_software/enablements/tcp.linux
-            wget -c https://github.com/weaved/installer/raw/master/weaved_software/enablements/vnc.linux -O $rachelScriptsDir/weaved_software/enablements/vnc.linux
-            wget -c https://github.com/weaved/installer/raw/master/weaved_software/enablements/web.linux -O $rachelScriptsDir/weaved_software/enablements/web.linux
-            wget -c https://github.com/weaved/installer/raw/master/weaved_software/enablements/webssh.linux -O $rachelScriptsDir/weaved_software/enablements/webssh.linux
-            wget -c https://github.com/weaved/installer/raw/master/weaved_software/enablements/webport.pi -O $rachelScriptsDir/weaved_software/enablements/webport.pi
-            wget -c https://github.com/weaved/installer/raw/master/weaved_software/enablements/webiopi.pi -O $rachelScriptsDir/weaved_software/enablements/webiopi.pi
-            wget -c https://github.com/weaved/installer/raw/master/weaved_software/Yo -O $rachelScriptsDir/weaved_software/Yo
-            wget -c https://github.com/weaved/installer/raw/master/weaved_software/scripts/notify.sh -O $rachelScriptsDir/weaved_software/notify.sh
-            wget -c https://github.com/weaved/installer/raw/master/weaved_software/scripts/send_notification.sh -O $rachelScriptsDir/weaved_software/send_notification.sh
-            chmod +x $rachelScriptsDir/weaved_software/*.sh $rachelScriptsDir/weaved_software/Yo
-            sed -i 's|/scripts||g' $rachelScriptsDir/weaved_software/installer.sh
-            echo; printGood "Done."
-            # Run installer
-            cd $rachelScriptsDir/weaved_software
-            bash installer.sh
-
-            echo; printGood "Weaved service install complete."
-            printGood "NOTE: An Weaved service uninstaller is available from the Utilities menu of this script."
-        else
-            echo; printError "One or more files did not download correctly; check log file ($rachelLog) and try again."
-            cleanup
-            echo; exit 1
-        fi
-    fi
-}
-
-uninstallAllWeavedServices(){
-    echo; printStatus "Uninstalling Weaved service."
-
-    TMP_DIR=/tmp
-    # Stop all Weaved services
-    for i in `ls /usr/bin/Weaved*.sh`; do
-        $i stop
-    done
-
-    # Remove Weaved files
-    rm /usr/bin/weaved*
-    rm /usr/bin/Weaved*
-    rm -rf /etc/weaved
-
-    # Remove Weaved from crontab
-    crontab -l | grep -v weaved | cat > $TMP_DIR/.crontmp
-    crontab $TMP_DIR/.crontmp
-
-    # Ensure user knows to remove from online service list
-    echo; printStatus "If you uninstalled Weaved connectd without deleting Services first,"
-    echo "there may be orphaned Services in your Services List.  Use the "
-    echo "'Settings' link in the web portal Services List to delete these."
-
-    echo; printGood "Weaved service uninstall complete."
-}
-
-
-uninstallWeavedService(){
-    weavedUninstaller(){
-        bash $rachelScriptsDir/weaved_software/uninstaller.sh
-        echo; printGood "Weaved service uninstall complete."
-    }
-    echo; printStatus "Uninstalling Weaved service."
-    cd $rachelScriptsDir
-    # Run uninstaller
-    if [[ -f $rachelScriptsDir/weaved_software/uninstaller.sh ]]; then 
-        weavedUninstaller
-    else
-        printError "The Weaved uninstaller does not exist. Attempting to download..."
-        if [[ $internet == "1" ]]; then
-            $WEAVEDUNINSTALLER
-            commandStatus
-            if [[ $errorCode == 0 ]] && [[ -f $rachelScriptsDir/weaved_software/uninstaller.sh ]]; then
-                weavedUninstaller
-            else
-                printError "Download failed; check log file ($rachelLog) and try again."
-            fi
-        else
-            printError "No internet connection; I can not download the uninstaller."
-            echo "    Connect the CAP to the internet and try the uninstaller again."
-        fi
-    fi
-}
-
-backupWeavedService(){
-    # Clear current configs
-    stty sane
-    if [[ `find /etc/weaved/services/ -name 'Weaved*.conf' 2>/dev/null | wc -l` -ge 1 ]]; then
-        echo; printStatus "Backing up configuration files to $rachelRecoveryDir/weaved"
-        rm -rf $rachelRecoveryDir/Weaved
-        mkdir -p $rachelRecoveryDir/Weaved
-        # Backup Weaved configs
-        cp -f /etc/weaved/services/Weaved*.conf /usr/bin/Weaved*.sh /usr/bin/notify_Weaved*.sh $rachelRecoveryDir/Weaved/ 2>/dev/null
-        printGood "Your current configuration is backed up and will be restored if you have to run the USB Recovery."
-    elif [[ ! -d /etc/weaved ]]; then
-        # Weaved is no longer installed, remove all backups
-        rm -rf $rachelRecoveryDir/Weaved
-    else
-        echo; printError "You do not have any Weaved configuration files to backup."
-    fi
-    # Add Weaved restore back into rachel-scripts.sh
-    # Clean rachel-scripts.sh
-    sed -i '/Weaved/d' $rachelScriptsFile
-    # Write restore commands to rachel-scripts.sh
-    sudo sed -i '5 a # Restore Weaved configs, if needed' $rachelScriptsFile
-    sudo sed -i '6 a echo \$(date) - Checking Weaved install' $rachelScriptsFile
-    sudo sed -i '7 a if [[ -d '$rachelRecoveryDir'/Weaved ]] && [[ `ls /usr/bin/Weaved*.sh 2>/dev/null | wc -l` == 0 ]]; then' $rachelScriptsFile
-    sudo sed -i '8 a echo \$(date) - Weaved backup files found but not installed, recovering now' $rachelScriptsFile
-    sudo sed -i '9 a mkdir -p /etc/weaved/services #Weaved' $rachelScriptsFile
-    sudo sed -i '10 a cp '$rachelRecoveryDir'/Weaved/Weaved*.conf /etc/weaved/services/' $rachelScriptsFile
-    sudo sed -i '11 a cp '$rachelRecoveryDir'/Weaved/*.sh /usr/bin/' $rachelScriptsFile
-    sudo sed -i '12 a reboot #Weaved' $rachelScriptsFile
-    sudo sed -i '13 a fi #Weaved' $rachelScriptsFile
-}
-
 downloadOfflineContent(){
     # Check for internet
     if [[ $internet == 0 ]]; then echo; printError "You need to be online to download/update your OFFLINE content."; break; fi
@@ -722,33 +551,33 @@ downloadOfflineContent(){
     commandStatus
     printGood "Done."
 
-    # Downloading deb packages
-    echo; printStatus "Downloading/updating debian packages."
-    if [[ $osName="precise" ]]; then
-        apt-get update; apt-get -y install python-software-properties; apt-add-repository -y ppa:relan/exfat
-    fi
-    mkdir -p $dirContentOffline/offlinepkgs/precise $dirContentOffline/offlinepkgs/trusty
-    # Download trusty packages
-    cd $dirContentOffline/offlinepkgs
-    osName="trusty"
-    wget -r $gitRachelPlus/sources.list/$osName/sources-us.list -O /etc/apt/sources.list
-    apt-get update
-    rm -f trusty/*.deb
-    downloadPackages
-    commandStatus
-    # Download precise packages
-    cd $dirContentOffline/offlinepkgs
-    osName="precise"
-    wget -r $gitRachelPlus/sources.list/$osName/sources-us.list -O /etc/apt/sources.list
-    apt-get update
-    rm -f precise/*.deb
-    downloadPackages
-    commandStatus
-    printGood "Done."
-    # Put things back
-    capCheck
-    $SOURCEUS
-    apt-get update
+    # Downloading deb packages # Not installing anymore
+    # echo; printStatus "Downloading/updating debian packages."
+    # if [[ $osName="precise" ]]; then
+    #     apt-get update; apt-get -y install python-software-properties; apt-add-repository -y ppa:relan/exfat
+    # fi
+    # mkdir -p $dirContentOffline/offlinepkgs/precise $dirContentOffline/offlinepkgs/trusty
+    # # Download trusty packages
+    # cd $dirContentOffline/offlinepkgs
+    # osName="trusty"
+    # wget -r $gitRachelPlus/sources.list/$osName/sources-us.list -O /etc/apt/sources.list
+    # apt-get update
+    # rm -f trusty/*.deb
+    # downloadPackages
+    # commandStatus
+    # # Download precise packages
+    # cd $dirContentOffline/offlinepkgs
+    # osName="precise"
+    # wget -r $gitRachelPlus/sources.list/$osName/sources-us.list -O /etc/apt/sources.list
+    # apt-get update
+    # rm -f precise/*.deb
+    # downloadPackages
+    # commandStatus
+    # printGood "Done."
+    # # Put things back
+    # capCheck
+    # $SOURCEUS
+    # apt-get update
 
     # Downloading Stem module
     echo; printStatus "Downloading stem module."
@@ -768,6 +597,7 @@ downloadOfflineContent(){
     echo "  - [Français] - French content"
     echo "  - [Português] - Portuguese content"
     echo "  - [Hindi] - Hindi content"
+    echo "  - [None] - Continue without content"
     echo
     select menu in "Arabic" "Deutsch" "English" "Español" "Français" "Português" "Hindi" "None"; do
         case $menu in
@@ -1149,7 +979,7 @@ contentUpdate(){
     done <<< "$MODULELIST"
 }
 
-kaliteRemove(){
+removeKALite(){
     # Removing old version
     echo; printStatus "Cleaning any previous KA Lite installation files."
     if [[ $kaliteVersionDate == 1 ]]; then
@@ -1204,15 +1034,12 @@ kaliteLocationUpdate(){
     fi
 }
 
-kaliteInstall(){
+installKALite(){
     # Downloading KA Lite
     echo; printStatus "Downloading KA Lite Version $kaliteCurrentVersion"
     $KALITEINSTALL
     # Checking user provided file MD5 against known good version
     checkMD5 $installTmpDir/$kaliteInstaller
-    # Download contentpacks
-    echo; printStatus "Downloading KA Lite contentpack(s)"
-    downloadKAContentPacks
     # !!! Need to add offline method
 #    # Fix for 0.6.8-0.6.9v1 versions of KA Lite
 #    apt-get install python-pip
@@ -1254,9 +1081,9 @@ kaliteSetup(){
         read -p "    Enter (y/N) " REPLY
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             # Remove previous KA Lite
-            kaliteRemove
+            removeKALite
             # Install KA Lite
-            kaliteInstall
+            installKALite
         else
             printStatus "Skipping install."
         fi
@@ -1272,7 +1099,7 @@ kaliteSetup(){
         read -p "Enter (y/N) " REPLY
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             # Install KA Lite
-            kaliteInstall
+            installKALite
         fi
     else
         echo; printStatus "It doesn't look like KA Lite is installed; installing now."
@@ -1280,9 +1107,9 @@ kaliteSetup(){
         kaliteUser="root"
         kaliteVersionDate=0
         # Remove previous KA Lite
-        kaliteRemove
+        removeKALite
         # Install KA Lite
-        kaliteInstall
+        installKALite
     fi
 
     # For debug purposes, print ka-lite user
@@ -1298,6 +1125,10 @@ kaliteSetup(){
     # Install module for RACHEL index.php
     echo; printStatus "Syncing RACHEL web interface 'KA Lite module'."
     rsync -avz --delete-after $RSYNCDIR/rachelmods/en-kalite $rachelWWW/modules/
+
+    # Download contentpacks
+    echo; printStatus "Downloading KA Lite contentpack(s)"
+    downloadKAContentPacks
 
     # Symlink the KA Lite database and video files
     kaliteCheckFiles
@@ -1406,6 +1237,10 @@ downloadKAContentPacks(){
             $KALITECONTENT/contentpacks/$thislang.zip -O $rachelWWW/modules/$thislang-kalite/$thislang.zip
         fi
         commandStatus
+        # Soft link kalite sqlite language files
+        rm $rachelPartition/.kalite/content_khan_$thislang.sqlite
+        ln -s $rachelWWW/modules/$thislang-kalite/content_khan_$thislang.sqlite $rachelPartition/.kalite/content_khan_$thislang.sqlite
+        # Soft link old contentpack name to new
         rm $rachelWWW/modules/$thislang-kalite/$thislang-contentpack.zip 2>/dev/null
         ln -s $rachelWWW/modules/$thislang-kalite/$thislang.zip $rachelWWW/modules/$thislang-kalite/$thislang-contentpack.zip 2>/dev/null
     done
@@ -1633,20 +1468,6 @@ EOF
         sudo sed -i '$e echo "sudo /usr/bin/kalite start"' $rachelScriptsFile
         printGood "Done."
     fi
-
-    # # Add Weaved restore back into rachel-scripts.sh
-    # # Clean rachel-scripts.sh
-    # sed -i '/Weaved/d' $rachelScriptsFile
-    # # Write restore commands to rachel-scripts.sh
-    # sudo sed -i '10 a # Restore Weaved configs, if needed' $rachelScriptsFile
-    # sudo sed -i '11 a echo \$(date) - Checking Weaved install' $rachelScriptsFile
-    # sudo sed -i '12 a if [[ -d '$rachelRecoveryDir'/Weaved ]] && [[ `ls /usr/bin/Weaved*.sh 2>/dev/null | wc -l` == 0 ]]; then' $rachelScriptsFile
-    # sudo sed -i '13 a echo \$(date) - Weaved backup files found but not installed, recovering now' $rachelScriptsFile
-    # sudo sed -i '14 a mkdir -p /etc/weaved/services #Weaved' $rachelScriptsFile
-    # sudo sed -i '15 a cp '$rachelRecoveryDir'/Weaved/Weaved*.conf /etc/weaved/services/' $rachelScriptsFile
-    # sudo sed -i '16 a cp '$rachelRecoveryDir'/Weaved/*.sh /usr/bin/' $rachelScriptsFile
-    # sudo sed -i '17 a reboot #Weaved' $rachelScriptsFile
-    # sudo sed -i '18 a fi #Weaved' $rachelScriptsFile
 
     # Add battery monitoring start line 
     if [[ -f $rachelScriptsDir/batteryWatcher.sh ]]; then
@@ -2044,10 +1865,10 @@ updateRachelFolders(){
     if [[ -f /root/createUSB.sh ]]; then mv /root/createUSB.sh $rachelScriptsDir/; fi
     # Move gpt.backup
     if [[ -f /root/gpt.backup ]]; then mv /root/gpt.backup $rachelScriptsDir/; fi
-    # Move weaved folder
-    if [[ -d /root/weaved_software ]]; then mv /root/weaved_software $rachelScriptsDir/; fi
     # Move rachelKiwixStart script
     if [[ -f /root/rachelKiwixStart.sh ]]; then mv /root/rachelKiwixStart.sh $rachelScriptsDir/; fi
+    # Remove weaved folder
+    rm -rf /root/weaved_software $rachelScriptsDir/weaved_software 
 }
 
 contentModuleListInstall(){
@@ -2269,7 +2090,6 @@ uninstallESP(){
 # Loop to redisplay main menu
 whatToDo(){
     echo; printQuestion "What would you like to do next?"
-    # echo "1)Base Install  2)Install/Upgrade KALite  3)Install Kiwix  4)Install Default Weaved Services  5)Install Weaved Service  6)Add Module  7)Add Language  8)Update Modules  9)Utilities  10)Exit"
     echo "1)Base Install  2)Install/Upgrade KALite  3)Install Kiwix  4)Install ESP  5)Add Module  6)Add Multiple Modules  7)Update Modules  8)Utilities  9)Exit"
 }
 
@@ -2279,8 +2099,6 @@ interactiveMode(){
     echo "  - [Base-Install] of RACHEL on a raw CAP (completely erases any content)"
     echo "  - [Install-Upgrade-KALite]"
     echo "  - [Install-Kiwix]"
-    # echo "  - [Install-Default-Weaved-Services] installs the default CAP Weaved services for ports 22, 80, 8080"
-    # echo "  - [Install-Weaved-Service] adds a Weaved service to an online account you provide during install"
     echo "  - [Install-ESP]"
     echo "  - [Add-Module] lists current available modules; installs one at a time"
     echo "  - [Add-Multiple-Modules] installs groups of modules"
@@ -2288,7 +2106,6 @@ interactiveMode(){
     echo "  - Other [Utilities]"
     echo "    - Install a battery monitor that cleanly shuts down this device with less than 3% battery"
     echo "    - Download RACHEL content to stage for OFFLINE installs"
-    echo "    - Backup or Uninstall Weaved services"
     echo "    - Repair an install of a CAP after a firmware upgrade"
     echo "    - Repair a KA Lite assessment file location"
     echo "    - Repairs of general bug fixes"
