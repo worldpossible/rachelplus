@@ -1716,25 +1716,25 @@ echo; echo "[*] Copying USB version of cap-rachel-configure.sh to /root"
 cp $rachelPartition/cap-rachel-configure.sh /root/
 chmod +x /root/cap-rachel-configure.sh
 # Install OS updates (some needed for the new contentshell)
-echo; echo "[*] Installing OS updates."
-cd $dirContentOffline/offlinepkgs
-if [[ $osName == "precise" ]]; then
-    cd precise
-elif [[ $osName == "trusty" ]]; then
-    cd trusty
-else
-    cd precise
-fi
-dpkg -i *.deb
+# echo; echo "[*] Installing OS updates."
+# cd $dirContentOffline/offlinepkgs
+# if [[ $osName == "precise" ]]; then
+#     cd precise
+# elif [[ $osName == "trusty" ]]; then
+#     cd trusty
+# else
+#     cd precise
+# fi
+# dpkg -i *.deb
 # Add symlinks - when running the Recovery USB, symlinks are not permitted on FAT partitions, so we have to create them after recovery runs
 echo; echo "[*] Add symlink for en-local_content."
-ln -s $rachelWWW/modules/en-local_content/rachel-index.php $rachelWWW/modules/en-local_content/index.htmlf
+ln -s $rachelWWW/modules/en-local_content/rachel-index.php $rachelWWW/modules/en-local_content/index.htmlf 2>/dev/null
 echo; echo "[*] Add symlinks for .kalite admin directory."
-rm $rachelPartition/.kalite/content_khan_es.sqlite
-rm $rachelPartition/.kalite/content_khan_fr.sqlite
-ln -s $rachelWWW/modules/en-kalite/content_khan_en.sqlite $rachelPartition/.kalite/content_khan_en.sqlite
-ln -s $rachelWWW/modules/es-kalite/content_khan_es.sqlite $rachelPartition/.kalite/content_khan_es.sqlite
-ln -s $rachelWWW/modules/fr-kalite/content_khan_fr.sqlite $rachelPartition/.kalite/content_khan_fr.sqlite
+rm -f $rachelPartition/.kalite/content_khan_es.sqlite
+rm -f $rachelPartition/.kalite/content_khan_fr.sqlite
+ln -s $rachelWWW/modules/en-kalite/content_khan_en.sqlite $rachelPartition/.kalite/content_khan_en.sqlite 2>/dev/null
+ln -s $rachelWWW/modules/es-kalite/content_khan_es.sqlite $rachelPartition/.kalite/content_khan_es.sqlite 2>/dev/null
+ln -s $rachelWWW/modules/fr-kalite/content_khan_fr.sqlite $rachelPartition/.kalite/content_khan_fr.sqlite 2>/dev/null
 # Update to the latest contentshell
 echo; echo "[*] Updating to latest contentshell."
 cd $dirContentOffline/contentshell
