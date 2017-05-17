@@ -20,7 +20,7 @@ osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
 # To get current version - date +%Y%m%d.%H%M
-scriptVersion=20170516.2001
+scriptVersion=20170516.2153
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -1150,6 +1150,7 @@ kaliteCheckFiles(){
     mkdir /media/RACHEL/kacontent
     # clear out old database files
     rm -rf /root/.kalite/database/content_khan_*.sqlite
+    rm -rf /root/.kalite/content_khan_*.sqlite
     # check/install kalite content packs (this covers subtitles)
     if [[ -f $rachelPartition/kaliteUpdate ]]; then
         echo; printStatus "Installing content packs"
@@ -1231,10 +1232,11 @@ downloadKAContentPacks(){
         fi
         commandStatus
         # Soft link kalite sqlite language files
-        rm $rachelPartition/.kalite/content_khan_$lang.sqlite
-        ln -s $rachelWWW/modules/$lang-kalite/content_khan_$lang.sqlite $rachelPartition/.kalite/content_khan_$lang.sqlite
+        rm -f $kaliteDir/content_khan_$lang.sqlite
+        rm -f $kaliteDir/database/content_khan_$lang.sqlite
+        ln -s $rachelWWW/modules/$lang-kalite/content_khan_$lang.sqlite $kaliteDir/database/content_khan_$lang.sqlite
         # Soft link old contentpack name to new
-        rm $rachelWWW/modules/$lang-kalite/$lang-contentpack.zip 2>/dev/null
+        rm -f $rachelWWW/modules/$lang-kalite/$lang-contentpack.zip 2>/dev/null
         ln -s $rachelWWW/modules/$lang-kalite/$lang.zip $rachelWWW/modules/$lang-kalite/$lang-contentpack.zip 2>/dev/null
     done
     touch $rachelPartition/kaliteUpdate
@@ -1595,11 +1597,11 @@ repairBugs(){
     kaliteLocationUpdate
 
     # Check soft links for kalite content files
-    rm $rachelPartition/.kalite/content_khan_es.sqlite
-    rm $rachelPartition/.kalite/content_khan_fr.sqlite
-    ln -s $rachelWWW/modules/en-kalite/content_khan_en.sqlite $rachelPartition/.kalite/content_khan_en.sqlite
-    ln -s $rachelWWW/modules/es-kalite/content_khan_es.sqlite $rachelPartition/.kalite/content_khan_es.sqlite
-    ln -s $rachelWWW/modules/fr-kalite/content_khan_fr.sqlite $rachelPartition/.kalite/content_khan_fr.sqlite
+    rm -f $kaliteDir/content_khan_*.sqlite
+    rm -f $kaliteDir/database/content_khan_*.sqlite
+    ln -s $rachelWWW/modules/en-kalite/content_khan_en.sqlite $kaliteDir/database/content_khan_en.sqlite 2>/dev/null
+    ln -s $rachelWWW/modules/es-kalite/content_khan_es.sqlite $kaliteDir/database/content_khan_es.sqlite 2>/dev/null
+    ln -s $rachelWWW/modules/fr-kalite/content_khan_fr.sqlite $kaliteDir/database/content_khan_fr.sqlite 2>/dev/null
     touch $rachelPartition/kaliteUpdate
     kaliteCheckFiles
 
@@ -1733,11 +1735,11 @@ chmod +x /root/cap-rachel-configure.sh
 echo; echo "[*] Add symlink for en-local_content."
 ln -s $rachelWWW/modules/en-local_content/rachel-index.php $rachelWWW/modules/en-local_content/index.htmlf 2>/dev/null
 echo; echo "[*] Add symlinks for .kalite admin directory."
-rm -f $rachelPartition/.kalite/content_khan_es.sqlite
-rm -f $rachelPartition/.kalite/content_khan_fr.sqlite
-ln -s $rachelWWW/modules/en-kalite/content_khan_en.sqlite $rachelPartition/.kalite/content_khan_en.sqlite 2>/dev/null
-ln -s $rachelWWW/modules/es-kalite/content_khan_es.sqlite $rachelPartition/.kalite/content_khan_es.sqlite 2>/dev/null
-ln -s $rachelWWW/modules/fr-kalite/content_khan_fr.sqlite $rachelPartition/.kalite/content_khan_fr.sqlite 2>/dev/null
+rm -f $kaliteDir/content_khan_*.sqlite
+rm -f $kaliteDir/database/content_khan_*.sqlite
+ln -s $rachelWWW/modules/en-kalite/content_khan_en.sqlite $kaliteDir/database/content_khan_en.sqlite 2>/dev/null
+ln -s $rachelWWW/modules/es-kalite/content_khan_es.sqlite $kaliteDir/database/content_khan_es.sqlite 2>/dev/null
+ln -s $rachelWWW/modules/fr-kalite/content_khan_fr.sqlite $kaliteDir/database/content_khan_fr.sqlite 2>/dev/null
 # Update to the latest contentshell
 echo; echo "[*] Updating to latest contentshell."
 cd $dirContentOffline/contentshell
