@@ -20,7 +20,7 @@ osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
 # To get current version - date +%Y%m%d.%H%M
-scriptVersion=20170512.0020
+scriptVersion=20170516.2001
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -234,10 +234,7 @@ onlineVariables(){
     WORLDPOSSIBLEBRANDLOGOCAPTIVE="wget -r $gitContentShell/art/World-Possible-Logo-300x120.png -O World-Possible-Logo-300x120.png"
     GITCLONERACHELCONTENTSHELL="git clone https://github.com/rachelproject/contentshell contentshell"
     RSYNCDIR="$rsyncOnline"
-    KACONTENTFOLDER=""
     KALITEINSTALL="wget -c $kalitePrimaryDownload -O $installTmpDir/$kaliteInstaller"
-    KALITECONTENT="wget -c $kalitePrimaryContent"
-    KALITECONTENTINSTALL="rsync -avhz --progress $contentOnline/kacontent/ /media/RACHEL/kacontent/"
     KIWIXINSTALL="wget -c $wgetOnline/downloads/public_ftp/old/z-holding/$KiwixInstaller -O $rachelTmpDir/$KiwixInstaller"
     DOWNLOADCONTENTSCRIPT="wget -c $gitRachelPlus/scripts"
     CONTENTWIKI="wget -c http://download.kiwix.org/portable/wikipedia/$FILENAME -O $rachelTmpDir/$FILENAME"
@@ -262,10 +259,7 @@ offlineVariables(){
     WORLDPOSSIBLEBRANDLOGOCAPTIVE="rsync -avhz --progress $dirContentOffline/contentshell/art/World-Possible-Logo-300x120.png ."
     GITCLONERACHELCONTENTSHELL=""
     RSYNCDIR="$dirContentOffline"
-    KACONTENTFOLDER="$dirContentOffline/kacontent"
     KALITEINSTALL="rsync -avhz --progress $dirContentOffline/$kaliteInstaller $installTmpDir/$kaliteInstaller"
-    KALITECONTENT="wget -c $dirContentOffline"
-    KALITECONTENTINSTALL="rsync -avhz --progress $dirContentOffline/kacontent/ /media/RACHEL/kacontent/"
     KIWIXINSTALL=""
     DOWNLOADCONTENTSCRIPT="rsync -avhz --progress $dirContentOffline/rachelplus/scripts"
     CONTENTWIKIALL=""
@@ -905,7 +899,7 @@ addModule(){
             rsync -avz --delete-after $RSYNCDIR/rachelmods/$m $rachelWWW/modules/
             commandStatus
             # If KA Lite module, than set the kaliteUpdate "flag" to install the contentpack
-            if [[ $m == *kalite ]]; then
+            if [[ $m == *-kalite ]]; then
                 touch $rachelPartition/kaliteUpdate
             fi
             printGood "Done."
@@ -972,7 +966,7 @@ contentUpdate(){
         rsync -rltzuv --delete-after --exclude-from "$rachelScriptsDir/rsyncExclude.list" $RSYNCDIR/rachelmods/$module $rachelWWW/modules/
         commandStatus
         # If KA Lite module, than set the kaliteUpdate "flag" to install the contentpack
-        if [[ $module == *kalite ]]; then
+        if [[ $module == *-kalite ]]; then
             touch $rachelPartition/kaliteUpdate
         fi
         printGood "Done."
@@ -1112,22 +1106,18 @@ kaliteSetup(){
         installKALite
     fi
 
-    # For debug purposes, print ka-lite user
-    echo; printStatus "KA Lite is installed as user:  $(cat /etc/ka-lite/username)"
-
     # Configure ka-lite
-    echo; printStatus "Configuring KA Lite content settings file:  $kaliteSettings"
-    printStatus "KA Lite content directory being set to:  $kaliteContentDir"
+    echo; printStatus "KA Lite content settings file:  $kaliteSettings"
+    printStatus "KA Lite content directory:  $kaliteContentDir"
     sed -i '/^CONTENT_ROOT/d' $kaliteSettings
     sed -i '/^DATABASES/d' $kaliteSettings
     echo 'CONTENT_ROOT = "/media/RACHEL/kacontent"' >> $kaliteSettings
 
     # Install module for RACHEL index.php
-    echo; printStatus "Syncing RACHEL web interface 'KA Lite module'."
+    echo; printStatus "Syncing English KA Lite RACHEL module"
     rsync -avz --delete-after $RSYNCDIR/rachelmods/en-kalite $rachelWWW/modules/
 
     # Download contentpacks
-    echo; printStatus "Downloading KA Lite contentpack(s)"
     downloadKAContentPacks
 
     # Symlink the KA Lite database and video files
@@ -1164,10 +1154,10 @@ kaliteCheckFiles(){
     if [[ -f $rachelPartition/kaliteUpdate ]]; then
         echo; printStatus "Installing content packs"
         # Install new format contentpacks
-        for i in `ls $rachelWWW/modules/*-kalite/*.zip`; do
+        for i in `ls -1 --hide=*-contentpack.zip $rachelWWW/modules/*-kalite/`; do
             if [[ $i =~ ([a-z]{2}).zip ]]; then
-                thislang=${BASH_REMATCH[1]}
-                kalite manage retrievecontentpack local $thislang $rachelWWW/modules/"$thislang"-kalite/"$thislang".zip
+                lang=${BASH_REMATCH[1]}
+                kalite manage retrievecontentpack local $lang $rachelWWW/modules/"$lang"-kalite/"$lang".zip
             fi
         done
         rm -f $rachelPartition/kaliteUpdate
@@ -1184,6 +1174,10 @@ kaliteCheckFiles(){
     # Update KA Lite version
     dpkg -s ka-lite-bundle | grep ^Version | cut -d" " -f2 > /etc/kalite-version
     printGood "Done."
+}
+
+kaliteDiagnostic(){
+    kalite diagnose; echo
 }
 
 downloadKAContent(){
@@ -1219,8 +1213,8 @@ downloadKAContent(){
     if [[ ! -z $lang ]]; then
         echo; printStatus "Downloading KA Lite content from $RSYNCDIR"
         rsync -Pavz --include *.mp4 --exclude assessment --exclude locale $RSYNCDIR/rachelmods/$lang-kalite/content/ /media/RACHEL/rachel/modules/$lang-kalite/content
-        echo; printStatus "Downloading KA Lite contentpack"
-        $KALITECONTENT/contentpacks/$lang.zip -O /media/RACHEL/rachel/modules/$lang-kalite/$lang.zip
+        # echo; printStatus "Downloading KA Lite contentpack"
+        # rsync -Pavz $RSYNCDIR/rachelmods/$lang-kalite/$lang.zip /media/RACHEL/rachel/modules/$lang-kalite/$lang.zip
     fi
     touch $rachelPartition/kaliteUpdate
     kaliteCheckFiles
@@ -1229,21 +1223,21 @@ downloadKAContent(){
 }
 
 downloadKAContentPacks(){
-    echo; printStatus "Downloading contentpacks for KA Lite installed languages."
     for i in `ls $rachelWWW/modules/*-kalite/rachel-index.php`; do
         if [[ $i =~ ([a-z]{2})-kalite ]]; then
-            thislang=${BASH_REMATCH[1]}
-            echo; printStatus "Downloading KA Lite contentpack"
-            $KALITECONTENT/contentpacks/$thislang.zip -O $rachelWWW/modules/$thislang-kalite/$thislang.zip
+            lang=${BASH_REMATCH[1]}
+            echo; printStatus "Downloading KA Lite contentpack: $lang"
+            rsync -Pavz $RSYNCDIR/rachelmods/$lang-kalite/$lang.zip /media/RACHEL/rachel/modules/$lang-kalite/$lang.zip
         fi
         commandStatus
         # Soft link kalite sqlite language files
-        rm $rachelPartition/.kalite/content_khan_$thislang.sqlite
-        ln -s $rachelWWW/modules/$thislang-kalite/content_khan_$thislang.sqlite $rachelPartition/.kalite/content_khan_$thislang.sqlite
+        rm $rachelPartition/.kalite/content_khan_$lang.sqlite
+        ln -s $rachelWWW/modules/$lang-kalite/content_khan_$lang.sqlite $rachelPartition/.kalite/content_khan_$lang.sqlite
         # Soft link old contentpack name to new
-        rm $rachelWWW/modules/$thislang-kalite/$thislang-contentpack.zip 2>/dev/null
-        ln -s $rachelWWW/modules/$thislang-kalite/$thislang.zip $rachelWWW/modules/$thislang-kalite/$thislang-contentpack.zip 2>/dev/null
+        rm $rachelWWW/modules/$lang-kalite/$lang-contentpack.zip 2>/dev/null
+        ln -s $rachelWWW/modules/$lang-kalite/$lang.zip $rachelWWW/modules/$lang-kalite/$lang-contentpack.zip 2>/dev/null
     done
+    touch $rachelPartition/kaliteUpdate
     printGood "Done."
 }
 
@@ -1491,6 +1485,15 @@ EOF
         sed -i '$e echo "\# Updating the Kiwix library"' $rachelScriptsFile
         sed -i '$e echo "echo \\$(date) - Updating the Kiwix Library"' $rachelScriptsFile
         sed -i '$e echo "bash '$rachelScriptsDir'/rachelKiwixStart.sh"' $rachelScriptsFile
+        printGood "Done."
+    fi
+
+    # Check/enable ESP module
+    if [[ -f $rachelScriptsDir/checker.php ]]; then
+        echo; printStatus "Add ESP startup code"
+        sed -i '$e echo "# start rachel-esp checker"' $rachelScriptsFile
+        sed -i '$e echo "echo \\$(date) - Starting checker.php for rachel-esp"' $rachelScriptsFile
+        sed -i '$e echo "service esp start"' $rachelScriptsFile
         printGood "Done."
     fi
 
@@ -1779,6 +1782,7 @@ if [[ ! -L /root/.kalite ]]; then
 else
     echo; "[+] .kalite directory is located on the hard disk"
 fi
+#kalite start; kalite stop; kalite start
 # Update Kiwix version
 cat /var/kiwix/application.ini | grep ^Version | cut -d= -f2 > /etc/kiwix-version
 # Update KA Lite version
@@ -2122,7 +2126,6 @@ interactiveMode(){
 
             Install-Upgrade-KALite)
             kaliteSetup
-#            downloadKAContent
             echo; printGood "Login using wifi at http://192.168.88.1:8008 and register device."
             echo "After you register, click the new tab called 'Manage', then 'Videos' and download all the missing videos."
             repairRachelScripts
@@ -2190,9 +2193,10 @@ interactiveMode(){
             echo "  - [Download-KA-Contentpacks] to download & install KA Lite contentpacks"
             echo "  - [Uninstall-ESP] removes ESP service"
             echo "  - [Update-Content-Shell] updates the RACHEL contentshell from GitHub"
+            echo "  - [KA-Lite-Diagnostics] displays diangostic info on the KA Lite install"
+            echo "  - [Repair-KA-Lite] repairs KA Lite's mislocation of the assessment file; runs 'kalite manage setup' as well"
             echo "  - [Repair-Kiwix-Library] rebuilds the Kiwix Library"
             echo "  - [Repair-Firmware] repairs an install of a CAP after a firmware upgrade"
-            echo "  - [Repair-KA-Lite] repairs KA Lite's mislocation of the assessment file; runs 'kalite manage setup' as well"
             echo "  - [Repair-Bugs] provides general bug fixes (run when requested)"
             echo "  - [Sanitize] and prepare CAP for delivery to customer"
             echo "  - [Change-Package-Repo] allows you to change where in the world your packages are pulled from"
@@ -2200,7 +2204,7 @@ interactiveMode(){
             echo "  - [Testing] script"
             echo "  - Return to [Main Menu]"
             echo
-            select util in "Install-Battery-Watcher" "Enable-Wifi" "Disable-Wifi" "Disable-Reset-Button" "Download-OFFLINE-Content" "Download-KA-Contentpacks" "Uninstall-ESP" "Update-Content-Shell" "Repair-Kiwix-Library" "Repair-Firmware" "Repair-KA-Lite" "Repair-Bugs" "Sanitize" "Change-Package-Repo" "Check-MD5" "Test" "Main-Menu"; do
+            select util in "Install-Battery-Watcher" "Enable-Wifi" "Disable-Wifi" "Disable-Reset-Button" "Download-OFFLINE-Content" "Download-KA-Contentpacks" "Uninstall-ESP" "Update-Content-Shell" "KA-Lite-Diagnostics" "Repair-KA-Lite" "Repair-Kiwix-Library" "Repair-Firmware" "Repair-Bugs" "Sanitize" "Change-Package-Repo" "Check-MD5" "Test" "Main-Menu"; do
                 case $util in
                     Install-Battery-Watcher)
                     installBatteryWatch
@@ -2248,6 +2252,16 @@ interactiveMode(){
                     break
                     ;;
 
+                    KA-Lite-Diagnostics)
+                    kaliteDiagnostic
+                    break
+                    ;;
+
+                    Repair-KA-Lite)
+                    repairKalite
+                    break
+                    ;;
+
                     Repair-Kiwix-Library)
                     # update rachelKiwixStart.sh
                     createKiwixRepairScript
@@ -2258,11 +2272,6 @@ interactiveMode(){
 
                     Repair-Firmware)
                     repairFirmware
-                    break
-                    ;;
-
-                    Repair-KA-Lite)
-                    repairKalite
                     break
                     ;;
 
