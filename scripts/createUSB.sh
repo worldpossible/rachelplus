@@ -19,7 +19,7 @@ printQuestion(){
 	echo -e "\x1B[01;33m[?]\x1B[0m $1"
 }
 
-version=1.11.0
+version=2.0.0
 timestamp=$(date +"%Y%m%d.%H%M")
 usbDate=$(date +"%Y%m%d")
 imageSavePath="$HOME"
@@ -66,10 +66,7 @@ identifySavePath(){
 }
 
 identifyUSBVersion(){
-	# Identify the device name # OUTDATED
-	# echo; printQuestion "What will be the version number for the RACHEL Recovery USB?"
-	# echo "Normally, we use [date in format yyyymmdd]...for example, 20170122"
-	# echo "Enter the version number: "; read usbVersion
+    usbVersion=$usbDate
 	if [[ $os == "cap_v1" ]]; then 
         imageName="CAPv1_RACHEL_Recovery_USB_$usbDate.img"
 	elif [[ $os == "cap_v2" ]]; then
@@ -93,7 +90,7 @@ identifyUSBVersion(){
 identifyDeviceNum(){
 	# Identify the device name
 	if [[ $os == "linux" ]] || [[ $os == "cap_v1" ]] || [[ $os == "cap_v2" ]]; then
-		fdisk -l
+		lsblk|grep -v mmc|grep -v sda
 		echo; printQuestion "What is the device name that you want to image (for /dev/sdb, enter 'sdb')? "; read diskNum
 		usbDeviceName="/dev/$diskNum"
 	elif [[ $os == "osx" ]]; then
@@ -251,6 +248,17 @@ setUSBCreationDate(){
 	awk 'BEGIN{OFS=FS="\""} $1~/^usbCreated=/ {$2="'$timestamp'";}1' $mountName/update.sh > update.tmp; mv update.tmp update.sh
 }
 
+setFirmwareVersion(){
+	echo; printStatus "Setting the CAP firmware version."
+	if ! grep -q ^firmwareVersion= $mountName/update.sh; then
+		sed -i '33 a firmwareVersion=""' $mountName/update.sh
+	fi
+	echo; printQuestion "What version of Intel firmware is installed on the base OS?"
+	echo "Normally, we use Intel versioning...for example, 1.2.16 or 2.2.10"
+	echo "Enter the firmware version: "; read firmwareCode
+	awk 'BEGIN{OFS=FS="\""} $1~/^firmwareVersion=/ {$2="'$firmwareCode'";}1' $mountName/update.sh > update.tmp; mv update.tmp update.sh
+}
+
 setRecoveryMETHOD(){
 	echo; printStatus "Setting the recovery method to '1' for the default recovery method."
 	awk 'BEGIN{OFS=FS="\""} $1~/method=/ {$2="1";}1' $mountName/update.sh > update.tmp; mv update.tmp update.sh
@@ -314,7 +322,7 @@ compressHashUSBImage(){
 	cd $imageSavePath
 	# Compress the .img file (should reduce the image from 3.76GB to about 2.1GB)
 	echo; printStatus "Compressing .img file (on RACHEL-Plus CAP = ~14min)."
-	echo "Running cmd:  zip -9 -o $imageName.zip $imageName"
+	echo "Running cmd:  zip -9 -y -r -q -o $imageName.zip $imageName"
 	time zip -9 -y -r -q -o $imageName.zip $imageName
 
 	# MD5 hash the files
@@ -325,7 +333,7 @@ compressHashUSBImage(){
 		md5app=md5
 	fi
 	echo "Running cmd:  $md5app $imageName $imageName.zip"
-	time $md5app $imageName $imageName.zip | tee -a $imageName.zip.md5
+	time $md5app $imageName $imageName.zip | tee $imageName.zip.md5
 }
 
 ##### MAIN PROGRAM
@@ -351,6 +359,7 @@ buildUSBImage
 removeOSXJunk
 setUSBVersion
 setUSBCreationDate
+setFirmwareVersion
 setRecoveryMETHOD
 addDefaultModules
 updateVersionNums
