@@ -20,7 +20,7 @@ osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
 # To get current version - date +%Y%m%d.%H%M
-scriptVersion=20170516.2153
+scriptVersion=20170516.2339
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -129,7 +129,7 @@ cleanup(){
 testingScript(){
     set -x
 
-    newInstall
+    repairRachelScripts
 
     set +x
     exit 1
@@ -544,34 +544,6 @@ downloadOfflineContent(){
     wget -c $wgetOnline/downloads/public_ftp/old/z-holding/$KiwixInstaller -O $dirContentOffline/$KiwixInstaller
     commandStatus
     printGood "Done."
-
-    # Downloading deb packages # Not installing anymore
-    # echo; printStatus "Downloading/updating debian packages."
-    # if [[ $osName="precise" ]]; then
-    #     apt-get update; apt-get -y install python-software-properties; apt-add-repository -y ppa:relan/exfat
-    # fi
-    # mkdir -p $dirContentOffline/offlinepkgs/precise $dirContentOffline/offlinepkgs/trusty
-    # # Download trusty packages
-    # cd $dirContentOffline/offlinepkgs
-    # osName="trusty"
-    # wget -r $gitRachelPlus/sources.list/$osName/sources-us.list -O /etc/apt/sources.list
-    # apt-get update
-    # rm -f trusty/*.deb
-    # downloadPackages
-    # commandStatus
-    # # Download precise packages
-    # cd $dirContentOffline/offlinepkgs
-    # osName="precise"
-    # wget -r $gitRachelPlus/sources.list/$osName/sources-us.list -O /etc/apt/sources.list
-    # apt-get update
-    # rm -f precise/*.deb
-    # downloadPackages
-    # commandStatus
-    # printGood "Done."
-    # # Put things back
-    # capCheck
-    # $SOURCEUS
-    # apt-get update
 
     # Downloading Stem module
     echo; printStatus "Downloading stem module."
@@ -1143,7 +1115,7 @@ kaliteSetup(){
 kaliteCheckFiles(){
     # Stopping KA Lite
     echo; printStatus "Stopping kalite"
-    kalite stop
+    sudo kalite stop
     # clear out possible old videos taking up space
     echo; printStatus "Clearing old video content"
     rm -rf /media/RACHEL/kacontent
@@ -1171,7 +1143,7 @@ kaliteCheckFiles(){
     echo; printStatus "Symlinking all KA database module files to the actual KA Lite database folder."
     find $rachelWWW/modules/*-kalite -name "*.sqlite" -exec ln -sf {} /root/.kalite/database/ \;
     # Starting KA Lite
-    echo; kalite start
+    echo; sudo kalite start
     # Update KA Lite version
     dpkg -s ka-lite-bundle | grep ^Version | cut -d" " -f2 > /etc/kalite-version
     printGood "Done."
@@ -1448,23 +1420,6 @@ EOF
         printGood "Done."
     fi
 
-    if [[ -d $kaliteDir ]]; then
-        # Delete previous setup commands from /etc/rc.local (not used anymore)
-        sudo sed -i '/ka-lite/d' /etc/rc.local
-        sudo sed -i '/sleep/d' /etc/rc.local
-        # Delete previous setup commands from the $rachelScriptsFile
-        sudo sed -i '/ka-lite/d' $rachelScriptsFile
-        sudo sed -i '/kalite/d' $rachelScriptsFile
-        sudo sed -i '/sleep/d' $rachelScriptsFile
-        echo; printStatus "Setting up KA Lite to start at boot..."
-        # Start KA Lite at boot time
-        sudo sed -i '$e echo "# Start kalite at boot time"' $rachelScriptsFile
-        sed -i '$e echo "echo \\$(date) - Starting kalite"' $rachelScriptsFile
-        sudo sed -i '$e echo "sleep 5 #kalite"' $rachelScriptsFile
-        sudo sed -i '$e echo "sudo /usr/bin/kalite start"' $rachelScriptsFile
-        printGood "Done."
-    fi
-
     # Add battery monitoring start line 
     if [[ -f $rachelScriptsDir/batteryWatcher.sh ]]; then
         # Clean rachel-scripts.sh
@@ -1505,6 +1460,24 @@ EOF
     sed -i '$e echo "echo \\$(date) - Checking if we should disable wifi"' $rachelScriptsFile
     sed -i '$e echo "if [[ -f '$rachelScriptsDir'/disable_wifi ]]; then sleep 5; ifconfig wlan0 down; echo \\"Wifi disabled\\"; fi"' $rachelScriptsFile
     printGood "Done."
+
+    # Check for KA Lite module
+    if [[ -d $kaliteDir ]]; then
+        # Delete previous setup commands from /etc/rc.local (not used anymore)
+        sudo sed -i '/ka-lite/d' /etc/rc.local
+        sudo sed -i '/sleep/d' /etc/rc.local
+        # Delete previous setup commands from the $rachelScriptsFile
+        sudo sed -i '/ka-lite/d' $rachelScriptsFile
+        sudo sed -i '/kalite/d' $rachelScriptsFile
+        sudo sed -i '/sleep/d' $rachelScriptsFile
+        echo; printStatus "Setting up KA Lite to start at boot..."
+        # Start KA Lite at boot time
+        sudo sed -i '$e echo "# Start kalite at boot time"' $rachelScriptsFile
+        sed -i '$e echo "echo \\$(date) - Starting kalite"' $rachelScriptsFile
+        sudo sed -i '$e echo "sleep 15 #kalite"' $rachelScriptsFile
+        sudo sed -i '$e echo "service ka-lite start #kalite"' $rachelScriptsFile
+        printGood "Done."
+    fi
 
     # Add RACHEL script complete line
     sed -i '$e echo "echo \\$(date) - RACHEL startup completed"' $rachelScriptsFile
@@ -1621,7 +1594,7 @@ repairBugs(){
     # restart kiwix
     /root/rachel-scripts/rachelKiwixStart.sh
 
-    # Fixing issue with 10.10.10.10 redirect and sleep times
+    # Rebuild rachelStartup.sh file
     repairRachelScripts
 
     # There is one miconfigured index.htmlf that needs to be fixed on the harddrive
@@ -1706,43 +1679,23 @@ usbRecovery(){
     # Add runonce.sh script that will run on reboot
     sed "s,%dirContentOffline%,$dirContentOffline,g;s,%rachelWWW%,$rachelWWW,g;s,%stemPkg%,$stemPkg,g;s,%gitContentShellCommit%,$gitContentShellCommit,g;s,%rachelLogDir%,$rachelLogDir,g;s,%rachelLogFile%,$rachelLogFile,g;s,%rachelPartition%,$rachelPartition,g" > $rachelPartition/runonce.sh << 'EOF'
 #!/bin/bash
-rachelPartition="%rachelPartition%"
-dirContentOffline="%rachelPartition%"
-rachelWWW="%rachelWWW%"
-stemPkg="%stemPkg%"
-gitContentShellCommit="%gitContentShellCommit%"
-rachelLogDir="%rachelLogDir%"
-rachelLogFile="%rachelLogFile%"
-rachelLog="$rachelLogDir/$rachelLogFile"
+. /media/RACHEL/cap-rachel-configure.sh --source-only
 exec 1>> $rachelLog 2>&1
 echo "[+] Starting USB Recovery runonce script - $(date)"
+# Run rachel startup script repair
+repairRachelScripts
+# Run kalite check
+kaliteCheckFiles
 # Copy latest cap-rachel-configure.sh script to /root
 echo; echo "[*] Copying USB version of cap-rachel-configure.sh to /root"
 cp $rachelPartition/cap-rachel-configure.sh /root/
 chmod +x /root/cap-rachel-configure.sh
-# Install OS updates (some needed for the new contentshell)
-# echo; echo "[*] Installing OS updates."
-# cd $dirContentOffline/offlinepkgs
-# if [[ $osName == "precise" ]]; then
-#     cd precise
-# elif [[ $osName == "trusty" ]]; then
-#     cd trusty
-# else
-#     cd precise
-# fi
-# dpkg -i *.deb
 # Add symlinks - when running the Recovery USB, symlinks are not permitted on FAT partitions, so we have to create them after recovery runs
-echo; echo "[*] Add symlink for en-local_content."
+echo; echo "[+] Add symlink for en-local_content."
 ln -s $rachelWWW/modules/en-local_content/rachel-index.php $rachelWWW/modules/en-local_content/index.htmlf 2>/dev/null
-echo; echo "[*] Add symlinks for .kalite admin directory."
-rm -f $kaliteDir/content_khan_*.sqlite
-rm -f $kaliteDir/database/content_khan_*.sqlite
-ln -s $rachelWWW/modules/en-kalite/content_khan_en.sqlite $kaliteDir/database/content_khan_en.sqlite 2>/dev/null
-ln -s $rachelWWW/modules/es-kalite/content_khan_es.sqlite $kaliteDir/database/content_khan_es.sqlite 2>/dev/null
-ln -s $rachelWWW/modules/fr-kalite/content_khan_fr.sqlite $kaliteDir/database/content_khan_fr.sqlite 2>/dev/null
 # Update to the latest contentshell
-echo; echo "[*] Updating to latest contentshell."
-cd $dirContentOffline/contentshell
+echo; echo "[+] Updating to latest contentshell."
+cd $rachelPartition/contentshell
 cp -rf ./* $rachelWWW/ # overwrite current content with contentshell
 cp -rf ./.git $rachelWWW/ # copy over GitHub files
 mv /etc/init/procps.conf /etc/init/procps.conf.old 2>/dev/null # otherwise quite a pkgs won't install
@@ -1750,8 +1703,8 @@ rm -f $rachelWWW/en_all.sh $rachelWWW/en_justice.sh $rachelWWW/modules/ka-lite $
 pear clear-cache 2>/dev/null
 pecl info stem 
 if [[ $? == 0 ]]; then 
-    echo; "[*] Installing the stem module."
-    printf "\n" | pecl install $dirContentOffline/offlinepkgs/$stemPkg
+    echo; echo "[+] Installing the stem module."
+    printf "\n" | pecl install $rachelPartition/offlinepkgs/$stemPkg
     # Add support for stem extension
     echo '; configuration for php stem module' > /etc/php5/conf.d/stem.ini
     echo 'extension=stem.so' >> /etc/php5/conf.d/stem.ini
@@ -1761,13 +1714,13 @@ else
 fi
 # Check KA Lite admin directory location
 # If /root/.kalite is not a symlink, move KA Lite database to hard drive for speed increase and to prevent filling up the eMMC with user data
-echo; printStatus "Checking that .kalite directory lives on hard disk"
+echo; echo "[+] Checking that .kalite directory lives on hard disk"
 if [[ ! -L /root/.kalite ]]; then
-    echo; "[+] Need to move .kalite from eMMC to hard disk"
-    kalite stop
-    echo; "[+] Before copying KA Lite folder - here is an 'ls' of $rachelPartition"
+    echo; echo "[*] Need to move .kalite from eMMC to hard disk"
+    sudo kalite stop
+    echo; echo "[*] Before copying KA Lite folder - here is an 'ls' of $rachelPartition"
     ls -la $rachelPartition
-    echo; "[+] Copying primary (.kalite) and backup (.kalite-backup) directory to $rachelPartition"
+    echo; echo "[+] Copying primary (.kalite) and backup (.kalite-backup) directory to $rachelPartition"
     if [[ -d $rachelPartition/.kalite ]]; then
         rm -rf $rachelPartition/.kalite-backup
         mv $rachelPartition/.kalite $rachelPartition/.kalite-backup
@@ -1776,15 +1729,14 @@ if [[ ! -L /root/.kalite ]]; then
         cp -r /root/.kalite $rachelPartition/.kalite-backup
     fi
     mv /root/.kalite $rachelPartition/
-    echo; "[+] After copying KA Lite folder - $rachelPartition (should list folders .kalite and .kalite-backup)"
+    echo; echo "[*] After copying KA Lite folder - $rachelPartition (should list folders .kalite and .kalite-backup)"
     ls -la $rachelPartition
-    echo; "[+] Symlinking /root/.kalite to /media/RACHEL/.kalite"
+    echo; echo "[+] Symlinking /root/.kalite to /media/RACHEL/.kalite"
     ln -s $rachelPartition/.kalite /root/.kalite
-    echo; "[+] Symlinking complete - /root"
+    echo; echo "[+] Symlinking complete - /root"
 else
-    echo; "[+] .kalite directory is located on the hard disk"
+    echo; echo "[+] .kalite directory is located on the hard disk"
 fi
-#kalite start; kalite stop; kalite start
 # Update Kiwix version
 cat /var/kiwix/application.ini | grep ^Version | cut -d= -f2 > /etc/kiwix-version
 # Update KA Lite version
@@ -1795,10 +1747,10 @@ mv $rachelPartition/rachelinstaller-version /etc/rachelinstaller-version
 echo "[+] Completed USB Recovery runonce script - $(date)"
 # Add header/date/time to install log file
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
-sudo mv $rachelLog $rachelLogDir/rachel-runonce-$timestamp.log
-# Reboot
+mv $rachelLog $rachelLogDir/rachel-runonce-$timestamp.log
+# Remove self; reboot
 rm -- "$0"
-sleep 10; shutdown -h now
+sleep 5; shutdown -r now
 EOF
 }
 
@@ -2011,6 +1963,9 @@ buildRACHEL(){
     echo; printStatus "Installing RACHEL esp"
     installESP
 
+    # ensure rachelStartup.sh is accurate
+    repairRachelScripts
+
     # update RACHEL installer version
     echo $(cat /etc/rachelinstaller-version | cut -d_ -f1)-$(date +%Y%m%d.%H%M) > /etc/rachelinstaller-version
 }
@@ -2147,6 +2102,7 @@ interactiveMode(){
 
             Install-ESP)
             installESP
+            repairRachelScripts
             whatToDo
             ;;
 
