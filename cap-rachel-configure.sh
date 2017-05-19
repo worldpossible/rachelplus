@@ -20,7 +20,7 @@ osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
 # To get current version - date +%Y%m%d.%H%M
-scriptVersion=20170516.2339
+scriptVersion=20170518.2017
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -906,7 +906,7 @@ addMultipleModules(){
         esac
     done
     # get content
-    if [[ $option == "exit" ]]; then printError "Exiting on user request."; fi
+    if [[ $option == "exit" ]]; then printError "Exiting on user request."; break; fi
     if [[ $option == "custom" ]]; then
         echo; printStatus "Here is list of your current partitions and their mountpoints (if applicable):"
         lsblk|grep -v mmc|grep -v sda
