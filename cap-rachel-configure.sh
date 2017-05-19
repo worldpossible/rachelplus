@@ -20,7 +20,7 @@ osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
 # To get current version - date +%Y%m%d.%H%M
-scriptVersion=20170518.2017
+scriptVersion=20170518.2153
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -257,7 +257,7 @@ offlineVariables(){
     RACHELBRANDLOGOCAPTIVE="rsync -avhz --progress $dirContentOffline/contentshell/art/RACHELbrandLogo-captive.png ."
     HFCBRANDLOGOCAPTIVE="rsync -avhz --progress $dirContentOffline/contentshell/art/HFCbrandLogo-captive.jpg ."
     WORLDPOSSIBLEBRANDLOGOCAPTIVE="rsync -avhz --progress $dirContentOffline/contentshell/art/World-Possible-Logo-300x120.png ."
-    GITCLONERACHELCONTENTSHELL=""
+    GITCLONERACHELCONTENTSHELL="rsync -avhz --progress $dirContentOffline/contentshell ."
     RSYNCDIR="$dirContentOffline"
     KALITEINSTALL="rsync -avhz --progress $dirContentOffline/$kaliteInstaller $installTmpDir/$kaliteInstaller"
     KIWIXINSTALL=""
@@ -575,7 +575,7 @@ downloadOfflineContent(){
             Kannada) echo "#Kannada" >> $rachelScriptsDir/rsyncInclude.list; echo "kn-*" >> $rachelScriptsDir/rsyncInclude.list ;;
             Português) echo "#Portuguese" >> $rachelScriptsDir/rsyncInclude.list; echo "pt-*" >> $rachelScriptsDir/rsyncInclude.list ;;
             Hindi) echo "#Hindi" >> $rachelScriptsDir/rsyncInclude.list; echo "hi-*" >> $rachelScriptsDir/rsyncInclude.list ;;
-            None) sleep 0 ;;
+            None) noInstall=1; break ;;
             *) printError "That really isn't an answer I am looking for..." ;;
         esac
         echo; printStatus "Language modules included:"
@@ -589,6 +589,7 @@ downloadOfflineContent(){
         echo; printQuestion "What additional language would you like to select?"
         echo "1)Arabic  2)Deutsch  3)English  4)Español  5)Français  6)Português  7)Hindi  8)None"
     done
+    if [[ $noInstall == 1 ]]; then echo; printError "Alright, skipping content download."; break; fi
     buildRsyncModuleExcludeList
     MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" --include-from "$rachelScriptsDir/rsyncInclude.list" --exclude '*' $RSYNCDIR/rachelmods/ | awk '{print $5}' | tail -n +2)
     echo; printStatus "Rsyncing core RACHEL content from $RSYNCDIR"
@@ -796,7 +797,6 @@ checkContentShell(){
     if [[ ! -d $rachelWWW ]]; then
         printStatus "RACHEL content shell does not exist at $rachelWWW."
         printStatus "Cloning the RACHEL content shell from GitHub into $(pwd)"
-        rm -rf contentshell # in case of previous failed install
         $GITCLONERACHELCONTENTSHELL
         cd contentshell
         cp -rf ./* $rachelWWW/
@@ -804,7 +804,6 @@ checkContentShell(){
     else
         if [[ ! -d $rachelWWW/.git ]]; then
             echo; printStatus "$rachelWWW exists but it wasn't installed from git; installing RACHEL content shell from GitHub."
-            rm -rf contentshell # in case of previous failed install
             $GITCLONERACHELCONTENTSHELL
             cd contentshell
             cp -rf ./* $rachelWWW/ # overwrite current content with contentshell
