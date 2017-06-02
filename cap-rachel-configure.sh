@@ -20,7 +20,7 @@ osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
 # To get current version - date +%Y%m%d.%H%M
-scriptVersion=20170518.2153
+scriptVersion=20170601.2236
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -34,7 +34,7 @@ rachelScriptsFile="$rachelScriptsDir/rachelStartup.sh"
 rachelScriptsLog="/var/log/rachel/rachel-scripts.log"
 kaliteUser="root"
 kaliteDir="/root/.kalite" # Installed as user 'root'
-kaliteContentDir="$rachelPartition/kacontent"
+kaliteContentDir="$rachelPartition/.kalite/content"
 kaliteMajorVersion="0.17"
 kaliteCurrentVersion="$kaliteMajorVersion.1-0ubuntu1"
 kaliteInstaller=ka-lite-bundle_"$kaliteCurrentVersion"_all.deb
@@ -1082,7 +1082,8 @@ kaliteSetup(){
     printStatus "KA Lite content directory:  $kaliteContentDir"
     sed -i '/^CONTENT_ROOT/d' $kaliteSettings
     sed -i '/^DATABASES/d' $kaliteSettings
-    echo 'CONTENT_ROOT = "/media/RACHEL/kacontent"' >> $kaliteSettings
+    ## Removed the following as we now put the content and core KA folder *all* on the hard drive
+    # echo 'CONTENT_ROOT = "/media/RACHEL/kacontent"' >> $kaliteSettings
 
     # Install module for RACHEL index.php
     echo; printStatus "Syncing English KA Lite RACHEL module"
@@ -1117,8 +1118,7 @@ kaliteCheckFiles(){
     sudo kalite stop
     # clear out possible old videos taking up space
     echo; printStatus "Clearing old video content"
-    rm -rf /media/RACHEL/kacontent
-    mkdir /media/RACHEL/kacontent
+    rm -rf $rachelPartition/kacontent
     # clear out old database files
     rm -rf /root/.kalite/database/content_khan_*.sqlite
     rm -rf /root/.kalite/content_khan_*.sqlite
@@ -1142,7 +1142,7 @@ kaliteCheckFiles(){
     echo; printStatus "Symlinking all KA database module files to the actual KA Lite database folder."
     find $rachelWWW/modules/*-kalite -name "*.sqlite" -exec ln -sf {} /root/.kalite/database/ \;
     # Starting KA Lite
-    echo; sudo kalite start
+    echo; sudo kalite stop; sudo kalite start
     # Update KA Lite version
     dpkg -s ka-lite-bundle | grep ^Version | cut -d" " -f2 > /etc/kalite-version
     printGood "Done."
@@ -1537,9 +1537,10 @@ repairFirmware(){
 repairKalite(){
     echo; printStatus "Fixing KA-Lite"
     # Fixing KA-Lite 
-    cp -f /media/RACHEL/kacontent/assessmentitems.sqlite /usr/share/kalite/assessment/khan/.
+    # cp -f /media/RACHEL/kacontent/assessmentitems.sqlite /usr/share/kalite/assessment/khan/.
+    cp -f $kaliteContentDir/assessmentitems.sqlite /usr/share/kalite/assessment/khan/.
     sed -i '/assessmentitems.sqlite/d' /root/.kalite/settings.py
-    # Turn loggin off for compatibility
+    # Turn logging off for compatibility
     exec &>/dev/tty
     # Restart kalite to use the new assessmentitems.sqlite location
     echo; kalite stop
@@ -2047,19 +2048,47 @@ uninstallESP(){
     printGood "Done."
 }
 
+updateConfigureScript(){
+    if [[ $internet == "1" ]]; then
+        $DOWNLOADSCRIPT >&2
+        commandStatus
+        if [[ -s $installTmpDir/cap-rachel-configure.sh ]]; then
+            mv $installTmpDir/cap-rachel-configure.sh /root/cap-rachel-configure.sh
+            chmod +x /root/cap-rachel-configure.sh
+            versionNum=$(cat /root/cap-rachel-configure.sh |grep ^scriptVersion|head -n 1|cut -d"=" -f2|cut -d" " -f1)
+            printGood "Success! Your script was updated to $versionNum; RE-RUN the script to use the new version."
+        else
+            printStatus "Fail! Check the log file for more info on what happened:  $rachelLog"
+            echo
+        fi
+    else
+        if [[ ! -f $dirContentOffline/cap-rachel-configure.sh ]]; then
+            echo; printError "You don't have a copy of the rachel script in your offline content location."
+            echo; exit 1
+        fi
+        $DOWNLOADSCRIPT >&2
+        commandStatus
+        chmod +x /root/cap-rachel-configure.sh
+        versionNum=$(cat /root/cap-rachel-configure.sh |grep ^scriptVersion|head -n 1|cut -d"=" -f2|cut -d" " -f1)
+        printGood "Success! Your script was updated to $versionNum; RE-RUN the script to use the new version."
+           # echo; printError "You need to be connected to the internet to update this script."
+    fi
+}
+
 # Loop to redisplay main menu
 whatToDo(){
     echo; printQuestion "What would you like to do next?"
-    echo "1)Base Install  2)Install/Upgrade KALite  3)Install Kiwix  4)Install ESP  5)Add Module  6)Add Multiple Modules  7)Update Modules  8)Utilities  9)Exit"
+    echo "1)Base Install  2)Install/Upgrade KALite  3)Install Kiwix  4)Install ESP  5)Check for udpates  6)Add Module  7)Add Multiple Modules  8)Update Modules  9)Utilities  10)Exit"
 }
 
 # Interactive mode menu
 interactiveMode(){
     echo; printQuestion "What you would like to do:"
-    echo "  - [Base-Install] of RACHEL on a raw CAP (completely erases any content)"
+    echo "  - [Base-Install] of RACHEL on a raw (non-RACHEL) CAP (completely erases any content)"
     echo "  - [Install-Upgrade-KALite]"
     echo "  - [Install-Kiwix]"
     echo "  - [Install-ESP]"
+    echo "  - [Check-for-Updates] for configure script, all installed modules, KA Lite, "
     echo "  - [Add-Module] lists current available modules; installs one at a time"
     echo "  - [Add-Multiple-Modules] installs groups of modules"
     echo "  - [Update-Modules] updates the currently installed modules"
@@ -2074,7 +2103,7 @@ interactiveMode(){
     echo "    - Testing script"
     echo "  - [Exit] the installation script"
     echo
-    select menu in "Base-Install" "Install-Upgrade-KALite" "Install-Kiwix" "Install-ESP" "Add-Module" "Add-Multiple-Modules" "Update-Modules" "Utilities" "Exit"; do
+    select menu in "Base-Install" "Install-Upgrade-KALite" "Install-Kiwix" "Install-ESP" "Check-for-Updates" "Add-Module" "Add-Multiple-Modules" "Update-Modules" "Utilities" "Exit"; do
             case $menu in
             Base-Install)
             newInstall
@@ -2102,6 +2131,22 @@ interactiveMode(){
             Install-ESP)
             installESP
             repairRachelScripts
+            whatToDo
+            ;;
+
+            Check-for-Updates)
+            # cap-rachel-configure.sh
+            updateConfigureScript
+            # Modules
+            updateModuleNames
+            contentUpdate
+            # KA
+            kaliteSetup
+            echo; printGood "Login using wifi at http://192.168.88.1:8008 and register device."
+            echo "After you register, click the new tab called 'Manage', then 'Videos' and download all the missing videos."
+            printGood "KA Lite Install Complete."
+            # Check for the more common errors
+            repairBugs
             whatToDo
             ;;
 
@@ -2447,37 +2492,14 @@ else
             testingScript
             ;;
         (u) # UPDATE - Update the RACHEL configure script to the latest master (release) build.
-            # Create temp directories
+    # Create temp directories
             mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir
             # Check OS and CAP version
             osCheck
             capCheck
             # Determine the operational mode - ONLINE or OFFLINE
-            opMode
-            if [[ $internet == "1" ]]; then
-                $DOWNLOADSCRIPT >&2
-                commandStatus
-                if [[ -s $installTmpDir/cap-rachel-configure.sh ]]; then
-                    mv $installTmpDir/cap-rachel-configure.sh /root/cap-rachel-configure.sh
-                    chmod +x /root/cap-rachel-configure.sh
-                    versionNum=$(cat /root/cap-rachel-configure.sh |grep ^scriptVersion|head -n 1|cut -d"=" -f2|cut -d" " -f1)
-                    printGood "Success! Your script was updated to $versionNum; RE-RUN the script to use the new version."
-                else
-                    printStatus "Fail! Check the log file for more info on what happened:  $rachelLog"
-                    echo
-                fi
-            else
-                if [[ ! -f $dirContentOffline/cap-rachel-configure.sh ]]; then
-                    echo; printError "You don't have a copy of the rachel script in your offline content location."
-                    echo; exit 1
-                fi
-                $DOWNLOADSCRIPT >&2
-                commandStatus
-                chmod +x /root/cap-rachel-configure.sh
-                versionNum=$(cat /root/cap-rachel-configure.sh |grep ^scriptVersion|head -n 1|cut -d"=" -f2|cut -d" " -f1)
-                printGood "Success! Your script was updated to $versionNum; RE-RUN the script to use the new version."
-#                    echo; printError "You need to be connected to the internet to update this script."
-            fi
+            opMode        
+            updateConfigureScript
             exit 1
             ;;
         (z) # UPDATE to BETA - Update the RACHEL configure script to the latest BETA build.
