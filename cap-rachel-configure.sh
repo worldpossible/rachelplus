@@ -20,7 +20,7 @@ osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
 # To get current version - date +%Y%m%d.%H%M
-scriptVersion=20170605.2059
+scriptVersion=20170605.2113
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -225,7 +225,7 @@ capCheck(){
 }
 
 rachelPartitionCheck(){
-    df -h | grep sda3 | grep RACHEL
+    df -h | grep sda3 | grep RACHEL >/dev/null 2>&1
     if [[ $? != 0 ]]; then 
         echo; printError "WARNING:  RACHEL partition is *not* mounted."
         echo; printStatus "Attempting to mount the hard drive partition for /media/RACHEL"
