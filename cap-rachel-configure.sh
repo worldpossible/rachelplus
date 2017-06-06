@@ -20,7 +20,7 @@ osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
 # To get current version - date +%Y%m%d.%H%M
-scriptVersion=20170605.1904
+scriptVersion=20170605.2059
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -221,6 +221,29 @@ capCheck(){
     else
         echo; printError "This isn't a CAP; sorry, I can not continue."
         echo; exit 1
+    fi
+}
+
+rachelPartitionCheck(){
+    df -h | grep sda3 | grep RACHEL
+    if [[ $? != 0 ]]; then 
+        echo; printError "WARNING:  RACHEL partition is *not* mounted."
+        echo; printStatus "Attempting to mount the hard drive partition for /media/RACHEL"
+        # echo; printStatus "Mounting /dev/sda1 to /media/preloaded"
+        # mount /dev/sda1 /media/preloaded
+        # if [[ df -h | grep sda1 | grep preloaded ]]; then printGood "Mounted successfully."; else printError "Mounting failed."; mountFail=1; fi 
+        # echo; printStatus "Mounting /dev/sda2 to /media/uploaded"
+        # mount /dev/sda2 /media/uploaded
+        # if [[ df -h | grep sda2 | grep uploaded ]]; then printGood "Mounted successfully."; else printError "Mounting failed."; mountFail=1; fi 
+        echo; printStatus "Mounting /dev/sda3 to /media/RACHEL"
+        mount /dev/sda3 /media/RACHEL
+        if [[ $(df -h | grep sda3 | grep RACHEL) ]]; then printGood "Mounted successfully."; else printError "Mounting failed."; mountFail=1; fi
+        if [[ $mountFail == 1 ]]; then
+            echo; printError "Run 'dmesg' to view CAP error log."
+            echo "You can also check the RACHEL configure script log file (noted below) for other possible errors."
+            echo "Exiting...script can not continue."
+            cleanup
+        fi
     fi
 }
 
@@ -2440,6 +2463,7 @@ else
             # Check OS and CAP version
             osCheck
             capCheck
+            rachelPartitionCheck
             if [[ $# -lt $((OPTIND)) ]]; then
                 echo; echo "$IAM -b argument(s) missing...needs 2!" >&2
                 echo; echo "Usage: `basename $0` -b '(en | es | fr) [ rsync host ]'" >&2
@@ -2460,6 +2484,7 @@ else
             # Check OS and CAP version
             osCheck
             capCheck
+            rachelPartitionCheck
             # Determine the operational mode - ONLINE or OFFLINE
             opMode
             # Build the hash list 
@@ -2475,6 +2500,7 @@ else
             # Check OS and CAP version
             osCheck
             capCheck
+            rachelPartitionCheck
             # Determine the operational mode - ONLINE or OFFLINE
             opMode
             # Build the hash list 
@@ -2489,6 +2515,7 @@ else
             # Check OS and CAP version
             osCheck
             capCheck
+            rachelPartitionCheck
             # Determine the operational mode - ONLINE or OFFLINE
             opMode
             repairBugs
@@ -2499,6 +2526,7 @@ else
             # Check OS and CAP version
             osCheck
             capCheck
+            rachelPartitionCheck
             # Determine the operational mode - ONLINE or OFFLINE
             opMode
             testingScript
