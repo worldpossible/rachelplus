@@ -20,8 +20,8 @@ printQuestion(){
 }
 
 version=2.1.9
-timestamp=$(date +"%Y%m%d.%H%M")
-usbDate=$(date +"%Y%m%d")
+usbVersion=$(date +"%Y%m%d")
+usbDateTime=$(date +"%Y%m%d.%H%M")
 imageSavePath="$HOME"
 imageSavePathCAP="/media/RACHEL/recovery"
 installTmpDir="/root/cap-rachel-install.tmp"
@@ -34,9 +34,9 @@ rsyncDIR="rsync://dev.worldpossible.org"
 
 loggingStart(){
 	if [[ $os == "cap_v1" ]] || [[ $os == "cap_v2" ]]; then
-		createLog="/media/RACHEL/recovery/createUSB-$timestamp.log"
+		createLog="/media/RACHEL/recovery/createUSB-$usbDateTime.log"
 	else
-		createLog="./createUSB-$timestamp.log"
+		createLog="./createUSB-$usbDateTime.log"
 	fi
 	exec &> >(tee "$createLog")
 }
@@ -62,29 +62,28 @@ identifySavePath(){
 	else
 		imageSavePath=$imageSavePath
 	fi
-	printGood "Saving image to $imageSavePath"
+	printGood "Saving image to:  $imageSavePath"
 }
 
 identifyUSBVersion(){
-    usbVersion=$usbDate
 	if [[ $os == "cap_v1" ]]; then 
-        imageName="CAPv1_RACHEL_Recovery_USB_$usbDate.img"
+        imageName="CAPv1_RACHEL_Recovery_USB_$usbVersion.img"
 	elif [[ $os == "cap_v2" ]]; then
-        imageName="CAPv2_RACHEL_Recovery_USB_$usbDate.img"
+        imageName="CAPv2_RACHEL_Recovery_USB_$usbVersion.img"
 	else 
 		printQuestion "What model of CAP (v1 or v2) are you creating an recovery image for?"
 	    select menu in "CAPv1" "CAPv2"; do
 			case $menu in
 			CAPv1)
-				imageName="CAPv1_RACHEL_Recovery_USB_$usbDate.img"
+				imageName="CAPv1_RACHEL_Recovery_USB_$usbVersion.img"
 			;;
 			CAPv2)
-			    imageName="CAPv2_RACHEL_Recovery_USB_$usbDate.img"
+			    imageName="CAPv2_RACHEL_Recovery_USB_$usbVersion.img"
 			;;
 			esac
 	    done
 	fi
-	printGood "Image name:  $imageName"
+	printGood "Using image name:  $imageName"
 }
 
 identifyDeviceNum(){
@@ -182,7 +181,7 @@ buildUSBImage(){
 			echo
 			echo "Select 'n' to exit. (y/N)"; read REPLY
 			if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
-				echo "It takes about 75 minutes (on a RACHEL-Plus CAP) to create the 3 images; then, the USB script will continue."
+				echo "It takes about 75 minutes (RACHEL-Plus CAPv1) or 96 minutes (RACHEL-Plus CAPv2) to create the 3 images; then, the USB script will continue."
 				echo "Started building images at $(date "+%r")"
 				rm -rf $0 $installTmpDir $rachelTmpDir
 				echo; time /root/generate_recovery.sh $rachelRecoveryDir/
@@ -238,22 +237,20 @@ addDefaultModules(){
 }
 
 updateVersions(){
+	# Remove old format
+	sed -i '/^version=/d' $mountName/update.sh
 	# Update firmware version
 	echo; printStatus "Setting the RACHEL CAP firmware version."
-	if ! grep -q ^firmwareVersion= $mountName/update.sh; then
-		sed -i '33 a firmwareVersion=""' $mountName/update.sh
-	fi
-	awk 'BEGIN{OFS=FS="\""} $1~/^firmwareVersion=/ {$2="'$(cat /etc/version)'";}1' $mountName/update.sh > update.tmp; mv update.tmp update.sh
-	# Update USB version
-	echo; printStatus "Setting the RACHEL Recovery USB version."
-	awk 'BEGIN{OFS=FS="\""} $1~/^usbVersion=/ {$2="'$usbVersion'";}1' $mountName/update.sh > update.tmp; mv update.tmp update.sh
+	if ! grep -q ^firmwareVersion= $mountName/update.sh; then sed -i '36 a firmwareVersion=""' $mountName/update.sh; fi
+	awk 'BEGIN{OFS=FS="\""} $1~/^firmwareVersion=/ {$2="'$(cat /etc/version)'";}1' $mountName/update.sh > update.tmp; mv update.tmp $mountName/update.sh
 	# Update USB creation date
 	echo; printStatus "Setting the RACHEL Recovery USB creation date."
-	sed -i '/^version=/d' $mountName/update.sh
-	if ! grep -q ^usbCreated= $mountName/update.sh; then
-		sed -i '33 a usbCreated=""' $mountName/update.sh
-	fi
-	awk 'BEGIN{OFS=FS="\""} $1~/^usbCreated=/ {$2="'$timestamp'";}1' $mountName/update.sh > update.tmp; mv update.tmp update.sh
+	if ! grep -q ^usbCreated= $mountName/update.sh; then sed -i '37 a usbCreated=""' $mountName/update.sh; fi
+	awk 'BEGIN{OFS=FS="\""} $1~/^usbCreated=/ {$2="'$usbDateTime'";}1' $mountName/update.sh > update.tmp; mv update.tmp $mountName/update.sh
+	# Update USB version
+	echo; printStatus "Setting the RACHEL Recovery USB version."
+	if ! grep -q ^usbVersion= $mountName/update.sh; then sed -i '38 a usbVersion=""' $mountName/update.sh; fi
+	awk 'BEGIN{OFS=FS="\""} $1~/^usbVersion=/ {$2="'$usbVersion'";}1' $mountName/update.sh > update.tmp; mv update.tmp $mountName/update.sh
 	# Update RACHEL Installer version
 	echo $usbVersion > /etc/rachelinstaller-version
 	echo $usbVersion > $mountName/rachel-files/rachelinstaller-version
