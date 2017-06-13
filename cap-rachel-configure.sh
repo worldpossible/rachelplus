@@ -20,7 +20,7 @@ osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
 # To get current version - date +%Y%m%d.%H%M
-scriptVersion=20170605.2113
+scriptVersion=20170612.2355
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -57,9 +57,6 @@ errorCode="0"
 buildHashList(){
     cat > $installTmpDir/hashes.md5 << 'EOF'
 d17736647f2d94f7c7dd428d19a64237 ka-lite-bundle_0.17.1-0ubuntu1_all.deb
-ef4e2741b145a21179eed83867cb531a ka-lite-bundle_0.17.0-0ubuntu1_all.deb
-13c447a2e78ad67a06caaded00d01701 ka-lite-bundle_0.17.0-0ubuntu2_all.deb
-34fb1b8df07db49de04bc5faaae6497d ka-lite-bundle_0.17.0-0ubuntu3_all.deb
 b61fdc3937aa226f34f685ba0bc29db1 kiwix-0.9-linux-i686.tar.bz2
 df6216ba851819d9c3d0208d3ea639df kiwix-0.9-linux-x86_64.tar.bz2
 EOF
@@ -554,17 +551,22 @@ downloadOfflineContent(){
     printGood "Done."
 
     # Downloading Github repo:  kalite
+    downloadKAInstaller(){
+        # Downloading current version of KA Lite
+        echo; printStatus "Downloading KA Lite Version $kaliteCurrentVersion"
+        $KALITEINSTALL
+        commandStatus
+        mv $installTmpDir/$kaliteInstaller $dirContentOffline/$kaliteInstaller
+    }
     echo; printStatus "Checking/downloading:  KA Lite"
     if [[ -f $dirContentOffline/$kaliteInstaller ]]; then
         # Checking user provided file MD5 against known good version
         checkMD5 $dirContentOffline/$kaliteInstaller
         if [[ $md5Status == 0 ]]; then
-            # Downloading current version of KA Lite
-            echo; printStatus "Downloading KA Lite Version $kaliteCurrentVersion"
-            $KALITEINSTALL
-            commandStatus
-            mv $installTmpDir/$kaliteInstaller $dirContentOffline/$kaliteInstaller
+            downloadKAInstaller
         fi
+    else
+        downloadKAInstaller
     fi
     commandStatus
     printGood "Done."
