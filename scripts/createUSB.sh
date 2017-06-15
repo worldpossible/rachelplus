@@ -19,7 +19,7 @@ printQuestion(){
 	echo -e "\x1B[01;33m[?]\x1B[0m $1"
 }
 
-version=2.1.9
+version=2.1.10
 usbVersion=$(date +"%Y%m%d")
 usbDateTime=$(date +"%Y%m%d.%H%M")
 imageSavePath="$HOME"

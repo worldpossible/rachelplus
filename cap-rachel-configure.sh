@@ -20,7 +20,7 @@ osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
 # To get current version - date +%Y%m%d.%H%M
-scriptVersion=20170612.2355
+scriptVersion=20170614.2144
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -568,8 +568,19 @@ downloadOfflineContent(){
     else
         downloadKAInstaller
     fi
-    commandStatus
+    commandStatus    
     printGood "Done."
+
+    # # Downloading KA Lite contentpacks
+    # echo; printStatus "Downloading/updating KA Lite contentpacks"
+    # for i in `ls $dirContentOffline/rachelmods/*-kalite/rachel-index.php`; do
+    # if [[ $i =~ ([a-z]{2})-kalite ]]; then
+    #     lang=${BASH_REMATCH[1]}
+    #     echo; printStatus "Downloading KA Lite contentpack: $lang"
+    #     wget -c $kalitePrimaryContent/$lang.zip -O $dirContentOffline/rachelmods/$lang-kalite/$lang.zip
+    # fi
+    # commandStatus    
+    # printGood "Done."
 
     # Downloading kiwix
     echo; printStatus "Downloading/updating kiwix."
@@ -1715,6 +1726,7 @@ usbRecovery(){
 . /media/RACHEL/cap-rachel-configure.sh --source-only
 exec 1>> $rachelLog 2>&1
 echo "[+] Starting USB Recovery runonce script - $(date)"
+capCheck >/dev/null 2>&1
 # Run rachel startup script repair
 repairRachelScripts
 # Run kalite check
@@ -1768,20 +1780,20 @@ if [[ ! -L /root/.kalite ]]; then
     ln -s $rachelPartition/.kalite /root/.kalite
     echo; echo "[+] Symlinking complete - /root"
 else
-    echo; echo "[+] .kalite directory is located on the hard disk"
+    echo "[+] .kalite directory is located on the hard disk"
 fi
 # Update Kiwix version
 cat /var/kiwix/application.ini | grep ^Version | cut -d= -f2 > /etc/kiwix-version
 # Update KA Lite version
 dpkg -s ka-lite-bundle | grep ^Version | cut -d" " -f2 > /etc/kalite-version
 # Update RACHEL USB installer version
-mv $rachelPartition/rachelinstaller-version /etc/rachelinstaller-version
+mv $rachelPartition/rachelinstaller-version /etc/rachelinstaller-version >/dev/null 2>&1
 # Update RACHEL Hardware build version
 echo $os > /etc/rachelbuild
 # Update RACHEL Hardware build date
-echo $buildDate > /etc/rachelbuilddate
+mv $rachelPartition/rachelbuilddate /etc/rachelbuilddate >/dev/null 2>&1
 # FINISHED
-echo "[+] Completed USB Recovery runonce script - $(date)"
+echo; echo "[+] Completed USB Recovery runonce script - $(date)"
 # Add header/date/time to install log file
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 mv $rachelLog $rachelLogDir/rachel-runonce-$timestamp.log
@@ -2107,7 +2119,8 @@ updateConfigureScript(){
         commandStatus
         chmod +x /root/cap-rachel-configure.sh
         versionNum=$(cat /root/cap-rachel-configure.sh |grep ^scriptVersion|head -n 1|cut -d"=" -f2|cut -d" " -f1)
-        printGood "Success! Your script was updated to $versionNum; RE-RUN the script to use the new version."
+        echo; printGood "Your script was updated to $versionNum"
+        echo "RE-RUN the script to use the new version."
            # echo; printError "You need to be connected to the internet to update this script."
     fi
 }
