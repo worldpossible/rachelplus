@@ -19,7 +19,7 @@ printQuestion(){
 	echo -e "\x1B[01;33m[?]\x1B[0m $1"
 }
 
-version=2.1.10
+version=2.1.11
 usbVersion=$(date +"%Y%m%d")
 usbDateTime=$(date +"%Y%m%d.%H%M")
 imageSavePath="$HOME"
@@ -219,7 +219,7 @@ removeOSXJunk(){
 	echo; printStatus "Removing any OSX junk files."
 	cd $mountName
 	echo "Removing any OSX junk files in the directory:  $(pwd)"
-	rm -rf .Spotlight-V100 .Trashes ._.Trashes .fseventsd log/* update.log
+	rm -rf .Spotlight-V100 .Trashes ._.Trashes .fseventsd log/* update.log .TemporaryItems ._.TemporaryItems ._README.txt
 	echo; printStatus "Cleaned up USB; ready to image."
 	ls -la $mountName
 }
@@ -274,7 +274,7 @@ unmountUSB(){
 
 imageUSB(){
 	# Image the USB - show the imaging time when complete; only copy our first 2 partitions to minimize space
-	echo; printStatus "Creating image of USB drive (on USB 2.0 = ~60min; on USB 3.0 = ~2.5min)."
+	echo; printStatus "Creating image of USB drive (with USB 2.0 = ~60min; with USB 3.0 = ~2.5min)."
 	echo "File location:  $imageSavePath/$imageName"
 	if [[ $os == "cap_v1" ]]; then
 #		usbDeviceName=$usbDeviceName

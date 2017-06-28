@@ -20,7 +20,7 @@ osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
 # To get current version - date +%Y%m%d.%H%M
-scriptVersion=20170614.2144
+scriptVersion=20170627.2052
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -1710,18 +1710,15 @@ installPkgUpdates(){
 }
 
 usbRecovery(){
-    echo; printGood "Script set for 'OFFLINE' mode."
     internet="0"
     noCleanup="1"
-    dirContentOffline="/media/RACHEL"
     offlineVariables
-    capCheck >/dev/null 2>&1
     # Update rachel folder structure
     updateRachelFolders
     # Update modules names to new structure
     updateModuleNames
     # Add runonce.sh script that will run on reboot
-    sed "s,%dirContentOffline%,$dirContentOffline,g;s,%rachelWWW%,$rachelWWW,g;s,%stemPkg%,$stemPkg,g;s,%gitContentShellCommit%,$gitContentShellCommit,g;s,%rachelLogDir%,$rachelLogDir,g;s,%rachelLogFile%,$rachelLogFile,g;s,%rachelPartition%,$rachelPartition,g" > $rachelPartition/runonce.sh << 'EOF'
+    cat > $rachelPartition/runonce.sh << 'EOF'
 #!/bin/bash
 . /media/RACHEL/cap-rachel-configure.sh --source-only
 exec 1>> $rachelLog 2>&1
@@ -1791,7 +1788,7 @@ mv $rachelPartition/rachelinstaller-version /etc/rachelinstaller-version >/dev/n
 # Update RACHEL Hardware build version
 echo $os > /etc/rachelbuild
 # Update RACHEL Hardware build date
-mv $rachelPartition/rachelbuilddate /etc/rachelbuilddate >/dev/null 2>&1
+echo $timestamp > /etc/rachelbuilddate
 # FINISHED
 echo; echo "[+] Completed USB Recovery runonce script - $(date)"
 # Add header/date/time to install log file
@@ -1809,22 +1806,51 @@ installBatteryWatch(){
     # Create batteryWatcher script
     cat > $rachelScriptsDir/batteryWatcher.sh << 'EOF'
 #!/bin/bash
+echo; echo "[*] System boot - battery monitor started at $(date)" >> /var/log/rachel/battery.log
+badBattChk=0
 while :; do
-    if [[ $(cat /tmp/chargeStatus) -lt -200 ]]; then
-        if [[ $(cat /tmp/batteryLastChargeLevel) -lt 3 ]]; then
-            echo "$(date) - Low battery shutdown" >> /var/log/rachel/shutdown.log
-            kalite stop
-            shutdown -h now
-            exit 0
+    # If battery is not connected, do not run script
+    if [[ $(cat /tmp/battery_connected_status) == 0 ]]; then
+        echo "[!] Battery not connected, monitor stopped at $(date)" >> /var/log/rachel/battery.log
+        echo "[+] Battery connected:  $(cat /tmp/battery_connected_status)" >> /var/log/rachel/battery.log
+        exit 0
+    else
+        # If charge level is low, battery connected, and last charge level is below 95%, then there is a possible bad battery and do not run script
+        if [[ $(cat /tmp/chargeStatus) -lt 400 ]] && [[ $(cat /tmp/chargeStatus) -gt -275 ]] && [[ $(cat /tmp/batteryLastChargeLevel) -lt 95 ]]; then
+            let "badBattChk++"
+            if [[ $badBattChk -ge 3 ]]; then
+                echo "[!] Possible bad battery, monitor stopped at $(date)" >> /var/log/rachel/battery.log
+                echo "[+] Battery connected:  $(cat /tmp/battery_connected_status)" >> /var/log/rachel/battery.log
+                echo "[+] Battery last charge level:  $(cat /tmp/batteryLastChargeLevel)" >> /var/log/rachel/battery.log
+                echo "[+] Battery charge status:  $(cat /tmp/chargeStatus)" >> /var/log/rachel/battery.log
+                echo "[+] Bad battery check #:  $(echo $badBattChk)" >> /var/log/rachel/battery.log
+                exit 0
+            fi
+        else
+            badBattChk=0
+            # If charging level is less then -200 (power not connected) and last charge level is below 3%, stop KA Lite and safely shutdown CAP 
+            if [[ $(cat /tmp/chargeStatus) -lt -200 ]]; then
+                if [[ $(cat /tmp/batteryLastChargeLevel) -lt 3 ]]; then
+                    echo "[!] Low battery shutdown at $(date)" >> /var/log/rachel/battery.log
+                    echo "[+] Battery connected:  $(cat /tmp/battery_connected_status)" >> /var/log/rachel/battery.log
+                    echo "[+] Battery last charge level:  $(cat /tmp/batteryLastChargeLevel)" >> /var/log/rachel/battery.log
+                    echo "[+] Battery charge status:  $(cat /tmp/chargeStatus)" >> /var/log/rachel/battery.log
+                    echo "[+] Bad battery check #:  $(echo $badBattChk)" >> /var/log/rachel/battery.log
+                    kalite stop
+                    shutdown -h now
+                    exit 0
+                fi
+            fi
         fi
     fi
+    # Check battery every 10 seconds
     sleep 10
 done
 EOF
     chmod +x $rachelScriptsDir/batteryWatcher.sh
     # Check and kill other scripts running
     printStatus "Checking for and killing previously run battery monitoring scripts"
-    pid=$(ps aux | grep -v grep | grep "/bin/bash $rachelScriptsDir/batteryWatcher.sh" | awk '{print $2}')
+    pid=$(ps aux | grep -v grep | grep "batteryWatcher.sh" | awk '{print $2}')
     if [[ ! -z $pid ]]; then kill $pid; fi
     # Start script
     $rachelScriptsDir/batteryWatcher.sh&
@@ -2445,7 +2471,7 @@ elif [[ $1 == "--version" ]]; then
     echo $scriptVersion
     noCleanup=1
 elif [[ $1 == "--usbrecovery" ]]; then
-    loggingAndRachelStart
+    # loggingAndRachelStart
     usbRecovery
     noCleanup=1
 elif [[ $1 == "--source-only" ]]; then
