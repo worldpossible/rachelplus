@@ -20,7 +20,7 @@ osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
 # To get current version - date +%Y%m%d.%H%M
-scriptVersion=20170627.2334
+scriptVersion=20170628.0021
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -1468,7 +1468,7 @@ EOF
         sed -i '/battery/d' $rachelScriptsFile
         sed -i '$e echo "# Start battery monitoring"' $rachelScriptsFile
         sed -i '$e echo "echo \\$(date) - Starting battery monitor"' $rachelScriptsFile
-        sed -i '$e echo "bash '$rachelScriptsDir'/batteryWatcher.sh&"' $rachelScriptsFile
+        sed -i '$e echo "if [[ \\$(lsb_release -ds | grep 16.04) ]]; then systemctl start batterywatcher.service; else service batterywatcher start; fi"' $rachelScriptsFile
     fi
 
     # Check for disable reset button flag
@@ -1820,7 +1820,7 @@ while :; do
             # If charge status is low (should be at/above 400 at 99% battery), battery connected, and last charge level is below 95%, then there is a possible bad battery and do not run script
             if [[ $(cat /tmp/chargeStatus 2>/dev/null) -lt 400 ]] && [[ $(cat /tmp/chargeStatus 2>/dev/null) -gt -275 ]] && [[ $(cat /tmp/batteryLastChargeLevel 2>/dev/null) -lt 95 ]]; then
                 let "badBattChk++"
-                if [[ $badBattChk -ge 3 ]]; then
+                if [[ $badBattChk -ge 6 ]]; then
                     echo "[!] Possible bad battery, monitor stopped at $(date)" >> /var/log/rachel/battery.log
                     echo "[+] Battery connected:  $(cat /tmp/battery_connected_status)" >> /var/log/rachel/battery.log 2>/dev/null
                     echo "[+] Battery last charge level:  $(cat /tmp/batteryLastChargeLevel)" >> /var/log/rachel/battery.log 2>/dev/null
@@ -1855,8 +1855,61 @@ EOF
     printStatus "Checking for and killing previously run battery monitoring scripts"
     pid=$(ps aux | grep -v grep | grep "batteryWatcher.sh" | awk '{print $2}')
     if [[ ! -z $pid ]]; then kill $pid; fi
-    # Start script
-    $rachelScriptsDir/batteryWatcher.sh&
+    # create startup process for Ubuntu 16.04
+    if [[ $(echo $osVersion | grep 16.04) ]]; then
+        rm -f /etc/init/batterywatcher.conf # Remove other versions of script
+        cat > /etc/systemd/system/batterywatcher.service << 'EOF'
+[Unit]
+Description=Battery Watcher
+After=network.target
+
+[Service]
+User=root
+Restart=always
+ExecStart=/root/rachel-scripts/batteryWatcher.sh
+
+[Install]
+WantedBy=multi-user.target
+EOF
+        printGood "Done."
+        echo; printStatus "Starting Battery Watcher."
+        # start the process
+        systemctl daemon-reload
+        systemctl enable batterywatcher.service
+        systemctl start batterywatcher.service
+        printGood "Done."
+        echo; printStatus "Checking status of running process:"
+        # check the status
+        systemctl status batterywatcher.service
+    else # Run this for every other OS version
+        rm -f /etc/systemd/system/batterywatcher.service # Remove 16.04 versions of script
+        cat > /etc/init/batterywatcher.conf << 'EOF'
+# Info
+description "Battery Watcher"
+author      "Sam <sam@hackersforcharity.org>"
+
+# Events
+start on net-device-up IFACE=eth0
+stop on shutdown
+
+# Automatically restart process if crashed
+respawn
+respawn limit 20 5
+
+# Run the script!
+script
+    exec /root/rachel-scripts/batteryWatcher.sh
+end script
+EOF
+        printGood "Done."
+        echo; printStatus "Starting Battery Watcher."
+        # start the process
+        service batterywatcher start
+        printGood "Done."
+        echo; printStatus "Checking status of running process:"
+        # check the status
+        service batterywatcher status
+    fi
     printStatus "Logging battery status to /var/log/rachel/battery.log"
     printGood "Script started...monitoring battery."
 }
