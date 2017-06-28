@@ -20,7 +20,7 @@ osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
 # To get current version - date +%Y%m%d.%H%M
-scriptVersion=20170627.2052
+scriptVersion=20170627.2334
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -1492,7 +1492,7 @@ EOF
         echo; printStatus "Add ESP startup code"
         sed -i '$e echo "# start rachel-esp checker"' $rachelScriptsFile
         sed -i '$e echo "echo \\$(date) - Starting checker.php for rachel-esp"' $rachelScriptsFile
-        sed -i '$e echo "service esp start"' $rachelScriptsFile
+        sed -i '$e echo "if [[ \\$(lsb_release -ds | grep 16.04) ]]; then systemctl start esp.service; else service esp start; fi"' $rachelScriptsFile
         printGood "Done."
     fi
 
@@ -1809,42 +1809,45 @@ installBatteryWatch(){
 echo; echo "[*] System boot - battery monitor started at $(date)" >> /var/log/rachel/battery.log
 badBattChk=0
 while :; do
-    # If battery is not connected, do not run script
-    if [[ $(cat /tmp/battery_connected_status) == 0 ]]; then
-        echo "[!] Battery not connected, monitor stopped at $(date)" >> /var/log/rachel/battery.log
-        echo "[+] Battery connected:  $(cat /tmp/battery_connected_status)" >> /var/log/rachel/battery.log
-        exit 0
-    else
-        # If charge level is low, battery connected, and last charge level is below 95%, then there is a possible bad battery and do not run script
-        if [[ $(cat /tmp/chargeStatus) -lt 400 ]] && [[ $(cat /tmp/chargeStatus) -gt -275 ]] && [[ $(cat /tmp/batteryLastChargeLevel) -lt 95 ]]; then
-            let "badBattChk++"
-            if [[ $badBattChk -ge 3 ]]; then
-                echo "[!] Possible bad battery, monitor stopped at $(date)" >> /var/log/rachel/battery.log
-                echo "[+] Battery connected:  $(cat /tmp/battery_connected_status)" >> /var/log/rachel/battery.log
-                echo "[+] Battery last charge level:  $(cat /tmp/batteryLastChargeLevel)" >> /var/log/rachel/battery.log
-                echo "[+] Battery charge status:  $(cat /tmp/chargeStatus)" >> /var/log/rachel/battery.log
-                echo "[+] Bad battery check #:  $(echo $badBattChk)" >> /var/log/rachel/battery.log
-                exit 0
-            fi
+    # Check if system is finished booting
+    if [[ -f /tmp/chargeStatus ]]; then
+        # If battery is not connected, do not run script
+        if [[ $(cat /tmp/battery_connected_status 2>/dev/null) == 0 ]]; then
+            echo "[!] Battery not connected, monitor stopped at $(date)" >> /var/log/rachel/battery.log
+            echo "[+] Battery connected:  $(cat /tmp/battery_connected_status)" >> /var/log/rachel/battery.log 2>/dev/null
+            exit 0
         else
-            badBattChk=0
-            # If charging level is less then -200 (power not connected) and last charge level is below 3%, stop KA Lite and safely shutdown CAP 
-            if [[ $(cat /tmp/chargeStatus) -lt -200 ]]; then
-                if [[ $(cat /tmp/batteryLastChargeLevel) -lt 3 ]]; then
-                    echo "[!] Low battery shutdown at $(date)" >> /var/log/rachel/battery.log
-                    echo "[+] Battery connected:  $(cat /tmp/battery_connected_status)" >> /var/log/rachel/battery.log
-                    echo "[+] Battery last charge level:  $(cat /tmp/batteryLastChargeLevel)" >> /var/log/rachel/battery.log
-                    echo "[+] Battery charge status:  $(cat /tmp/chargeStatus)" >> /var/log/rachel/battery.log
-                    echo "[+] Bad battery check #:  $(echo $badBattChk)" >> /var/log/rachel/battery.log
-                    kalite stop
-                    shutdown -h now
+            # If charge status is low (should be at/above 400 at 99% battery), battery connected, and last charge level is below 95%, then there is a possible bad battery and do not run script
+            if [[ $(cat /tmp/chargeStatus 2>/dev/null) -lt 400 ]] && [[ $(cat /tmp/chargeStatus 2>/dev/null) -gt -275 ]] && [[ $(cat /tmp/batteryLastChargeLevel 2>/dev/null) -lt 95 ]]; then
+                let "badBattChk++"
+                if [[ $badBattChk -ge 3 ]]; then
+                    echo "[!] Possible bad battery, monitor stopped at $(date)" >> /var/log/rachel/battery.log
+                    echo "[+] Battery connected:  $(cat /tmp/battery_connected_status)" >> /var/log/rachel/battery.log 2>/dev/null
+                    echo "[+] Battery last charge level:  $(cat /tmp/batteryLastChargeLevel)" >> /var/log/rachel/battery.log 2>/dev/null
+                    echo "[+] Battery charge status:  $(cat /tmp/chargeStatus)" >> /var/log/rachel/battery.log 2>/dev/null
+                    echo "[+] Bad battery check #:  $(echo $badBattChk)" >> /var/log/rachel/battery.log 2>/dev/null
                     exit 0
+                fi
+            else
+                badBattChk=0
+                # If charging level is less then -200 (power not connected) and last charge level is below 3%, stop KA Lite and safely shutdown CAP 
+                if [[ $(cat /tmp/chargeStatus 2>/dev/null) -lt -200 ]]; then
+                    if [[ $(cat /tmp/batteryLastChargeLevel 2>/dev/null) -lt 3 ]]; then
+                        echo "[!] Low battery shutdown at $(date)" >> /var/log/rachel/battery.log
+                        echo "[+] Battery connected:  $(cat /tmp/battery_connected_status)" >> /var/log/rachel/battery.log 2>/dev/null
+                        echo "[+] Battery last charge level:  $(cat /tmp/batteryLastChargeLevel)" >> /var/log/rachel/battery.log 2>/dev/null
+                        echo "[+] Battery charge status:  $(cat /tmp/chargeStatus)" >> /var/log/rachel/battery.log 2>/dev/null
+                        echo "[+] Bad battery check #:  $(echo $badBattChk)" >> /var/log/rachel/battery.log 2>/dev/null
+                        kalite stop
+                        shutdown -h now
+                        exit 0
+                    fi
                 fi
             fi
         fi
+        # Check battery every 10 seconds
+        sleep 10
     fi
-    # Check battery every 10 seconds
-    sleep 10
 done
 EOF
     chmod +x $rachelScriptsDir/batteryWatcher.sh
@@ -2076,8 +2079,35 @@ installESP(){
     wget -q $gitESP/client/checker.php -O $rachelScriptsDir/checker.php
     rsync -av --del $RSYNCDIR/rachelmods/extra-build-files/esp.sshkey $rachelScriptsDir/
     chmod 600 $rachelScriptsDir/esp.sshkey
-    # create startup process
-    cat > /etc/init/esp.conf << 'EOF'
+    # create startup process for Ubuntu 16.04
+    if [[ $(echo $osVersion | grep 16.04) ]]; then
+        rm -f /etc/init/esp.conf # Remove other versions of script
+        cat > /etc/systemd/system/esp.service << 'EOF'
+[Unit]
+Description=ESP
+After=network.target
+
+[Service]
+User=root
+Restart=always
+ExecStart=/usr/bin/php -f /root/rachel-scripts/checker.php
+
+[Install]
+WantedBy=multi-user.target
+EOF
+        printGood "Done."
+        echo; printStatus "Starting ESP."
+        # start the process
+        systemctl daemon-reload
+        systemctl enable esp.service
+        systemctl start esp.service
+        printGood "Done."
+        echo; printStatus "Checking status of running process:"
+        # check the status
+        systemctl status esp.service
+    else # Run this for every other OS version
+        rm -f /etc/systemd/system/esp.service # Remove 16.04 versions of script
+        cat > /etc/init/esp.conf << 'EOF'
 # Info
 description "ESP"
 author      "Jonathan Field <jfield@worldpossible.org>"
@@ -2095,29 +2125,34 @@ script
     exec /usr/bin/php -f /root/rachel-scripts/checker.php
 end script
 EOF
-    printGood "Done."
-    echo; printStatus "Starting ESP."
-    # start the process
-    service esp start
-    printGood "Done."
-    echo; printStatus "Checking status of running process:"
-    # check the status
-    service esp status
+        printGood "Done."
+        echo; printStatus "Starting ESP."
+        # start the process
+        service esp start
+        printGood "Done."
+        echo; printStatus "Checking status of running process:"
+        # check the status
+        service esp status
+    fi
     # remove any existing weaved startup code
     sed -i '/Weaved/d' $rachelScriptsFile
     # remove any existing esp startup code
     sed -i '/esp/d' $rachelScriptsFile
     # add our esp startup code after Kiwix starts    
-    sed -i '/rachelKiwixStart.sh/a # start rachel-esp checker\necho $(date) - Starting checker.php for rachel-esp\nservice esp start' $rachelScriptsFile
+    sed -i '/rachelKiwixStart.sh/a # start rachel-esp checker\necho $(date) - Starting checker.php for rachel-esp\nif [[ \\$(lsb_release -ds | grep 16.04) ]]; then systemctl start esp.service; else service esp start; fi' $rachelScriptsFile
     printGood "ESP install completed."
 }
 
 uninstallESP(){
     echo; printStatus "Uninstalling ESP."
     # stop esp service
-    service esp stop
+    if [[ $(echo $osVersion | grep 16.04) ]]; then
+        systemctl stop esp.service
+    else
+        service esp stop
+    fi
     # remove esp files
-    rm -f /etc/init/esp.conf $rachelScriptsDir/checker.php $rachelScriptsDir/esp.sshkey
+    rm -f /etc/init/esp.conf /etc/systemd/system/esp.service $rachelScriptsDir/checker.php $rachelScriptsDir/esp.sshkey
     # remove any existing esp startup code
     sed -i '/esp/d' $rachelScriptsFile
     printGood "Done."
