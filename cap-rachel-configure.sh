@@ -1854,7 +1854,7 @@ EOF
     if [[ ! -z $pid ]]; then kill $pid; fi
     # Start script
     $rachelScriptsDir/batteryWatcher.sh&
-    printStatus "Logging shutdowns to /var/log/rachel/shutdown.log"
+    printStatus "Logging battery status to /var/log/rachel/battery.log"
     printGood "Script started...monitoring battery."
 }
 
