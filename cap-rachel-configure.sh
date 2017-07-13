@@ -20,7 +20,7 @@ osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
 # To get current version - date +%Y%m%d.%H%M
-scriptVersion=20170628.0021
+scriptVersion=20170712.2028
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -875,6 +875,12 @@ checkContentShell(){
     printGood "Done."
 }
 
+runFinishScript(){
+    if [[ $(grep ^"# Execute this script" $rachelWWW/modules/$m/finish_install.sh) ]]; then
+        bash $rachelWWW/modules/$m/finish_install.sh
+    fi
+}
+
 addModule(){
     if [[ -f /tmp/module.lst ]]; then
         echo; printStatus "Your selected module list:"
@@ -912,12 +918,15 @@ addModule(){
             echo; printStatus "Downloading $m"
             rsync -avz --delete-after $RSYNCDIR/rachelmods/$m $rachelWWW/modules/
             commandStatus
+            runFinishScript
             # If KA Lite module, than set the kaliteUpdate "flag" to install the contentpack
             if [[ $m == *-kalite ]]; then
                 touch $rachelPartition/kaliteUpdate
             fi
             printGood "Done."
         done < /tmp/module.lst
+    else
+        noInstall=1
     fi
     rm -f /tmp/module.lst
 }
@@ -1968,6 +1977,7 @@ contentModuleListInstall(){
             rsync -av --del $RSYNCDIR/rachelmods/$m $rachelWWW/modules/
         fi
         commandStatus
+        runFinishScript
         printGood "Done."
     done < $1
 }
@@ -2306,11 +2316,14 @@ interactiveMode(){
             Add-Module)
             updateModuleNames
             addModule
-            kaliteCheckFiles
-            # update rachelKiwixStart.sh
-            createKiwixRepairScript
-            # restart kiwix
-            /root/rachel-scripts/rachelKiwixStart.sh
+            if [[ $noInstall != 1 ]]; then
+                kaliteCheckFiles
+                # update rachelKiwixStart.sh
+                createKiwixRepairScript
+                # restart kiwix
+                /root/rachel-scripts/rachelKiwixStart.sh
+            fi
+            echo; printStatus "Exiting module install."
             whatToDo
             ;;
 
