@@ -20,7 +20,7 @@ osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
 # To get current version - date +%Y%m%d.%H%M
-scriptVersion=20170712.2028
+scriptVersion=20170713.0059
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
 rachelLogDir="/var/log/rachel"
@@ -1807,6 +1807,27 @@ mv $rachelLog $rachelLogDir/rachel-runonce-$timestamp.log
 rm -- "$0"
 sleep 5; shutdown -r now
 EOF
+
+    # This will run only if USB was set to METHOD 4
+    if [[ $method == 4 ]]; then
+        # Because this is running, remove the FINISH lines from above runonce.sh
+        sed -n '/# FINISHED/q;p' $rachelPartition/runonce.sh > runonce.tmp; mv runonce.tmp $rachelPartition/runonce.sh
+        cat >> $rachelPartition/runonce.sh << 'EOF'
+echo; echo "[*] Downloading content for automated build"
+# Pull the current module build file
+echo; echo "[+] Downloading lastest module build file"
+# Rsync to Jeremy's server
+echo; echo "[+] Doing what Jeremy needs done; lots of rsync!"
+# FINISHED
+echo; echo "[+] Completed USB Recovery runonce script - $(date)"
+# Add header/date/time to install log file
+timestamp=$(date +"%b-%d-%Y-%H%M%Z")
+mv $rachelLog $rachelLogDir/rachel-runonce-$timestamp.log
+# Remove self; reboot
+rm -- "$0"
+sleep 5; shutdown -r now
+EOF
+fi
 }
 
 installBatteryWatch(){
