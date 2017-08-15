@@ -137,7 +137,7 @@ sanitize(){
 	# Remove history, clean logs
 	echo; printStatus "Sanitizing log files."
 	# Clean log files and possible test scripts
-	rm -rf /var/log/rachel-install* /var/log/RACHEL/* /var/log/rachel/* /root	est.sh
+	rm -rf /var/log/rachel-install* /var/log/RACHEL/* /var/log/rachel/* /root/test.sh
 	# Clean previous cached logins from ssh
 	rm -f /root/.ssh/known_hosts
 	# Clean off ka-lite_content.zip (if exists)
