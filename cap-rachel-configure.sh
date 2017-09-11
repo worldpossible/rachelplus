@@ -5,7 +5,7 @@
 
 # COMMON VARIABLES - Change as needed
 dirContentOffline="/media/usbhd-sdb1" # Enter directory of downloaded RACHEL content for offline install (e.g. I mounted my external USB on my CAP but plugging the external USB into and running the command 'fdisk -l' to find the right drive, then 'mkdir /media/RACHEL-Content' to create a folder to mount to, then 'mount /dev/sdb1 /media/RACHEL-Content' to mount the USB drive.)
-rsyncOnline="rsync://dev.worldpossible.org" # The current RACHEL rsync repository
+rsyncOnline="rsync://dev.worldpossible.org" # The current RACHEL rsync repositoryoCleanup="1"
 contentOnline="rsync://rachel.golearn.us/content" # Another RACHEL rsync repository
 wgetOnline="http://rachelfriends.org" # RACHEL large file repo (ka-lite_content, etc)
 gitESP="https://raw.githubusercontent.com/rachelproject/esp/master" # ESP GitHub Repo
@@ -20,30 +20,31 @@ osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
 # To get current version - date +%Y%m%d.%H%M
-scriptVersion=20170713.0059
+scriptVersion=20170910.2111
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
-internet="1" # Enter 0 (Offline), 1 (Online - DEFAULT)
+internet="1" # 0 (Offline), 1 (Online - DEFAULT)
+rootDir="/root"
 rachelLogDir="/var/log/rachel"
 mkdir -p $rachelLogDir
 rachelLogFile="rachel-install.log.tmp"
 rachelLog="$rachelLogDir/$rachelLogFile"
 rachelPartition="/media/RACHEL"
 rachelWWW="$rachelPartition/rachel"
-rachelScriptsDir="/root/rachel-scripts"
+rachelScriptsDir="$rootDir/rachel-scripts"
 rachelScriptsFile="$rachelScriptsDir/rachelStartup.sh"
 rachelScriptsLog="/var/log/rachel/rachel-scripts.log"
 kaliteUser="root"
-kaliteDir="/root/.kalite" # Installed as user 'root'
+kaliteDir="$rootDir/.kalite" # Installed as user 'root'
 kaliteContentDir="$rachelPartition/.kalite/content"
 kaliteMajorVersion="0.17"
-kaliteCurrentVersion="$kaliteMajorVersion.1-0ubuntu1"
+kaliteCurrentVersion="$kaliteMajorVersion.2-0ubuntu1"
 kaliteInstaller=ka-lite-bundle_"$kaliteCurrentVersion"_all.deb
 kalitePrimaryDownload="http://pantry.learningequality.org/downloads/ka-lite/$kaliteMajorVersion/installers/debian/$kaliteInstaller"
 kalitePrimaryContent="http://pantry.learningequality.org/downloads/ka-lite/$kaliteMajorVersion/content"
 kaliteSettings="$kaliteDir/settings.py"
 kiwixInstallerCAPv1="kiwix-0.9-linux-i686.tar.bz2"
 kiwixInstallerCAPv2="kiwix-0.9-linux-x86_64.tar.bz2"
-installTmpDir="/root/cap-rachel-install.tmp"
+installTmpDir="$rootDir/cap-rachel-install.tmp"
 rachelTmpDir="/media/RACHEL/cap-rachel-install.tmp"
 rachelRecoveryDir="/media/RACHEL/recovery"
 stemPkg="stem-1.5.1.tgz"
@@ -57,6 +58,7 @@ errorCode="0"
 buildHashList(){
     cat > $installTmpDir/hashes.md5 << 'EOF'
 d17736647f2d94f7c7dd428d19a64237 ka-lite-bundle_0.17.1-0ubuntu1_all.deb
+07c27248e8d1db41c6ecf386ab3cae2d ka-lite-bundle_0.17.2-0ubuntu1_all.deb
 b61fdc3937aa226f34f685ba0bc29db1 kiwix-0.9-linux-i686.tar.bz2
 df6216ba851819d9c3d0208d3ea639df kiwix-0.9-linux-x86_64.tar.bz2
 EOF
@@ -126,8 +128,9 @@ cleanup(){
 testingScript(){
     set -x
 
-    repairRachelScripts
-
+    createKiwixRepairScript
+    $rootDir/rachel-scripts/rachelKiwixStart.sh
+    
     set +x
     exit 1
 }
@@ -151,7 +154,7 @@ opMode(){
             offlineVariables
             echo; printStatus "Here is list of your current partitions and their mountpoints (if applicable):"
             lsblk|grep -v mmc|grep -v sda
-            echo; printQuestion "What is the location of your content folder (for example, /media/usb)? "; read dirContentOffline
+            echo; printQuestion "What is the mountpoint name of your content folder (for example, /media/usb)? "; read dirContentOffline
             grep -qs " $dirContentOffline " /proc/mounts
             if [[ $? != 0 ]]; then
                 echo; printError "The folder location does not exist!  Do you want to continue?"
@@ -290,7 +293,7 @@ offlineVariables(){
     KIWIXINSTALL=""
     DOWNLOADCONTENTSCRIPT="rsync -avhz --progress $dirContentOffline/rachelplus/scripts"
     CONTENTWIKIALL=""
-    DOWNLOADSCRIPT="rsync -avhz --progress $dirContentOffline/cap-rachel-configure.sh /root/cap-rachel-configure.sh"
+    DOWNLOADSCRIPT="rsync -avhz --progress $dirContentOffline/cap-rachel-configure.sh $rootDir/cap-rachel-configure.sh"
     DOWNLOADBETASCRIPT=""
 }
 
@@ -363,7 +366,6 @@ checkMD5(){
 
 rebootCAP(){
     # No log as it won't clean up the tmp file
-    echo; printStatus "I need to reboot; new installs will reboot twice more automatically."
     echo; printStatus "The file, $rachelLog, will be renamed to a dated log file when the script is complete."
     printStatus "Rebooting in 10 seconds...Ctrl-C to cancel reboot."
     # Progress bar to visualize wait period
@@ -380,20 +382,20 @@ sanitize(){
     # Remove history, clean logs
     echo; printStatus "Sanitizing log files."
     # Clean log files and possible test scripts
-    rm -rf /var/log/rachel-install* /var/log/rachel/* /root/test.sh
+    rm -rf /var/log/rachel-install* /var/log/rachel/* $rootDir/test.sh
     # Clean previous cached logins from ssh
-    rm -f /root/.ssh/known_hosts
+    rm -f $rootDir/.ssh/known_hosts
     # Clean off ka-lite_content.zip (if exists)
     rm -f /media/RACHEL/ka-lite_content.zip
     # Clean previous files from running the generate_recovery.sh script 
     rm -rf /recovery/20* $rachelRecoveryDir/20*
     # Clean bash history
-    echo "" > /root/.bash_history
+    echo "" > $rootDir/.bash_history
     echo; printQuestion "Do you want to remove any currently activated Weaved services and run the ESP installer?"
     read -p "    Enter (y/N) " REPLY
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         # Remove previous Weaved installs
-        rm -rf /usr/bin/notify_Weaved*.sh /usr/bin/Weaved*.sh /etc/weaved/services/Weaved*.conf /root/Weaved*.log
+        rm -rf /usr/bin/notify_Weaved*.sh /usr/bin/Weaved*.sh /etc/weaved/services/Weaved*.conf $rootDir/Weaved*.log
         # Install ESP
         installESP
     fi
@@ -415,8 +417,8 @@ installKiwix(){
     # Clean up current rachel-scripts.sh file
     sed -i '/kiwix/d' $rachelScriptsFile
     # Add lines to $rachelScriptsFile that will start kiwix on boot
-    sed -i '$e echo "\# Start kiwix on boot"' $rachelScriptsFile
-    sed -i '$e echo "\/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' $rachelScriptsFile
+    # sed -i '$e echo "\# Start kiwix on boot"' $rachelScriptsFile
+    # sed -i '$e echo "\/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' $rachelScriptsFile
     # Update Kiwix version
     cat /var/kiwix/application.ini | grep ^Version | cut -d= -f2 > /etc/kiwix-version
 }
@@ -438,7 +440,7 @@ createKiwixRepairScript(){
 
 # Create tmp file (clean out new lines, etc)
 tmp=`mktemp`
-libraryPath="/media/RACHEL/kiwix/data/library"
+libraryPath="/var/kiwix"
 library="$libraryPath/library.xml"
 
 # Remove/recreate existing library
@@ -790,16 +792,16 @@ EOF
         parted -s /dev/sda mklabel gpt
         ## Part1: 3G for preloaded content
         #sgdisk -n 1:2048:765460479 -c 1:"preloaded" -u 1:77777777-7777-7777-7777-777777777777 -t 1:8300 /dev/sda # original
-        #sgdisk -n 1:2048:+20G -c 1:"preloaded" -u 1:77777777-7777-7777-7777-777777777777 -t 1:8300 /dev/sda # RACHEL 20GB
-        sgdisk -n 1:2048:+3G -c 1:"preloaded" -u 1:77777777-7777-7777-7777-777777777777 -t 1:8300 /dev/sda
+        #sgdisk -n 1:2048:+20G -c 1:"preloaded" -u 1:77777777-7777-7777-7777-777777777777 -t 1:8300 /dev/sda # 20GB
+        sgdisk -n 1:2048:+3G -c 1:"preloaded" -u 1:77777777-7777-7777-7777-777777777777 -t 1:8300 /dev/sda # 3GB
         ## Part2: 17G for teacher content
         #sgdisk -n 2:765460480:-1M -c 2:"uploaded" -u 2:88888888-8888-8888-8888-888888888888 -t 2:8300 /dev/sda # original
-        #sgdisk -n 2:21G:+100G -c 2:"uploaded" -u 2:88888888-8888-8888-8888-888888888888 -t 2:8300 /dev/sda # RACHEL 100GB
-        sgdisk -n 2:6293504:+17G -c 2:"uploaded" -u 2:88888888-8888-8888-8888-888888888888 -t 2:8300 /dev/sda
+        #sgdisk -n 2:21G:+100G -c 2:"uploaded" -u 2:88888888-8888-8888-8888-888888888888 -t 2:8300 /dev/sda # 100GB
+        sgdisk -n 2:6293504:+17G -c 2:"uploaded" -u 2:88888888-8888-8888-8888-888888888888 -t 2:8300 /dev/sda # 17G
         ## Part3: Remaining for RACHEL content
-        #sgdisk -n 3:+122G:-1M -c 3:"RACHEL" -u 3:99999999-9999-9999-9999-999999999999 -t 3:8300 /dev/sda # RACHEL 343.8GB
-        #sgdisk -n 3:255852544:-1M -c 3:"RACHEL" -u 3:99999999-9999-9999-9999-999999999999 -t 3:8300 /dev/sda # RACHEL 343.8GB
-        sgdisk -n 3:41945088:-1M -c 3:"RACHEL" -u 3:99999999-9999-9999-9999-999999999999 -t 3:8300 /dev/sda
+        #sgdisk -n 3:+122G:-1M -c 3:"RACHEL" -u 3:99999999-9999-9999-9999-999999999999 -t 3:8300 /dev/sda # 122GB
+        #sgdisk -n 3:255852544:-1M -c 3:"RACHEL" -u 3:99999999-9999-9999-9999-999999999999 -t 3:8300 /dev/sda # 344GB
+        sgdisk -n 3:41945088:-1M -c 3:"RACHEL" -u 3:99999999-9999-9999-9999-999999999999 -t 3:8300 /dev/sda # All remaining
         sgdisk -p /dev/sda
         printGood "Done."
 
@@ -1025,9 +1027,9 @@ removeKALite(){
 }
 
 kaliteLocationUpdate(){
-    # If /root/.kalite is not a symlink, move KA Lite database to hard drive for speed increase and to prevent filling up the eMMC with user data
+    # If $rootDir/.kalite is not a symlink, move KA Lite database to hard drive for speed increase and to prevent filling up the eMMC with user data
     echo; printStatus "Checking that .kalite directory lives on hard disk"
-    if [[ ! -L /root/.kalite ]]; then
+    if [[ ! -L $rootDir/.kalite ]]; then
         echo; printError "Need to move .kalite from eMMC to hard disk"
         kalite stop
         echo; printStatus "Before copying KA Lite folder - here is an 'ls' of $rachelPartition"
@@ -1038,14 +1040,14 @@ kaliteLocationUpdate(){
             mv $rachelPartition/.kalite $rachelPartition/.kalite-backup
         else
             rm -rf $rachelPartition/.kalite
-            cp -r /root/.kalite $rachelPartition/.kalite-backup
+            cp -r $rootDir/.kalite $rachelPartition/.kalite-backup
         fi
-        mv /root/.kalite $rachelPartition/
+        mv $rootDir/.kalite $rachelPartition/
         echo; printStatus "After copying KA Lite folder - $rachelPartition (should list folders .kalite and .kalite-backup)"
         ls -la $rachelPartition
-        echo; printStatus "Symlinking /root/.kalite to /media/RACHEL/.kalite"
-        ln -s $rachelPartition/.kalite /root/.kalite
-        echo; printGood "Symlinking complete - /root"
+        echo; printStatus "Symlinking $rootDir/.kalite to /media/RACHEL/.kalite"
+        ln -s $rachelPartition/.kalite $rootDir/.kalite
+        echo; printGood "Symlinking complete - $rootDir"
     else
         echo; printGood ".kalite directory is located on the hard disk"
     fi
@@ -1172,8 +1174,8 @@ kaliteCheckFiles(){
     echo; printStatus "Clearing old video content"
     rm -rf $rachelPartition/kacontent
     # clear out old database files
-    rm -rf /root/.kalite/database/content_khan_*.sqlite
-    rm -rf /root/.kalite/content_khan_*.sqlite
+    rm -rf $rootDir/.kalite/database/content_khan_*.sqlite
+    rm -rf $rootDir/.kalite/content_khan_*.sqlite
     # check/install kalite content packs (this covers subtitles)
     if [[ -f $rachelPartition/kaliteUpdate ]]; then
         echo; printStatus "Installing content packs"
@@ -1192,7 +1194,7 @@ kaliteCheckFiles(){
     printGood "Done."
     # Copying KA database file to KA Lite database folder
     echo; printStatus "Symlinking all KA database module files to the actual KA Lite database folder."
-    find $rachelWWW/modules/*-kalite -name "*.sqlite" -exec ln -sf {} /root/.kalite/database/ \;
+    find $rachelWWW/modules/*-kalite -name "*.sqlite" -exec ln -sf {} $rootDir/.kalite/database/ \;
     # Starting KA Lite
     echo; sudo kalite stop; sudo kalite start
     # Update KA Lite version
@@ -1437,105 +1439,102 @@ repairRachelScripts(){
     echo; printStatus "Updating $rachelScriptsFile"
     mkdir -p $rachelScriptsDir
     # Add rachel-scripts.sh script
-    sed "s,%rachelScriptsLog%,$rachelScriptsLog,g;s,%rachelPartition%,$rachelPartition,g" > $rachelScriptsFile << 'EOF'
+    cat > $rachelScriptsFile << 'EOF'
 #!/bin/bash
 # Send output to log file
-rm -f %rachelScriptsLog%
-exec 1>> %rachelScriptsLog% 2>&1
+rm -f /var/log/rachel/rachel-scripts.log
+exec 1>> /var/log/rachel/rachel-scripts.log 2>&1
 echo $(date) - Starting RACHEL script
-# Run once
-if [[ -f %rachelPartition%/runonce.sh ]]; then
-    echo $(date) - Running "runonce" script
-    bash %rachelPartition%/runonce.sh
+
+# Run once (checks every boot for this script)
+if [[ -f /media/RACHEL/runonce.sh ]]; then
+    echo; echo $(date) - Running "runonce" script
+    bash /media/RACHEL/runonce.sh
 fi
+
+# Start Kiwix on boot
+echo; echo $(date) - Starting Kiwix
+bash /root/rachel-scripts/rachelKiwixStart.sh
+
+# Start battery monitoring
+echo; echo $(date) - Starting battery monitor
+if [[ $(lsb_release -ds | grep 16.04) ]]; then systemctl start batterywatcher.service; else service batterywatcher start; fi
+
+# Check if we should disable reset button
+echo; echo $(date) - Checking if we should disable reset button
+if [[ -f /root/rachel-scripts/disable_reset ]]; then killall reset_button; echo "Reset button disabled"; fi
+
+# Start RACHEL esp checker
+echo; echo $(date) - Starting esp-checker.php for rachel-esp
+if [[ $(lsb_release -ds | grep 16.04) ]]; then systemctl start esp.service; else service esp start; fi
+
+# Check if we should disable wifi
+echo; echo $(date) - Checking if we should disable wifi
+if [[ -f /root/rachel-scripts/disable_wifi ]]; then sleep 5; ifconfig wlan0 down; echo "Wifi disabled"; fi
+
+# Start kalite at boot time
+echo; echo $(date) - Starting kalite
+sleep 20 # kalite needs full network to start up
+         # (any way to speed up the network boot?)
+sudo /usr/bin/kalite start
+
+# First boot (only runs one time after reimage)
+# Put to the bottom to allow networking to come up
+if [[ -f /root/rachel-scripts/firstboot.sh ]]; then
+    echo; echo $(date) - Running "firstboot" script
+    bash /root/rachel-scripts/firstboot.sh
+fi
+
+# Check for modules (simple check on boot for updated modules on attached USB)
+if [[ $(lsblk | grep -E 'sdb|sdc|sdd') ]]; then
+    echo; echo $(date) - Running "module update" script
+    usbDrive=$(df -h | grep -E 'sdb1|sdc1|sdd1' | grep media | awk '{ print $1 }' | cut -d'/' -f3)
+    if [[ $usbDrive != 0 ]]; then
+        echo "[!] WARNING:  USB is *not* mounted."
+        echo "[-] Attempting to mount the attached USB to /media/usb"
+        mkdir /media/usb
+        mount /dev/$usbDrive /media/usb
+        if [[ $(df -h | grep $usbDrive | grep usb) ]]; then echo "[+] Mounted successfully."; else echo "[!] Mounting failed."; mountFail=1; fi
+        if [[ $mountFail == 1 ]]; then
+            echo "Run 'dmesg' to view CAP error log."
+            echo "You can also check the RACHEL configure script log file (noted below) for other possible errors."
+        else
+            mountedUSB="/media/usb"
+        fi
+    else
+        mountedUSB=$(lsblk | grep $usbDrive | awk '{ print $7 }')
+    fi
+    # Add module symlink for index.htmlf and correct permissions
+    if [[ -d $mountedUSB/rachelmods ]]; then
+        rsync -avhP $mountedUSB/rachelmods/ /media/RACHEL/rachel/modules/
+        # Add symlinks - when running the Recovery USB, symlinks are not permitted on FAT partitions, so we have to create them after recovery runs
+        echo; echo "[-] Add symlink for en-local_content."
+        installedMods=$(ls /media/RACHEL/rachel/modules)
+        while IFS= read -r module; do
+            ln -s /media/RACHEL/rachel/modules/$module/rachel-index.php /media/RACHEL/rachel/modules/$module/index.htmlf 2>/dev/null
+        done <<< "$installedMods"
+        find /media/RACHEL/rachel/modules/ -type d -print0 | xargs -0 chmod 0755
+        find /media/RACHEL/rachel/modules/ -type f -print0 | xargs -0 chmod 0644
+    else
+        echo "[!] Mounted USB does not have a rachelmods folder...moving on."
+    fi
+    # Safely eject the attached USB
+    sync
+    eject $mountedUSB
+    # Set led lights to alert user that module transfer is complete
+    #   and they can remove the USB
+    bash /root/led_control.sh 3g on
+fi
+
+# All done
+echo; echo $(date) - RACHEL startup completed
 exit 0
 EOF
-
-    # Add rachel-scripts.sh startup in /etc/rc.local
-    sed -i '/RACHEL/d' /etc/rc.local
-    sed -i '/rachel/d' /etc/rc.local
-    sudo sed -i '$e echo "# Add rachel startup scripts"' /etc/rc.local
-    sudo sed -i '$e echo "bash '$rachelScriptsFile'&"' /etc/rc.local
-
-    # Check/re-add Kiwix
-    if [[ -d /var/kiwix ]]; then
-        echo; printStatus "Setting up Kiwix to start at boot..."
-        # Remove old kiwix boot lines from /etc/rc.local
-        sed -i '/kiwix/d' /etc/rc.local
-        # Clean up current rachel-scripts.sh file
-        sed -i '/kiwix/d' $rachelScriptsFile
-        # Add lines to /etc/rc.local that will start kiwix on boot
-        sed -i '$e echo "\# Start kiwix on boot"' $rachelScriptsFile
-        sed -i '$e echo "echo \\$(date) - Starting kiwix"' $rachelScriptsFile
-        sed -i '$e echo "\/var\/kiwix\/bin\/kiwix-serve --daemon --port=81 --library \/media\/RACHEL\/kiwix\/data\/library\/library.xml"' $rachelScriptsFile
-        printGood "Done."
-    fi
-
-    # Add battery monitoring start line 
-    if [[ -f $rachelScriptsDir/batteryWatcher.sh ]]; then
-        # Clean rachel-scripts.sh
-        sed -i '/battery/d' $rachelScriptsFile
-        sed -i '$e echo "# Start battery monitoring"' $rachelScriptsFile
-        sed -i '$e echo "echo \\$(date) - Starting battery monitor"' $rachelScriptsFile
-        sed -i '$e echo "if [[ \\$(lsb_release -ds | grep 16.04) ]]; then systemctl start batterywatcher.service; else service batterywatcher start; fi"' $rachelScriptsFile
-    fi
-
-    # Check for disable reset button flag
-    echo; printStatus "Added check to disable the reset button"
-    sed -i '$e echo "\# Check if we should disable reset button"' $rachelScriptsFile
-    sed -i '$e echo "echo \\$(date) - Checking if we should disable reset button"' $rachelScriptsFile
-    sed -i '$e echo "if [[ -f '$rachelScriptsDir'/disable_reset ]]; then killall reset_button; echo \\"Reset button disabled\\"; fi"' $rachelScriptsFile
-    printGood "Done."
-
-    # Check/enable/disable Kiwix library modules
-    if [[ -f $rachelScriptsDir/rachelKiwixStart.sh ]]; then
-        echo; printStatus "Updating the Kiwix library"
-        sed -i '$e echo "\# Updating the Kiwix library"' $rachelScriptsFile
-        sed -i '$e echo "echo \\$(date) - Updating the Kiwix Library"' $rachelScriptsFile
-        sed -i '$e echo "bash '$rachelScriptsDir'/rachelKiwixStart.sh"' $rachelScriptsFile
-        printGood "Done."
-    fi
-
-    # Check/enable ESP module
-    if [[ -f $rachelScriptsDir/checker.php ]]; then
-        echo; printStatus "Add ESP startup code"
-        sed -i '$e echo "# start rachel-esp checker"' $rachelScriptsFile
-        sed -i '$e echo "echo \\$(date) - Starting checker.php for rachel-esp"' $rachelScriptsFile
-        sed -i '$e echo "if [[ \\$(lsb_release -ds | grep 16.04) ]]; then systemctl start esp.service; else service esp start; fi"' $rachelScriptsFile
-        printGood "Done."
-    fi
-
-    # Check for disable wifi flag
-    echo; printStatus "Added check to disable wifi"
-    sed -i '$e echo "\# Check if we should disable wifi"' $rachelScriptsFile
-    sed -i '$e echo "echo \\$(date) - Checking if we should disable wifi"' $rachelScriptsFile
-    sed -i '$e echo "if [[ -f '$rachelScriptsDir'/disable_wifi ]]; then sleep 5; ifconfig wlan0 down; echo \\"Wifi disabled\\"; fi"' $rachelScriptsFile
-    printGood "Done."
-
-    # Check for KA Lite module
-    if [[ -d $kaliteDir ]]; then
-        # Delete previous setup commands from /etc/rc.local (not used anymore)
-        sudo sed -i '/ka-lite/d' /etc/rc.local
-        sudo sed -i '/sleep/d' /etc/rc.local
-        # Delete previous setup commands from the $rachelScriptsFile
-        sudo sed -i '/ka-lite/d' $rachelScriptsFile
-        sudo sed -i '/kalite/d' $rachelScriptsFile
-        sudo sed -i '/sleep/d' $rachelScriptsFile
-        echo; printStatus "Setting up KA Lite to start at boot..."
-        # Start KA Lite at boot time
-        sudo sed -i '$e echo "# Start kalite at boot time"' $rachelScriptsFile
-        sed -i '$e echo "echo \\$(date) - Starting kalite"' $rachelScriptsFile
-        sudo sed -i '$e echo "sleep 15 #kalite"' $rachelScriptsFile
-        sudo sed -i '$e echo "service ka-lite start #kalite"' $rachelScriptsFile
-        printGood "Done."
-    fi
-
-    # Add RACHEL script complete line
-    sed -i '$e echo "echo \\$(date) - RACHEL startup completed"' $rachelScriptsFile
     echo; printGood "Rachel start script update complete."
 }
 
 repairFirmware(){
+    noCleanup="1"
     printHeader
     echo; printStatus "Repairing your CAP after a firmware upgrade."
     cd $installTmpDir
@@ -1566,12 +1565,12 @@ repairFirmware(){
     checkCaptivePortal
 
     # Remove outdated startup script
-    rm -f /root/iptables-rachel.sh
+    rm -f $rootDir/iptables-rachel.sh
 
     # Delete previous setwanip commands from /etc/rc.local - not used anymore
     echo; printStatus "Deleting previous setwanip.sh script from /etc/rc.local"
     sed -i '/setwanip/d' /etc/rc.local
-    rm -f /root/setwanip.sh
+    rm -f $rootDir/setwanip.sh
     printGood "Done."
 
     # Delete previous iptables commands from /etc/rc.local
@@ -1591,7 +1590,7 @@ repairKalite(){
     # Fixing KA-Lite 
     # cp -f /media/RACHEL/kacontent/assessmentitems.sqlite /usr/share/kalite/assessment/khan/.
     cp -f $kaliteContentDir/assessmentitems.sqlite /usr/share/kalite/assessment/khan/.
-    sed -i '/assessmentitems.sqlite/d' /root/.kalite/settings.py
+    sed -i '/assessmentitems.sqlite/d' $rootDir/.kalite/settings.py
     # Turn logging off for compatibility
     exec &>/dev/tty
     # Restart kalite to use the new assessmentitems.sqlite location
@@ -1637,14 +1636,14 @@ repairBugs(){
 
     # Add battery monitor
     ## Check for old batteryWatcher processes
-    batteryPID=$(ps aux |grep "/root/batteryWatcher.sh" | grep -v grep | awk '{ print $2 }')
+    batteryPID=$(ps aux |grep "$rootDir/batteryWatcher.sh" | grep -v grep | awk '{ print $2 }')
     if [[ ! -z $batteryPID ]]; then kill -9 $batteryPID; fi
     installBatteryWatch
 
     # Add Kiwix repair library script
     createKiwixRepairScript
     # restart kiwix
-    /root/rachel-scripts/rachelKiwixStart.sh
+    $rootDir/rachel-scripts/rachelKiwixStart.sh
 
     # Rebuild rachelStartup.sh file
     repairRachelScripts
@@ -1722,8 +1721,6 @@ usbRecovery(){
     internet="0"
     noCleanup="1"
     offlineVariables
-    # Update rachel folder structure
-    updateRachelFolders
     # Update modules names to new structure
     updateModuleNames
     # Add runonce.sh script that will run on reboot
@@ -1733,91 +1730,44 @@ usbRecovery(){
 exec 1>> $rachelLog 2>&1
 echo "[+] Starting USB Recovery runonce script - $(date)"
 capCheck >/dev/null 2>&1
+
 # Run rachel startup script repair
 repairRachelScripts
-# Run kalite check
-kaliteCheckFiles
-# Copy latest cap-rachel-configure.sh script to /root
-echo; echo "[*] Copying USB version of cap-rachel-configure.sh to /root"
-cp $rachelPartition/cap-rachel-configure.sh /root/
-chmod +x /root/cap-rachel-configure.sh
+
 # Add symlinks - when running the Recovery USB, symlinks are not permitted on FAT partitions, so we have to create them after recovery runs
-echo; echo "[+] Add symlink for en-local_content."
-ln -s $rachelWWW/modules/en-local_content/rachel-index.php $rachelWWW/modules/en-local_content/index.htmlf 2>/dev/null
+echo; echo "[-] Add symlink for en-local_content."
+installedMods=$(ls /media/RACHEL/rachel/modules)
+while IFS= read -r module; do
+    ln -s /media/RACHEL/rachel/modules/$module/rachel-index.php /media/RACHEL/rachel/modules/$module/index.htmlf 2>/dev/null
+done <<< "$installedMods"
+find /media/RACHEL/rachel/modules/ -type d -print0 | xargs -0 chmod 0755
+find /media/RACHEL/rachel/modules/ -type f -print0 | xargs -0 chmod 0644
+
 # Update to the latest contentshell
 echo; echo "[+] Updating to latest contentshell."
-cd $rachelPartition/contentshell
+cd $rachelScriptsDir/files/rachel
 cp -rf ./* $rachelWWW/ # overwrite current content with contentshell
 cp -rf ./.git $rachelWWW/ # copy over GitHub files
 mv /etc/init/procps.conf /etc/init/procps.conf.old 2>/dev/null # otherwise quite a pkgs won't install
 rm -f $rachelWWW/en_all.sh $rachelWWW/en_justice.sh $rachelWWW/modules/ka-lite $rachelWWW/modules/local_content # clean up old files
-pear clear-cache 2>/dev/null
-pecl info stem 
-if [[ $? == 0 ]]; then 
-    echo; echo "[+] Installing the stem module."
-    printf "\n" | pecl install $rachelPartition/offlinepkgs/$stemPkg
-    # Add support for stem extension
-    echo '; configuration for php stem module' > /etc/php5/conf.d/stem.ini
-    echo 'extension=stem.so' >> /etc/php5/conf.d/stem.ini
-else
-    cd $rachelWWW
-    git checkout $gitContentShellCommit
-fi
-# Check KA Lite admin directory location
-# If /root/.kalite is not a symlink, move KA Lite database to hard drive for speed increase and to prevent filling up the eMMC with user data
-echo; echo "[+] Checking that .kalite directory lives on hard disk"
-if [[ ! -L /root/.kalite ]]; then
-    echo; echo "[*] Need to move .kalite from eMMC to hard disk"
-    sudo kalite stop
-    echo; echo "[*] Before copying KA Lite folder - here is an 'ls' of $rachelPartition"
-    ls -la $rachelPartition
-    echo; echo "[+] Copying primary (.kalite) and backup (.kalite-backup) directory to $rachelPartition"
-    if [[ -d $rachelPartition/.kalite ]]; then
-        rm -rf $rachelPartition/.kalite-backup
-        mv $rachelPartition/.kalite $rachelPartition/.kalite-backup
-    else
-        rm -rf $rachelPartition/.kalite
-        cp -r /root/.kalite $rachelPartition/.kalite-backup
-    fi
-    mv /root/.kalite $rachelPartition/
-    echo; echo "[*] After copying KA Lite folder - $rachelPartition (should list folders .kalite and .kalite-backup)"
-    ls -la $rachelPartition
-    echo; echo "[+] Symlinking /root/.kalite to /media/RACHEL/.kalite"
-    ln -s $rachelPartition/.kalite /root/.kalite
-    echo; echo "[+] Symlinking complete - /root"
-else
-    echo "[+] .kalite directory is located on the hard disk"
-fi
-# Update Kiwix version
-cat /var/kiwix/application.ini | grep ^Version | cut -d= -f2 > /etc/kiwix-version
-# Update KA Lite version
-dpkg -s ka-lite-bundle | grep ^Version | cut -d" " -f2 > /etc/kalite-version
-# Update RACHEL USB installer version
-mv $rachelPartition/rachelinstaller-version /etc/rachelinstaller-version >/dev/null 2>&1
-# Update RACHEL Hardware build version
-echo $os > /etc/rachelbuild
-# Update RACHEL Hardware build date
-echo $timestamp > /etc/rachelbuilddate
-# FINISHED
-echo; echo "[+] Completed USB Recovery runonce script - $(date)"
-# Add header/date/time to install log file
-timestamp=$(date +"%b-%d-%Y-%H%M%Z")
-mv $rachelLog $rachelLogDir/rachel-runonce-$timestamp.log
-# Remove self; reboot
-rm -- "$0"
-sleep 5; shutdown -r now
-EOF
 
-    # This will run only if USB was set to METHOD 4
-    if [[ $method == 4 ]]; then
-        # Because this is running, remove the FINISH lines from above runonce.sh
-        sed -n '/# FINISHED/q;p' $rachelPartition/runonce.sh > runonce.tmp; mv runonce.tmp $rachelPartition/runonce.sh
-        cat >> $rachelPartition/runonce.sh << 'EOF'
-echo; echo "[*] Downloading content for automated build"
-# Pull the current module build file
-echo; echo "[+] Downloading lastest module build file"
-# Rsync to Jeremy's server
-echo; echo "[+] Doing what Jeremy needs done; lots of rsync!"
+# I don't think the following is needed anymore
+# pear clear-cache 2>/dev/null
+# pecl info stem 
+# if [[ $? == 0 ]]; then 
+#     echo; echo "[+] Installing the stem module."
+#     printf "\n" | pecl install $rachelPartition/offlinepkgs/$stemPkg
+#     # Add support for stem extension
+#     echo '; configuration for php stem module' > /etc/php5/conf.d/stem.ini
+#     echo 'extension=stem.so' >> /etc/php5/conf.d/stem.ini
+# else
+#     cd $rachelWWW
+#     git checkout $gitContentShellCommit
+# fi
+
+# Update Versions
+updateVersions
+
 # FINISHED
 echo; echo "[+] Completed USB Recovery runonce script - $(date)"
 # Add header/date/time to install log file
@@ -1827,9 +1777,21 @@ mv $rachelLog $rachelLogDir/rachel-runonce-$timestamp.log
 rm -- "$0"
 sleep 5; shutdown -r now
 EOF
-fi
 }
 
+updateVersions(){
+    # Update Versions
+    ## Update Kiwix version
+    cat /var/kiwix/application.ini | grep ^Version | cut -d= -f2 > /etc/kiwix-version
+    # Update KA Lite version
+    dpkg -s ka-lite-bundle | grep ^Version | cut -d" " -f2 > /etc/kalite-version
+    ## Update RACHEL USB installer version
+    mv $rachelPartition/rachelinstaller-version /etc/rachelinstaller-version >/dev/null 2>&1
+    ## Update RACHEL Hardware build version
+    echo $os > /etc/rachelbuild
+    ## Update RACHEL Hardware build date
+    echo $timestamp > /etc/rachelbuilddate
+}
 installBatteryWatch(){
     echo; printStatus "Creating $rachelScriptsDir/batteryWatcher.sh"
     echo "This script will monitor the battery charge level and shutdown this device with less than 3% battery charge."
@@ -1838,9 +1800,11 @@ installBatteryWatch(){
 #!/bin/bash
 echo; echo "[*] System boot - battery monitor started at $(date)" >> /var/log/rachel/battery.log
 badBattChk=0
+# Wait 30 secs for OS to fully boot
+sleep 30
 while :; do
     # Check if system is finished booting
-    if [[ -f /tmp/chargeStatus ]]; then
+    if [[ -f /tmp/chargeStatus ]] && [[ -f /tmp/batteryLastChargeLevel ]]; then
         # If battery is not connected, do not run script
         if [[ $(cat /tmp/battery_connected_status 2>/dev/null) == 0 ]]; then
             echo "[!] Battery not connected, monitor stopped at $(date)" >> /var/log/rachel/battery.log
@@ -1971,17 +1935,17 @@ updateRachelFolders(){
     if [[ -d $rachelLogDir ]] && [[ -d /var/log/RACHEL ]]; then cp /var/log/RACHEL/* $rachelLogDir/; rm -rf /var/log/RACHEL; fi
     if [[ -d /var/log/RACHEL ]]; then mv /var/log/RACHEL $rachelLogDir; fi
     # Move rachel-scripts.sh
-    if [[ -f /root/rachel-scripts.sh ]]; then mv /root/rachel-scripts.sh $rachelScriptsFile; fi
+    if [[ -f $rootDir/rachel-scripts.sh ]]; then mv $rootDir/rachel-scripts.sh $rachelScriptsFile; fi
     # Move battery watcher
-    if [[ -f /root/batteryWatcher.sh ]]; then mv /root/batteryWatcher.sh $rachelScriptsDir/; fi
+    if [[ -f $rootDir/batteryWatcher.sh ]]; then mv $rootDir/batteryWatcher.sh $rachelScriptsDir/; fi
     # Move createUSB
-    if [[ -f /root/createUSB.sh ]]; then mv /root/createUSB.sh $rachelScriptsDir/; fi
+    if [[ -f $rootDir/createUSB.sh ]]; then mv $rootDir/createUSB.sh $rachelScriptsDir/; fi
     # Move gpt.backup
-    if [[ -f /root/gpt.backup ]]; then mv /root/gpt.backup $rachelScriptsDir/; fi
+    if [[ -f $rootDir/gpt.backup ]]; then mv $rootDir/gpt.backup $rachelScriptsDir/; fi
     # Move rachelKiwixStart script
-    if [[ -f /root/rachelKiwixStart.sh ]]; then mv /root/rachelKiwixStart.sh $rachelScriptsDir/; fi
+    if [[ -f $rootDir/rachelKiwixStart.sh ]]; then mv $rootDir/rachelKiwixStart.sh $rachelScriptsDir/; fi
     # Remove weaved folder
-    rm -rf /root/weaved_software $rachelScriptsDir/weaved_software 
+    rm -rf $rootDir/weaved_software $rachelScriptsDir/weaved_software 
 }
 
 contentModuleListInstall(){
@@ -2025,11 +1989,15 @@ buildRACHEL(){
             ;;
         jeremy )
             offlineVariables
-            RSYNCDIR="rsync://192.168.1.74"
+            RSYNCDIR="rsync://192.168.1.10"
             ;;
         jfield )
             offlineVariables
             RSYNCDIR="rsync://192.168.1.6"
+            ;;
+        sam )
+            offlineVariables
+            RSYNCDIR="rsync://rachel.golearn.us"
             ;;
         usb )
             echo; printStatus "Here is list of your current partitions and their mountpoints (if applicable):"
@@ -2113,7 +2081,7 @@ buildRACHEL(){
     # update rachelKiwixStart.sh
     createKiwixRepairScript
     # restart kiwix
-    /root/rachel-scripts/rachelKiwixStart.sh
+    $rootDir/rachel-scripts/rachelKiwixStart.sh
 
     # install esp for remote service
     echo; printStatus "Installing RACHEL esp"
@@ -2154,12 +2122,12 @@ installESP(){
     mkdir -p $rachelScriptsDir
     echo; printStatus "Installing ESP."
     # download files and set permissions
-    wget -q $gitESP/client/checker.php -O $rachelScriptsDir/checker.php
+    wget -q $gitESP/client/checker.php -O $rachelScriptsDir/esp-checker.php
     rsync -av --del $RSYNCDIR/rachelmods/extra-build-files/esp.sshkey $rachelScriptsDir/
     chmod 600 $rachelScriptsDir/esp.sshkey
     # create startup process for Ubuntu 16.04
     if [[ $(echo $osVersion | grep 16.04) ]]; then
-        rm -f /etc/init/esp.conf # Remove other versions of script
+        rm -f /etc/init/esp.conf $rachelScriptsDir/checker.php # Remove other versions of script
         cat > /etc/systemd/system/esp.service << 'EOF'
 [Unit]
 Description=ESP
@@ -2168,7 +2136,7 @@ After=network.target
 [Service]
 User=root
 Restart=always
-ExecStart=/usr/bin/php -f /root/rachel-scripts/checker.php
+ExecStart=/usr/bin/php -f /root/rachel-scripts/esp-checker.php
 
 [Install]
 WantedBy=multi-user.target
@@ -2184,7 +2152,7 @@ EOF
         # check the status
         systemctl status esp.service
     else # Run this for every other OS version
-        rm -f /etc/systemd/system/esp.service # Remove 16.04 versions of script
+        rm -f /etc/systemd/system/esp.service $rachelScriptsDir/checker.php # Remove other versions of script
         cat > /etc/init/esp.conf << 'EOF'
 # Info
 description "ESP"
@@ -2200,7 +2168,7 @@ respawn limit 20 5
 
 # Run the script!
 script
-    exec /usr/bin/php -f /root/rachel-scripts/checker.php
+    exec /usr/bin/php -f /root/rachel-scripts/esp-checker.php
 end script
 EOF
         printGood "Done."
@@ -2217,7 +2185,7 @@ EOF
     # remove any existing esp startup code
     sed -i '/esp/d' $rachelScriptsFile
     # add our esp startup code after Kiwix starts    
-    sed -i '/rachelKiwixStart.sh/a # start rachel-esp checker\necho $(date) - Starting checker.php for rachel-esp\nif [[ \\$(lsb_release -ds | grep 16.04) ]]; then systemctl start esp.service; else service esp start; fi' $rachelScriptsFile
+    sed -i '/rachelKiwixStart.sh/a # start rachel-esp checker\necho $(date) - Starting esp-checker.php for rachel-esp\nif [[ \\$(lsb_release -ds | grep 16.04) ]]; then systemctl start esp.service; else service esp start; fi' $rachelScriptsFile
     printGood "ESP install completed."
 }
 
@@ -2230,7 +2198,7 @@ uninstallESP(){
         service esp stop
     fi
     # remove esp files
-    rm -f /etc/init/esp.conf /etc/systemd/system/esp.service $rachelScriptsDir/checker.php $rachelScriptsDir/esp.sshkey
+    rm -f /etc/init/esp.conf /etc/systemd/system/esp.service $rachelScriptsDir/esp-checker.php $rachelScriptsDir/esp.sshkey
     # remove any existing esp startup code
     sed -i '/esp/d' $rachelScriptsFile
     printGood "Done."
@@ -2241,9 +2209,9 @@ updateConfigureScript(){
         $DOWNLOADSCRIPT >&2
         commandStatus
         if [[ -s $installTmpDir/cap-rachel-configure.sh ]]; then
-            mv $installTmpDir/cap-rachel-configure.sh /root/cap-rachel-configure.sh
-            chmod +x /root/cap-rachel-configure.sh
-            versionNum=$(cat /root/cap-rachel-configure.sh |grep ^scriptVersion|head -n 1|cut -d"=" -f2|cut -d" " -f1)
+            mv $installTmpDir/cap-rachel-configure.sh $rootDir/cap-rachel-configure.sh
+            chmod +x $rootDir/cap-rachel-configure.sh
+            versionNum=$(cat $rootDir/cap-rachel-configure.sh |grep ^scriptVersion|head -n 1|cut -d"=" -f2|cut -d" " -f1)
             printGood "Success! Your script was updated to $versionNum; RE-RUN the script to use the new version."
         else
             printStatus "Fail! Check the log file for more info on what happened:  $rachelLog"
@@ -2256,8 +2224,8 @@ updateConfigureScript(){
         fi
         $DOWNLOADSCRIPT >&2
         commandStatus
-        chmod +x /root/cap-rachel-configure.sh
-        versionNum=$(cat /root/cap-rachel-configure.sh |grep ^scriptVersion|head -n 1|cut -d"=" -f2|cut -d" " -f1)
+        chmod +x $rootDir/cap-rachel-configure.sh
+        versionNum=$(cat $rootDir/cap-rachel-configure.sh |grep ^scriptVersion|head -n 1|cut -d"=" -f2|cut -d" " -f1)
         echo; printGood "Your script was updated to $versionNum"
         echo "RE-RUN the script to use the new version."
            # echo; printError "You need to be connected to the internet to update this script."
@@ -2323,7 +2291,7 @@ interactiveMode(){
             # update rachelKiwixStart.sh
             createKiwixRepairScript
             # restart kiwix
-            /root/rachel-scripts/rachelKiwixStart.sh
+            $rootDir/rachel-scripts/rachelKiwixStart.sh
             repairRachelScripts
             whatToDo
             ;;
@@ -2342,7 +2310,7 @@ interactiveMode(){
                 # update rachelKiwixStart.sh
                 createKiwixRepairScript
                 # restart kiwix
-                /root/rachel-scripts/rachelKiwixStart.sh
+                $rootDir/rachel-scripts/rachelKiwixStart.sh
             fi
             echo; printStatus "Exiting module install."
             whatToDo
@@ -2357,7 +2325,7 @@ interactiveMode(){
             # update rachelKiwixStart.sh
             createKiwixRepairScript
             # restart kiwix
-            /root/rachel-scripts/rachelKiwixStart.sh
+            $rootDir/rachel-scripts/rachelKiwixStart.sh
             whatToDo
             ;;
 
@@ -2368,7 +2336,7 @@ interactiveMode(){
             # update rachelKiwixStart.sh
             createKiwixRepairScript
             # restart kiwix
-            /root/rachel-scripts/rachelKiwixStart.sh
+            $rootDir/rachel-scripts/rachelKiwixStart.sh
             whatToDo
             ;;
 
@@ -2460,7 +2428,7 @@ interactiveMode(){
                     # update rachelKiwixStart.sh
                     createKiwixRepairScript
                     # restart kiwix
-                    /root/rachel-scripts/rachelKiwixStart.sh
+                    $rootDir/rachel-scripts/rachelKiwixStart.sh
                     break
                     ;;
 
@@ -2591,13 +2559,14 @@ elif [[ $1 == "--usbrecovery" ]]; then
     usbRecovery
     noCleanup=1
 elif [[ $1 == "--source-only" ]]; then
+    set -x
     printGood "Only importing source functions."
     noCleanup=1
 else
     # Check for old folder structure
-    if [[ -f /root/rachel-scripts.sh ]]; then 
+    if [[ -f $rootDir/rachel-scripts.sh ]]; then 
         echo; printError "Your RACHEL folder structure is outdated!"
-        echo "The configure script will still be located at /root/cap-rachel-configure.sh"
+        echo "The configure script will still be located at $rootDir/cap-rachel-configure.sh"
         echo "All other RACHEL scripts/files will be located in the folder called 'rachel-scripts'"
         echo "Updating your RACHEL install in 10 seconds."
         echo; sleep 10
@@ -2711,9 +2680,9 @@ else
                 $DOWNLOADBETASCRIPT >&2
                 commandStatus
                 if [[ -s $installTmpDir/cap-rachel-configure.sh ]]; then
-                    mv $installTmpDir/cap-rachel-configure.sh /root/cap-rachel-configure.sh
-                    chmod +x /root/cap-rachel-configure.sh
-                    versionNum=$(cat /root/cap-rachel-configure.sh |grep ^scriptVersion|head -n 1|cut -d"=" -f2|cut -d" " -f1)
+                    mv $installTmpDir/cap-rachel-configure.sh $rootDir/cap-rachel-configure.sh
+                    chmod +x $rootDir/cap-rachel-configure.sh
+                    versionNum=$(cat $rootDir/cap-rachel-configure.sh |grep ^scriptVersion|head -n 1|cut -d"=" -f2|cut -d" " -f1)
                     printGood "Success! Your script was updated to $versionNum; RE-RUN the script to use the new version."
                 else
                     printStatus "Fail! Check the log file for more info on what happened:  $rachelLog"
