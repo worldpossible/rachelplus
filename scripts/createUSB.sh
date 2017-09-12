@@ -19,7 +19,6 @@ printQuestion(){
 	echo -e "\x1B[01;33m[?]\x1B[0m $1"
 }
 
-usbVersion=2.2.5
 usbDateTime=$(date +"%Y%m%d.%H%M")
 imageSavePath="$HOME"
 imageSavePathCAP="/media/RACHEL/recovery"
@@ -110,6 +109,7 @@ confirmRecoveryUSB(){
 		# fi
 	else
 		printGood "This is a RACHEL Recovery USB."
+		usbVersion=$(head -1 $mountName/CHANGELOG.txt)
 	fi
 }
 
@@ -416,7 +416,6 @@ elif [[ -d /Volumes ]]; then
 	printGood "Hardware:  OSX"
 fi
 identifySavePath
-printGood "USB Version:  $usbVersion"
 identifyDeviceNum
 confirmRecoveryUSB
 setRecoveryMETHOD
