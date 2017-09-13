@@ -20,7 +20,7 @@ osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
 # To get current version - date +%Y%m%d.%H%M
-scriptVersion=20170910.2111
+scriptVersion=20170913.1119
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # 0 (Offline), 1 (Online - DEFAULT)
 rootDir="/root"
@@ -37,7 +37,7 @@ kaliteUser="root"
 kaliteDir="$rootDir/.kalite" # Installed as user 'root'
 kaliteContentDir="$rachelPartition/.kalite/content"
 kaliteMajorVersion="0.17"
-kaliteCurrentVersion="$kaliteMajorVersion.2-0ubuntu1"
+kaliteCurrentVersion="$kaliteMajorVersion.0-0ubuntu3"
 kaliteInstaller=ka-lite-bundle_"$kaliteCurrentVersion"_all.deb
 kalitePrimaryDownload="http://pantry.learningequality.org/downloads/ka-lite/$kaliteMajorVersion/installers/debian/$kaliteInstaller"
 kalitePrimaryContent="http://pantry.learningequality.org/downloads/ka-lite/$kaliteMajorVersion/content"
@@ -57,6 +57,7 @@ errorCode="0"
 # MD5 hash list
 buildHashList(){
     cat > $installTmpDir/hashes.md5 << 'EOF'
+34fb1b8df07db49de04bc5faaae6497d ka-lite-bundle_0.17.0-0ubuntu3_all.deb
 d17736647f2d94f7c7dd428d19a64237 ka-lite-bundle_0.17.1-0ubuntu1_all.deb
 07c27248e8d1db41c6ecf386ab3cae2d ka-lite-bundle_0.17.2-0ubuntu1_all.deb
 b61fdc3937aa226f34f685ba0bc29db1 kiwix-0.9-linux-i686.tar.bz2
