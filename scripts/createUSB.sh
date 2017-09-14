@@ -194,6 +194,7 @@ updateUSBFiles(){
 sanitize(){
 	# Remove history, clean logs
 	echo; printStatus "Sanitizing log files."
+	echo; echo "[+] Start time:  $(date "+%r")"
 	# Clean log files and possible test scripts
 	rm -rf /var/log/rachel-install* /var/log/RACHEL/* /var/log/rachel/*
 	# Clean previous cached logins from ssh
@@ -223,7 +224,9 @@ buildUSBImage(){
 			# Delete any previous .tar.xz files
 			rm -f $mountName/*.tar.xz
 
-			# Set variables to ensure they run on firstboot
+			# Setup files for first run/install
+			chmod +x /etc/battery_solve.sh 
+			rm /root/rachel-scripts/files/.kalite/content/*
 			mv /root/rachel-scripts/firstboot.sh.done /root/rachel-scripts/firstboot.sh
 			rm /root/battery_log
 			rm /etc/BATTERY_EDIT_DONE
@@ -256,8 +259,8 @@ buildUSBImage(){
 			echo
 			echo "Select 'n' to exit. (y/N)"; read REPLY
 			if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
-				echo "It takes about 75 minutes (RACHEL-Plus CAPv1) or 96 minutes (RACHEL-Plus CAPv2) to create the 3 images; then, the USB script will continue."
-				echo "Started building images at $(date "+%r")"
+				echo "It takes about 75 minutes (RACHEL-Plus CAPv1) or 121 minutes (RACHEL-Plus CAPv2) to create the 3 images; then, the USB script will continue."
+				echo; echo "[+] Start time:  $(date "+%r")"
 				rm -rf $installTmpDir $rachelTmpDir
 				echo; time /root/generate_recovery.sh $rachelRecoveryDir/
 				echo
@@ -346,6 +349,7 @@ unmountUSB(){
 imageUSB(){
 	# Image the USB - show the imaging time when complete; only copy our first 2 partitions to minimize space
 	echo; printStatus "Creating image of USB drive (with USB 2.0 = ~60min; with USB 3.0 = ~2.5min)."
+	echo; echo "[+] Start time:  $(date "+%r")"
 	echo "File location:  $imageSavePath/$imageName"
 	if [[ $os == "CAPv1" ]]; then
 #		usbDeviceName=$usbDeviceName
@@ -371,12 +375,14 @@ compressHashUSBImage(){
 	cd $imageSavePath
 	# MD5 hash the img
 	echo; printStatus "Calculating MD5 hash of both the .img (on RACHEL-Plus CAPv1 = ~51s; RACHEL-Plus CAPv2 = ~40s)."
+	echo; echo "[+] Start time:  $(date "+%r")"
 	if [[ $os == "linux" ]] || [[ $(echo $os | grep "CAP") ]]; then
 		md5app=md5sum
 	elif [[ $os == "osx" ]]; then
 		md5app=md5
 	fi
 	echo "Running cmd:  $md5app $imageName"
+	echo; echo "[+] Start time:  $(date "+%r")"
 	time $md5app $imageName | tee $imageName.md5
 	# Compress the .img file (should reduce the image from 3.76GB to about 2.1GB)
 	echo; printStatus "Compressing .img file (on RACHEL-Plus CAPv1 = ~14min; RACHEL-Plus CAPv2 = ~23min)."

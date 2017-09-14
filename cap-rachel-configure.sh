@@ -20,7 +20,7 @@ osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
 # To get current version - date +%Y%m%d.%H%M
-scriptVersion=20170913.1119
+scriptVersion=20170914.0913
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # 0 (Offline), 1 (Online - DEFAULT)
 rootDir="/root"
@@ -1801,8 +1801,8 @@ installBatteryWatch(){
 #!/bin/bash
 echo; echo "[*] System boot - battery monitor started at $(date)" >> /var/log/rachel/battery.log
 badBattChk=0
-# Wait 30 secs for OS to fully boot
-sleep 30
+# Wait 300 secs for OS to fully boot
+sleep 300
 while :; do
     # Check if system is finished booting
     if [[ -f /tmp/chargeStatus ]] && [[ -f /tmp/batteryLastChargeLevel ]]; then

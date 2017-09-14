@@ -11,20 +11,21 @@ rachelDir=/media/RACHEL
 # copy the minimal RACHEL contentshell
 echo $(date) - Copy the minimal RACHEL contentshell
 if [[ ! -d $rachelDir/rachel ]]; then
-    cp -r $rootDir/rachel $rachelDir
+    rsync -ahPl $rootDir/rachel $rachelDir
     bash $rachelDir/rachel/admin/post-update-script.sh
 fi
 
 # copy the initial .kalite (includes password)
 echo $(date) - Copy the initial .kalite \(includes password\)
 if [[ ! -d $rachelDir/.kalite ]]; then
-    cp -r $rootDir/.kalite $rachelDir
+    rsync -ahPl $rootDir/.kalite $rachelDir
+    
 fi
 
 # copy the moodle directory, create data dir
 echo $(date) - Copy the moodle directory, create data dir
 if [[ ! -d $rachelDir/moodle ]]; then
-    cp -r $rootDir/moodle $rachelDir
+    rsync -ahPl $rootDir/moodle $rachelDir
     ln -s $rachelDir/moodle $rachelDir/rachel
     mkdir $rachelDir/moodle-data
     chmod 777 $rachelDir/moodle-data
@@ -33,7 +34,7 @@ fi
 # copy the mysql data directory (contains moodle)
 echo $(date) - Copy the mysql data directory \(contains moodle\)
 if [[ ! -d $rachelDir/mysql ]]; then
-    cp -r $rootDir/mysql $rachelDir
+    rsync -ahPl $rootDir/mysql $rachelDir
     groupadd mysql
     chown -R mysql:mysql $rachelDir/mysql
     find $rachelDir/mysql -type d -print0 | xargs -0 chmod 0700

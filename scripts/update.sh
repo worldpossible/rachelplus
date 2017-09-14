@@ -29,7 +29,7 @@ scriptRoot="/boot/efi"
 . $scriptRoot/rachel-files/cap-rachel-configure.sh --source-only
 
 # METHOD --> 1=Recovery (DEFAULT), 2=Imager, 3=AutoInstall
-export method=1
+export method=3
 
 firmwareVersion="2.2.15-rooted"
 usbCreated="20170912.0152"
