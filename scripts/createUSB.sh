@@ -225,7 +225,7 @@ buildUSBImage(){
 			rm -f $mountName/*.tar.xz
 
 			# Setup files for first run/install
-			chmod +x /etc/battery_solve.sh 
+			chmod +x /etc/battery_solve.sh /root/rachel-scripts/firstboot.sh /root/rachel-scripts/rachelStartup.sh root/cap-rachel-configure.sh
 			rm /root/rachel-scripts/files/.kalite/content/*
 			mv /root/rachel-scripts/firstboot.sh.done /root/rachel-scripts/firstboot.sh
 			rm /root/battery_log
