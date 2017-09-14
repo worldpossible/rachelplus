@@ -2,7 +2,7 @@
 echo; echo "[*] System boot - battery monitor started at $(date)" >> /var/log/rachel/battery.log
 badBattChk=0
 # Wait 30 secs for OS to fully boot
-sleep 30
+sleep 300
 while :; do
     # Check if system is finished booting
     if [[ -f /tmp/chargeStatus ]] && [[ -f /tmp/batteryLastChargeLevel ]]; then
