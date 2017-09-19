@@ -41,11 +41,11 @@ loggingStart(){
 
 identifyOS(){
 	if [[ $(cat /etc/hostname 2>/dev/null) == "WRTD-303N-Server" ]] || [[ $(cat /etc/hostname 2>/dev/null) == "WAPD-237N-Server" ]]; then
-		os=CAPv1
+		os=CAP1
 	elif [[ $(cat /etc/hostname 2>/dev/null) == "WAPD-235N-Server" ]] && [[ $(lsb_release -ds | grep 14.04) ]]; then
-		os=CAPv2
+		os=CAP2
 	elif [[ $(cat /etc/hostname 2>/dev/null) == "WAPD-235N-Server" ]] && [[ $(lsb_release -ds | grep 16.04) ]]; then
-		os=CAPv2_16.04
+		os=CAP2_16.04
 	elif [[ -f /etc/issue ]]; then
 		os=linux
 	elif [[ -d /Volumes ]]; then
@@ -70,12 +70,12 @@ identifyDeviceNum(){
 	if [[ $os == "linux" ]] || [[ $(echo $os | grep "CAP") ]]; then
 		echo; printStatus "List of currently mounted USB devices:"
 		lsblk|grep -v mmc|grep -v sda
-		echo; printQuestion "What is the device name that you want to image (for /dev/sdb, enter 'sdb')? "; read diskNum
-		usbDeviceName="/dev/$diskNum"
+		echo; printQuestion "What is the device name that you want to image (for /dev/sdb, enter 'sdb')? "; read diskPart
+		usbDeviceName="/dev/$diskPart"
 	elif [[ $os == "osx" ]]; then
 		diskutil list
-		echo; printQuestion "What is the number of the device that you want to image (for /dev/disk1, enter '1')? "; read diskNum
-		usbDeviceName="/dev/disk$diskNum"
+		echo; printQuestion "What is the number of the device that you want to image (for /dev/disk1, enter '1')? "; read diskPart
+		usbDeviceName="/dev/disk$diskPart"
 	fi
 	echo; printGood "Device name:  $usbDeviceName"
 }
@@ -109,7 +109,7 @@ confirmRecoveryUSB(){
 		# fi
 	else
 		printGood "This is a RACHEL Recovery USB."
-		usbVersion=$(head -1 $mountName/CHANGELOG.txt)
+		usbVersion=$(head -1 $mountName/CHANGELOG)
 	fi
 }
 
@@ -123,7 +123,7 @@ setRecoveryMETHOD(){
 		case $menu in
 		METHOD_1_Recovery)
 			echo; printStatus "Setting the recovery method to '1' for the default recovery method."
-			awk 'BEGIN{OFS=FS="="} $1~/export method/ {$2=1;}1' $mountName/update.sh > update.tmp; mv update.tmp $mountName/update.sh
+			awk 'BEGIN{OFS=FS="="} $1~/method/ {$2=1;}1' $mountName/update.sh > update.tmp; mv update.tmp $mountName/update.sh
 			usbType="Recovery"
 			# Check if we want to build an install USB as well (good if you are not wanting to wait for the Recovery to finish)
 			echo; printQuestion "Do you want to build an install USB along with a Recovery USB? (y/N) "; read REPLY
@@ -134,13 +134,13 @@ setRecoveryMETHOD(){
 		;;
 		METHOD_2_Clone)
 			echo; printStatus "Setting the recovery method to '2' for the default recovery method."
-			awk 'BEGIN{OFS=FS="="} $1~/export method/ {$2=2;}1' $mountName/update.sh > update.tmp; mv update.tmp $mountName/update.sh
+			awk 'BEGIN{OFS=FS="="} $1~/method/ {$2=2;}1' $mountName/update.sh > update.tmp; mv update.tmp $mountName/update.sh
 			usbType="Clone"
 			break
 		;;
 		METHOD_3_AutoInstall)
 			echo; printStatus "Setting the recovery method to '3' for the default recovery method."
-			awk 'BEGIN{OFS=FS="="} $1~/export method/ {$2=3;}1' $mountName/update.sh > update.tmp; mv update.tmp $mountName/update.sh
+			awk 'BEGIN{OFS=FS="="} $1~/method/ {$2=3;}1' $mountName/update.sh > update.tmp; mv update.tmp $mountName/update.sh
 			usbType="Install"
 			break
 		;;
@@ -153,14 +153,14 @@ identifyUSBVersion(){
 		imageName=''$os'_RACHEL_'$usbType'_USB_'$usbVersion'.img'
 	else 
 		echo; printQuestion "What model of CAP (v1 or v2) are you creating an recovery image for?"
-		select menu in "CAPv1" "CAPv2"; do
+		select menu in "CAP1" "CAP2"; do
 			case $menu in
-			CAPv1)
-				imageName='CAPv1_RACHEL_'$usbType'_USB_'$usbVersion'.img'
+			CAP1)
+				imageName='CAP1_RACHEL_'$usbType'_USB_'$usbVersion'.img'
 				break
 			;;
-			CAPv2)
-				imageName='CAPv2_RACHEL_'$usbType'_USB_'$usbVersion'.img'
+			CAP2)
+				imageName='CAP2_RACHEL_'$usbType'_USB_'$usbVersion'.img'
 				break
 			;;
 			esac
@@ -226,7 +226,7 @@ buildUSBImage(){
 
 			# Setup files for first run/install
 			chmod +x /etc/battery_solve.sh /root/rachel-scripts/firstboot.sh /root/rachel-scripts/rachelStartup.sh root/cap-rachel-configure.sh
-			rm /root/rachel-scripts/files/.kalite/content/*
+			rm /root/rachel-scripts/files/.kalite/content/*.mp4
 			mv /root/rachel-scripts/firstboot.sh.done /root/rachel-scripts/firstboot.sh
 			rm /root/battery_log
 			rm /etc/BATTERY_EDIT_DONE
@@ -248,10 +248,6 @@ buildUSBImage(){
 			# Allow for KA Lite to completely shutdown
 			sleep 1
 
-#			# Delete the Device ID and crypto keys from the database (without affecting the admin user you have already set up)
-#			echo; printStatus "Delete KA Lite Device ID and clearing crypto keys from the database"
-#			kalite manage runcode "from django.conf import settings; settings.DEBUG_ALLOW_DELETIONS = True; from securesync.models import Device; Device.objects.all().delete(); from fle_utils.config.models import Settings; Settings.objects.all().delete()"
-
 			echo; printQuestion "Do you want to run the /root/generate_recovery.sh script?"
 			echo "The script will save the *.tar.xz files to /media/RACHEL/recovery"
 			echo
@@ -259,7 +255,7 @@ buildUSBImage(){
 			echo
 			echo "Select 'n' to exit. (y/N)"; read REPLY
 			if [[ $REPLY =~ ^[yY][eE][sS]|[yY]$ ]]; then
-				echo "It takes about 75 minutes (RACHEL-Plus CAPv1) or 121 minutes (RACHEL-Plus CAPv2) to create the 3 images; then, the USB script will continue."
+				echo "It takes about 75 minutes (RACHEL-Plus CAP1) or 121 minutes (RACHEL-Plus CAP2) to create the 3 images; then, the USB script will continue."
 				echo; echo "[+] Start time:  $(date "+%r")"
 				rm -rf $installTmpDir $rachelTmpDir
 				echo; time /root/generate_recovery.sh $rachelRecoveryDir/
@@ -326,8 +322,6 @@ updateVersions(){
 	awk 'BEGIN{OFS=FS="\""} $1~/^usbVersion=/ {$2="'$usbVersion'";}1' $mountName/update.sh > update.tmp; mv update.tmp $mountName/update.sh
 	# Update RACHEL Installer version
 	echo $usbVersion > /etc/rachelinstaller-version
-	mkdir -p $mountName/rachel-files
-	echo $usbVersion > $mountName/rachel-files/rachelinstaller-version
 	# Update KA Lite version
 	kalite --version > /etc/kalite-version
 	# Update Kiwix version
@@ -338,7 +332,6 @@ unmountUSB(){
 	# Identify the device name
 	echo; printStatus "Unmounting USB."
 	cd ~
-	sync
 	if [[ $os == "linux" ]] || [[ $(echo $os | grep "CAP") ]]; then
 		umount $usbDeviceName*
 	elif [[ $os == "osx" ]]; then
@@ -351,20 +344,20 @@ imageUSB(){
 	echo; printStatus "Creating image of USB drive (with USB 2.0 = ~60min; with USB 3.0 = ~2.5min)."
 	echo; echo "[+] Start time:  $(date "+%r")"
 	echo "File location:  $imageSavePath/$imageName"
-	if [[ $os == "CAPv1" ]]; then
+	if [[ $os == "CAP1" ]]; then
 #		usbDeviceName=$usbDeviceName
 		partCount=$(( $(fdisk -l $usbDeviceName | grep ${usbDeviceName}2 | awk '{ print $3 }') + 1 ))
-	elif [[ $os == "CAPv2" ]]; then
+	elif [[ $os == "CAP2" ]]; then
 #		partCount=$(( $(fdisk -l $usbDeviceName | grep ${usbDeviceName}2 | awk '{ print $3 }') + 1 ))
 #		partCount=7714816 # Recovery USBs prior to 2.2.0
 		partCount=8688540 # I don't have an easy way to get this info yet
-	elif [[ $os == "CAPv2_16.04" ]]; then
+	elif [[ $os == "CAP2_16.04" ]]; then
 		partCount=$(( $(fdisk -l $usbDeviceName | grep ${usbDeviceName}2 | awk '{ print $3 }') + 1 ))
 		# partCount=10856448 # I don't have an easy way to get this info yet
 	elif [[ $os == "linux" ]]; then # Because linux tags the 2nd part as bootable
 		partCount=$(( $(fdisk -l $usbDeviceName | grep ${usbDeviceName}2 | awk '{ print $4 }') + 1 ))
 	elif [[ $os == "osx" ]]; then
-		usbDeviceName=/dev/rdisk$diskNum
+		usbDeviceName=/dev/rdisk$diskPart
 		partCount=$(( $(sudo fdisk $usbDeviceName | grep 2: | awk '{ print $13 }' | cut -d] -f1) + 1 ))
 	fi
 	echo "Running cmd:  time sudo dd if=$usbDeviceName of=$imageSavePath/$imageName count=$partCount bs=512"
@@ -374,7 +367,7 @@ imageUSB(){
 compressHashUSBImage(){
 	cd $imageSavePath
 	# MD5 hash the img
-	echo; printStatus "Calculating MD5 hash of both the .img (on RACHEL-Plus CAPv1 = ~51s; RACHEL-Plus CAPv2 = ~40s)."
+	echo; printStatus "Calculating MD5 hash of both the .img (on RACHEL-Plus CAP1 = ~50s; RACHEL-Plus CAP2 = ~40s)."
 	echo; echo "[+] Start time:  $(date "+%r")"
 	if [[ $os == "linux" ]] || [[ $(echo $os | grep "CAP") ]]; then
 		md5app=md5sum
@@ -385,7 +378,7 @@ compressHashUSBImage(){
 	echo; echo "[+] Start time:  $(date "+%r")"
 	time $md5app $imageName | tee $imageName.md5
 	# Compress the .img file (should reduce the image from 3.76GB to about 2.1GB)
-	echo; printStatus "Compressing .img file (on RACHEL-Plus CAPv1 = ~14min; RACHEL-Plus CAPv2 = ~23min)."
+	echo; printStatus "Compressing .img file (on RACHEL-Plus CAP1 = ~14min; RACHEL-Plus CAP2 = ~23min)."
 	echo "Running cmd:  zip -9 -y -r -q -o $imageName.zip $imageName.md5 $imageName"
 	time zip -9 -y -r -q -o $imageName.zip $imageName.md5 $imageName
 }
@@ -410,11 +403,11 @@ loggingStart
 echo; echo "RACHEL Recovery USB Image Creation Script"
 printGood "Script started:  $(date)"
 printGood "Log file:  $createLog"
-if [[ $(echo $os) == "CAPv1" ]]; then
+if [[ $(echo $os) == "CAP1" ]]; then
 	printGood "Hardware:  RACHEL-Plus (CAP v1)"
-elif [[ $(echo $os) == "CAPv2" ]]; then
+elif [[ $(echo $os) == "CAP2" ]]; then
 	printGood "Hardware:  RACHEL-Plus (CAP v2)"
-elif [[ $(echo $os) == "CAPv2_16.04" ]]; then
+elif [[ $(echo $os) == "CAP2_16.04" ]]; then
 	printGood "Hardware:  RACHEL-Plus (CAP v2 16.04)"
 elif [[ -f /etc/issue ]]; then
 	printGood "Hardware:  Linux/Unix"
@@ -427,10 +420,10 @@ confirmRecoveryUSB
 setRecoveryMETHOD
 identifyUSBVersion
 updateUSBFiles
+updateVersions
 buildUSBImage
 removeOSXJunk
 #addDefaultModules
-updateVersions
 unmountUSB
 imageUSB
 compressHashUSBImage
