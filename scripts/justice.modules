@@ -1,0 +1,69 @@
+#
+# This .modules file indicates the modules which are to be included
+# during installation. They will be sorted in the order they appear
+# here. Lines that begin with a # are ignored. Lines that begin with
+# a . are installed but hidden.
+# version-17.07.10
+
+en-local_content
+en-moodle
+en-saylor
+en-boundless
+en-openstax
+en-ck12
+en-coreknowledge
+en-algebra2go
+en-rachelcourses
+en-oya
+en-kalite
+en-math_expression
+en-understanding_algebra
+en-PhET
+en-fairshake
+en-fantasticphonics-adult
+en-fantasticphonics-child
+en-GCF2015
+
+en-practical_action
+en-infonet
+en-musictheory
+en-wikisource
+en-law_library
+en-wikipedia_for_schools-static
+en-wiktionary
+en-wikivoyage
+en-worldmap
+
+en-TED
+en-radiolab
+en-ebooks
+en-afristory
+en-mustardseedbooks
+en-catdogbooks
+en-iicba
+en-powertyping
+en-olpc
+
+# spanish modules
+es-kalite
+es-ebooks
+es-mustardseedbooks
+es-ap_didact
+es-biblioteca
+es-cnbguatemala
+es-blockly_games
+es-educalab
+es-guatemala
+es-soluciones
+es-vedoque
+#es-windows_apps
+
+# french content
+fr-kalite
+fr-wikivoyage
+fr-wiktionary
+fr-ebooksgratuits
+fr-haitifutur
+fr-phet-haiti
+fr-bouquineux
+fr-catdogbooks

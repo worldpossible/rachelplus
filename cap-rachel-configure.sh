@@ -20,7 +20,7 @@ osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
 # To get current version - date +%Y%m%d.%H%M
-scriptVersion=20170914.0913
+scriptVersion=20170920.2049
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # 0 (Offline), 1 (Online - DEFAULT)
 rootDir="/root"
@@ -842,20 +842,20 @@ checkContentShell(){
     echo; printStatus "Checking for pre-existing RACHEL content shell."
     if [[ ! -d $rachelWWW ]]; then
         printStatus "RACHEL content shell does not exist at $rachelWWW."
-        printStatus "Cloning the RACHEL content shell from GitHub into $(pwd)"
+        printStatus "Cloning the RACHEL content shell into $(pwd)"
         $GITCLONERACHELCONTENTSHELL
         cd contentshell
         cp -rf ./* $rachelWWW/
         cp -rf ./.git $rachelWWW/
     else
         if [[ ! -d $rachelWWW/.git ]]; then
-            echo; printStatus "$rachelWWW exists but it wasn't installed from git; installing RACHEL content shell from GitHub."
+            echo; printStatus "$rachelWWW exists but it wasn't installed from git; installing RACHEL content shell."
             $GITCLONERACHELCONTENTSHELL
             cd contentshell
             cp -rf ./* $rachelWWW/ # overwrite current content with contentshell
             cp -rf ./.git $rachelWWW/ # copy over GitHub files
         else
-            echo; printStatus "$rachelWWW exists; updating RACHEL content shell from GitHub."
+            echo; printStatus "$rachelWWW exists; updating RACHEL content shell."
             if [[ $internet == "1" ]]; then
                 cd $rachelWWW; git fetch --all; git reset --hard origin/master
             else
@@ -879,9 +879,8 @@ checkContentShell(){
 }
 
 runFinishScript(){
-    if [[ $(grep ^"# Execute this script" $rachelWWW/modules/$m/finish_install.sh) ]]; then
-        bash $rachelWWW/modules/$m/finish_install.sh
-    fi
+    ln -s /media/RACHEL/rachel/modules/$m/rachel-index.php /media/RACHEL/rachel/modules/$m/index.htmlf 2>/dev/null
+    bash $rachelWWW/modules/$m/finish_install.sh
 }
 
 addModule(){
@@ -922,12 +921,10 @@ addModule(){
             rsync -avz --delete-after $RSYNCDIR/rachelmods/$m $rachelWWW/modules/
             commandStatus
             runFinishScript
-            # If KA Lite module, than set the kaliteUpdate "flag" to install the contentpack
-            if [[ $m == *-kalite ]]; then
-                touch $rachelPartition/kaliteUpdate
-            fi
             printGood "Done."
         done < /tmp/module.lst
+        find /media/RACHEL/rachel/modules/ -type d -print0 | xargs -0 chmod 0755
+        find /media/RACHEL/rachel/modules/ -type f -print0 | xargs -0 chmod 0644
     else
         noInstall=1
     fi
@@ -938,23 +935,15 @@ addMultipleModules(){
     ## Add user input to languages they want to support
     echo; printStatus "The language install will install essential modules from the language(s) you choose."
     echo; printQuestion "What language content you would like to install:"
-    echo "  - [English] - English content"
-    echo "  - [Español] - Spanish content"
-    echo "  - [Français] - French content"
-    echo "  - [Full-EN-ES-FR] - The core content in English, Español, and Français"
+    echo "  - [EN-ES-FR-Core] - The core content in English, Español, and Français"
     echo "  - [Justice] - Justice default content"
-    echo "  - [Justice-OYA] - Justice Oregon Youth Authority content"
     echo "  - [Custom] - Your own custom list of modules (1 module name/line)"
     echo "  - [Exit] Install"
     echo
-    select menu in "English-Core" "Español-Core" "Français-Core" "Full-EN-ES-FR" "Justice" "Justice-OYA" "Custom" "Exit"; do
+    select menu in "EN-ES-FR-Core" "Justice" "Custom" "Exit"; do
         case $menu in
-        English-Core) option="en_plus.modules"; break ;;
-        Español-Core)  option="es_plus.modules"; break ;;
-        Français-Core) option="fr_plus.modules"; break ;;
-        Full-EN-ES-FR) option="full.modules"; break ;;
+        EN-ES-FR-Core) option="full.modules"; break ;;
         Justice) option="justice.modules"; break ;;
-        Justice-OYA) option="justice-oya.modules"; break ;;
         Custom) option="custom"; break ;;
         Exit) option="exit"; break ;;
         esac
@@ -965,21 +954,19 @@ addMultipleModules(){
         echo; printStatus "Here is list of your current partitions and their mountpoints (if applicable):"
         lsblk|grep -v mmc|grep -v sda
         echo; printQuestion "What is the full path to your custom module list file (example: /media/usb/customList.modules)?"; read option
-        grep -qs $option /proc/mounts
-        if [[ $? != 0 ]]; then
+        # grep -qs $option /proc/mounts
+        # if [[ $? != 0 ]]; then
+        if [[ ! -f "$option" ]]; then
             echo; printError "The folder location does not exist!  Try mounting a partition and trying again."
+            cleanup
         else
             contentModuleListInstall $option
-            # Since we are installing the entire language (which includes KA Lite); set the kaliteUpdate flag to install contentpack
-            touch $rachelPartition/kaliteUpdate
             printGood "Done."
         fi
     else
         echo; printStatus "Installing/updating content from $option"
         contentModuleListInstall $rachelWWW/scripts/"$option"
         commandStatus
-        # Since we are installing the entire language (which includes KA Lite); set the kaliteUpdate flag to install contentpack
-        touch $rachelPartition/kaliteUpdate
         printGood "Done."
     fi
 }
@@ -987,16 +974,14 @@ addMultipleModules(){
 contentUpdate(){
     buildRsyncModuleExcludeList
     MODULELIST=$(rsync --list-only --exclude-from "$rachelScriptsDir/rsyncExclude.list" $rachelWWW/modules/ | awk '{print $5}' | tail -n +2)
-    while IFS= read -r module; do
-        echo; printStatus "Downloading $module"
-        rsync -rltzuv --delete-after --exclude-from "$rachelScriptsDir/rsyncExclude.list" $RSYNCDIR/rachelmods/$module $rachelWWW/modules/
-        commandStatus
-        # If KA Lite module, than set the kaliteUpdate "flag" to install the contentpack
-        if [[ $module == *-kalite ]]; then
-            touch $rachelPartition/kaliteUpdate
-        fi
+    while IFS= read -r m; do
+        echo; printStatus "Downloading $m"
+        rsync -rltzuv --delete-after --exclude-from "$rachelScriptsDir/rsyncExclude.list" $RSYNCDIR/rachelmods/$m $rachelWWW/modules/
+        runFinishScript
         printGood "Done."
     done <<< "$MODULELIST"
+    find /media/RACHEL/rachel/modules/ -type d -print0 | xargs -0 chmod 0755
+    find /media/RACHEL/rachel/modules/ -type f -print0 | xargs -0 chmod 0644
 }
 
 removeKALite(){
@@ -1177,18 +1162,6 @@ kaliteCheckFiles(){
     # clear out old database files
     rm -rf $rootDir/.kalite/database/content_khan_*.sqlite
     rm -rf $rootDir/.kalite/content_khan_*.sqlite
-    # check/install kalite content packs (this covers subtitles)
-    if [[ -f $rachelPartition/kaliteUpdate ]]; then
-        echo; printStatus "Installing content packs"
-        # Install new format contentpacks
-        for i in `ls -1 --hide=*-contentpack.zip $rachelWWW/modules/*-kalite/`; do
-            if [[ $i =~ ([a-z]{2}).zip ]]; then
-                lang=${BASH_REMATCH[1]}
-                kalite manage retrievecontentpack local $lang $rachelWWW/modules/"$lang"-kalite/"$lang".zip
-            fi
-        done
-        rm -f $rachelPartition/kaliteUpdate
-    fi
     # Creating symlinks of all KA Lite video files in the KA Lite content folder  
     echo; printStatus "Creating symlinks of all KA Lite video files in the KA Lite content folder."
     find $rachelWWW/modules/*-kalite/content -name "*.mp4" -exec ln -sf {} $kaliteContentDir 2>/dev/null \;
@@ -1240,12 +1213,10 @@ downloadKAContent(){
     if [[ ! -z $lang ]]; then
         echo; printStatus "Downloading KA Lite content from $RSYNCDIR"
         rsync -Pavz --include *.mp4 --exclude assessment --exclude locale $RSYNCDIR/rachelmods/$lang-kalite/content/ /media/RACHEL/rachel/modules/$lang-kalite/content
-        # echo; printStatus "Downloading KA Lite contentpack"
-        # rsync -Pavz $RSYNCDIR/rachelmods/$lang-kalite/$lang.zip /media/RACHEL/rachel/modules/$lang-kalite/$lang.zip
+        echo; printStatus "Downloading KA Lite contentpack"
+        rsync -Pavz $RSYNCDIR/rachelmods/$lang-kalite/$lang.zip /media/RACHEL/rachel/modules/$lang-kalite/$lang.zip
     fi
-    touch $rachelPartition/kaliteUpdate
     kaliteCheckFiles
-    commandStatus
     printGood "Done."
 }
 
@@ -1265,7 +1236,7 @@ downloadKAContentPacks(){
         rm -f $rachelWWW/modules/$lang-kalite/$lang-contentpack.zip 2>/dev/null
         ln -s $rachelWWW/modules/$lang-kalite/$lang.zip $rachelWWW/modules/$lang-kalite/$lang-contentpack.zip 2>/dev/null
     done
-    touch $rachelPartition/kaliteUpdate
+
     printGood "Done."
 }
 
@@ -1442,49 +1413,45 @@ repairRachelScripts(){
     # Add rachel-scripts.sh script
     cat > $rachelScriptsFile << 'EOF'
 #!/bin/bash
+
 # Send output to log file
 rm -f /var/log/rachel/rachel-scripts.log
 exec 1>> /var/log/rachel/rachel-scripts.log 2>&1
 echo $(date) - Starting RACHEL script
 
-# Run once (checks every boot for this script)
+# First boot
+if [[ -f /root/rachel-scripts/firstboot.sh ]]; then
+    echo $(date) - Running "firstboot" script
+    bash /root/rachel-scripts/firstboot.sh
+fi
+
+# Run once
 if [[ -f /media/RACHEL/runonce.sh ]]; then
-    echo; echo $(date) - Running "runonce" script
+    echo $(date) - Running "runonce" script
     bash /media/RACHEL/runonce.sh
 fi
 
-# Start Kiwix on boot
-echo; echo $(date) - Starting Kiwix
+# Start kiwix on boot
+echo $(date) - Starting kiwix
 bash /root/rachel-scripts/rachelKiwixStart.sh
 
-# Start battery monitoring
-echo; echo $(date) - Starting battery monitor
-if [[ $(lsb_release -ds | grep 16.04) ]]; then systemctl start batterywatcher.service; else service batterywatcher start; fi
-
-# Check if we should disable reset button
-echo; echo $(date) - Checking if we should disable reset button
-if [[ -f /root/rachel-scripts/disable_reset ]]; then killall reset_button; echo "Reset button disabled"; fi
-
-# Start RACHEL esp checker
-echo; echo $(date) - Starting esp-checker.php for rachel-esp
-if [[ $(lsb_release -ds | grep 16.04) ]]; then systemctl start esp.service; else service esp start; fi
-
-# Check if we should disable wifi
-echo; echo $(date) - Checking if we should disable wifi
-if [[ -f /root/rachel-scripts/disable_wifi ]]; then sleep 5; ifconfig wlan0 down; echo "Wifi disabled"; fi
-
 # Start kalite at boot time
-echo; echo $(date) - Starting kalite
+echo $(date) - Starting kalite
 sleep 20 # kalite needs full network to start up
          # (any way to speed up the network boot?)
 sudo /usr/bin/kalite start
 
-# First boot (only runs one time after reimage)
-# Put to the bottom to allow networking to come up
-if [[ -f /root/rachel-scripts/firstboot.sh ]]; then
-    echo; echo $(date) - Running "firstboot" script
-    bash /root/rachel-scripts/firstboot.sh
-fi
+# Start battery monitoring
+#echo $(date) - Starting battery monitor
+#bash /root/rachel-scripts/batteryWatcher.sh &
+
+# Check if we should disable reset button
+echo $(date) - Checking if we should disable reset button
+if [[ -f /root/rachel-scripts/disable_reset ]]; then killall reset_button; echo "Reset button disabled"; fi
+
+# Start esp, our system for doing remote service
+echo $(date) - Start esp process
+php /root/rachel-scripts/esp-checker.php &
 
 # Check for modules (simple check on boot for updated modules on attached USB)
 if [[ $(lsblk | grep -E 'sdb|sdc|sdd') ]]; then
@@ -1505,14 +1472,19 @@ if [[ $(lsblk | grep -E 'sdb|sdc|sdd') ]]; then
     else
         mountedUSB=$(lsblk | grep $usbDrive | awk '{ print $7 }')
     fi
+
     # Add module symlink for index.htmlf and correct permissions
     if [[ -d $mountedUSB/rachelmods ]]; then
+        # Set 3G led light on to alert user that module update started
+        bash /root/led_control.sh 3g on
+        # Start module update
         rsync -avhP $mountedUSB/rachelmods/ /media/RACHEL/rachel/modules/
         # Add symlinks - when running the Recovery USB, symlinks are not permitted on FAT partitions, so we have to create them after recovery runs
         echo; echo "[-] Add symlink for en-local_content."
         installedMods=$(ls /media/RACHEL/rachel/modules)
-        while IFS= read -r module; do
-            ln -s /media/RACHEL/rachel/modules/$module/rachel-index.php /media/RACHEL/rachel/modules/$module/index.htmlf 2>/dev/null
+        while IFS= read -r m; do
+            ln -s /media/RACHEL/rachel/modules/$m/rachel-index.php /media/RACHEL/rachel/modules/$m/index.htmlf 2>/dev/null
+            if [[ -f /media/RACHEL/rachel/modules/$m/finish_install.sh ]]; then bash /media/RACHEL/rachel/modules/$m/finish_install.sh; fi
         done <<< "$installedMods"
         find /media/RACHEL/rachel/modules/ -type d -print0 | xargs -0 chmod 0755
         find /media/RACHEL/rachel/modules/ -type f -print0 | xargs -0 chmod 0644
@@ -1522,13 +1494,13 @@ if [[ $(lsblk | grep -E 'sdb|sdc|sdd') ]]; then
     # Safely eject the attached USB
     sync
     eject $mountedUSB
-    # Set led lights to alert user that module transfer is complete
+    # Set 3G led light off to alert user that module transfer is complete
     #   and they can remove the USB
-    bash /root/led_control.sh 3g on
+    bash /root/led_control.sh 3g off
 fi
 
-# All done
-echo; echo $(date) - RACHEL startup completed
+# And we're done
+echo $(date) - RACHEL startup completed
 exit 0
 EOF
     echo; printGood "Rachel start script update complete."
@@ -1615,31 +1587,18 @@ repairBugs(){
     updateModuleNames
 
     # Update to the latest contentshell
-    # installPkgUpdates
     checkContentShell
 
     # Update KA Lite root directory location
     kaliteLocationUpdate
 
     # Check soft links for kalite content files
-    rm -f $kaliteDir/content_khan_*.sqlite
-    rm -f $kaliteDir/database/content_khan_*.sqlite
-    ln -s $rachelWWW/modules/en-kalite/content_khan_en.sqlite $kaliteDir/database/content_khan_en.sqlite 2>/dev/null
-    ln -s $rachelWWW/modules/es-kalite/content_khan_es.sqlite $kaliteDir/database/content_khan_es.sqlite 2>/dev/null
-    ln -s $rachelWWW/modules/fr-kalite/content_khan_fr.sqlite $kaliteDir/database/content_khan_fr.sqlite 2>/dev/null
-    touch $rachelPartition/kaliteUpdate
     kaliteCheckFiles
 
-    # Add local content module
-    echo; printStatus "Adding the local content module."
-    rsync -avz $RSYNCDIR/rachelmods/en-local_content $rachelWWW/modules/
-    printGood "Done."
-
-    # Add battery monitor
-    ## Check for old batteryWatcher processes
-    batteryPID=$(ps aux |grep "$rootDir/batteryWatcher.sh" | grep -v grep | awk '{ print $2 }')
-    if [[ ! -z $batteryPID ]]; then kill -9 $batteryPID; fi
-    installBatteryWatch
+    # Add battery monitor - not using post Sep 15, 2017
+    # batteryPID=$(ps aux |grep "$rootDir/batteryWatcher.sh" | grep -v grep | awk '{ print $2 }')
+    # if [[ ! -z $batteryPID ]]; then kill -9 $batteryPID; fi
+    # installBatteryWatch
 
     # Add Kiwix repair library script
     createKiwixRepairScript
@@ -1674,50 +1633,6 @@ repairBugs(){
     fi
 }
 
-installPkgUpdates(){
-    pkgInstaller(){
-        dpkg -i *.deb
-        # apt-get -fy install
-        pear clear-cache 2>/dev/null
-        pecl info stem > /dev/null
-        if [[ $? -ge 1 ]]; then 
-            echo; printStatus "Installing the stem module."
-            currentDir=$(pwd)
-            if [[ internet="1" ]]; then
-                echo; printStatus "Downloading stem module."
-                cd $rachelPartition/offlinepkgs
-                wget -c $stemURL -O $stemPkg
-            fi
-            echo "\n" | pecl install $stemPkg
-            echo '; configuration for php stem module' > /etc/php5/conf.d/stem.ini
-            echo 'extension=stem.so' >> /etc/php5/conf.d/stem.ini
-        fi
-    }
-    mv /etc/init/procps.conf /etc/init/procps.conf.old 2>/dev/null # otherwise quite a lot of pkgs won't install
-    echo; printStatus "Updating pgp keys."
-    for i in $(echo $gpgKeys); do $GPGKEY$i 2>/dev/null; done
-    echo; printStatus "Updating packages."
-    if [[ $internet == 1 ]]; then
-        if [[ $osName == "precise" ]]; then
-            apt-get update; apt-get -y install python-software-properties; apt-add-repository -y ppa:relan/exfat
-        fi
-        if [[ -d $rachelPartition ]]; then
-            mkdir -p $rachelPartition/offlinepkgs/precise $rachelPartition/offlinepkgs/trusty; cd $rachelPartition/offlinepkgs
-        else
-            mkdir -p $rachelPartition/offlinepkgs/precise $rachelPartition/offlinepkgs/trusty; cd $installTmpDir/offlinepkgs
-        fi
-        apt-get update
-        downloadPackages
-        pkgInstaller
-    elif [[ -d $dirContentOffline/offlinepkgs ]]; then
-        echo $osName
-        if [[ $osName == "trusty" ]]; then cd $dirContentOffline/offlinepkgs/trusty; else cd $dirContentOffline/offlinepkgs/precise; fi
-        pkgInstaller
-    else
-        printError "Packages not found for installation."
-    fi
-}
-
 usbRecovery(){
     internet="0"
     noCleanup="1"
@@ -1746,25 +1661,9 @@ find /media/RACHEL/rachel/modules/ -type f -print0 | xargs -0 chmod 0644
 
 # Update to the latest contentshell
 echo; echo "[+] Updating to latest contentshell."
-cd $rachelScriptsDir/files/rachel
-cp -rf ./* $rachelWWW/ # overwrite current content with contentshell
-cp -rf ./.git $rachelWWW/ # copy over GitHub files
+rsync -avhP $rachelScriptsDir/files/rachel/ $rachelWWW
 mv /etc/init/procps.conf /etc/init/procps.conf.old 2>/dev/null # otherwise quite a pkgs won't install
 rm -f $rachelWWW/en_all.sh $rachelWWW/en_justice.sh $rachelWWW/modules/ka-lite $rachelWWW/modules/local_content # clean up old files
-
-# I don't think the following is needed anymore
-# pear clear-cache 2>/dev/null
-# pecl info stem 
-# if [[ $? == 0 ]]; then 
-#     echo; echo "[+] Installing the stem module."
-#     printf "\n" | pecl install $rachelPartition/offlinepkgs/$stemPkg
-#     # Add support for stem extension
-#     echo '; configuration for php stem module' > /etc/php5/conf.d/stem.ini
-#     echo 'extension=stem.so' >> /etc/php5/conf.d/stem.ini
-# else
-#     cd $rachelWWW
-#     git checkout $gitContentShellCommit
-# fi
 
 # Update Versions
 updateVersions
@@ -1776,7 +1675,7 @@ timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 mv $rachelLog $rachelLogDir/rachel-runonce-$timestamp.log
 # Remove self; reboot
 rm -- "$0"
-sleep 5; shutdown -r now
+sleep 5; reboot
 EOF
 }
 
@@ -1793,6 +1692,7 @@ updateVersions(){
     ## Update RACHEL Hardware build date
     echo $timestamp > /etc/rachelbuilddate
 }
+
 installBatteryWatch(){
     echo; printStatus "Creating $rachelScriptsDir/batteryWatcher.sh"
     echo "This script will monitor the battery charge level and shutdown this device with less than 3% battery charge."
@@ -1966,6 +1866,8 @@ contentModuleListInstall(){
         runFinishScript
         printGood "Done."
     done < $1
+    find /media/RACHEL/rachel/modules/ -type d -print0 | xargs -0 chmod 0755
+    find /media/RACHEL/rachel/modules/ -type f -print0 | xargs -0 chmod 0644
 }
 
 buildRACHEL(){
@@ -2076,7 +1978,6 @@ buildRACHEL(){
     php $rachelWWW/sortmods.php $modulesFile
 
     # symlink KA Lite mp4s to /media/RACHEL/kacontent
-    touch $rachelPartition/kaliteUpdate
     kaliteCheckFiles
 
     # update rachelKiwixStart.sh
@@ -2319,7 +2220,6 @@ interactiveMode(){
 
             Add-Multiple-Modules)
             updateModuleNames
-            # installPkgUpdates
             checkContentShell
             addMultipleModules
             kaliteCheckFiles
@@ -2410,7 +2310,6 @@ interactiveMode(){
 
                     Update-Content-Shell)
                     echo; printStatus "Updating the RACHEL content shell."
-                    # installPkgUpdates
                     checkContentShell
                     break
                     ;;
