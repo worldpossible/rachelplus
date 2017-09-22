@@ -123,7 +123,7 @@ setRecoveryMETHOD(){
 		case $menu in
 		METHOD_1_Recovery)
 			echo; printStatus "Setting the recovery method to '1' for the default recovery method."
-			awk 'BEGIN{OFS=FS="="} $1~/method/ {$2=1;}1' $mountName/update.sh > update.tmp; mv update.tmp $mountName/update.sh
+			awk 'BEGIN{OFS=FS="\""} $1~/method=/ {$2="1";}1' $mountName/update.sh > update.tmp; mv update.tmp $mountName/update.sh
 			usbType="Recovery"
 			# Check if we want to build an install USB as well (good if you are not wanting to wait for the Recovery to finish)
 			echo; printQuestion "Do you want to build an install USB along with a Recovery USB? (y/N) "; read REPLY
@@ -134,13 +134,13 @@ setRecoveryMETHOD(){
 		;;
 		METHOD_2_Clone)
 			echo; printStatus "Setting the recovery method to '2' for the default recovery method."
-			awk 'BEGIN{OFS=FS="="} $1~/method/ {$2=2;}1' $mountName/update.sh > update.tmp; mv update.tmp $mountName/update.sh
+			awk 'BEGIN{OFS=FS="\""} $1~/method=/ {$2="2";}1' $mountName/update.sh > update.tmp; mv update.tmp $mountName/update.sh
 			usbType="Clone"
 			break
 		;;
 		METHOD_3_AutoInstall)
 			echo; printStatus "Setting the recovery method to '3' for the default recovery method."
-			awk 'BEGIN{OFS=FS="="} $1~/method/ {$2=3;}1' $mountName/update.sh > update.tmp; mv update.tmp $mountName/update.sh
+			awk 'BEGIN{OFS=FS="\""} $1~/method=/ {$2="3";}1' $mountName/update.sh > update.tmp; mv update.tmp $mountName/update.sh
 			usbType="Install"
 			break
 		;;
@@ -423,7 +423,7 @@ updateUSBFiles
 updateVersions
 buildUSBImage
 removeOSXJunk
-#addDefaultModules
+##addDefaultModules
 unmountUSB
 imageUSB
 compressHashUSBImage

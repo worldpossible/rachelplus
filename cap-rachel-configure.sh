@@ -2448,8 +2448,24 @@ stty sane
 trap cleanup EXIT
 
 # Menu
-if [[ $1 == "" || $1 == "--help" || $1 == "-h" ]]; then
+if [[ $1 == "--help" || $1 == "-h" ]]; then
     printHelp
+elif [[ $1 == "" ]]; then
+    # DEFAULT Interactive Mode
+    # Create temp directories
+    mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir 2>/dev/null
+    # Check OS and CAP version
+    osCheck
+    capCheck
+    rachelPartitionCheck
+    # Determine the operational mode - ONLINE or OFFLINE
+    opMode
+    # Build the hash list 
+    buildHashList
+    # Change directory into $installTmpDir
+    cd $installTmpDir
+    echo; printStatus "If needed, you may EXIT the interactive script at anytime, press Ctrl-C"
+    interactiveMode
 elif [[ $1 == "--version" ]]; then
     # Print version only, if requested
     echo $scriptVersion
