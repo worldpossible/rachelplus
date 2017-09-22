@@ -20,7 +20,7 @@ osVersion=$(lsb_release -ds)
 # osVersion=$(grep DISTRIB_RELEASE /etc/lsb-release | cut -d"=" -f2)
 # osVersion=$(awk -F '=' '/^VERSION_ID=/ {print $2}' /etc/os-release 2>&-)
 # To get current version - date +%Y%m%d.%H%M
-scriptVersion=20170920.2049
+scriptVersion=20170922.1853
 timestamp=$(date +"%b-%d-%Y-%H%M%Z")
 internet="1" # 0 (Offline), 1 (Online - DEFAULT)
 rootDir="/root"
@@ -129,8 +129,7 @@ cleanup(){
 testingScript(){
     set -x
 
-    createKiwixRepairScript
-    $rootDir/rachel-scripts/rachelKiwixStart.sh
+    kaliteCheckFiles
     
     set +x
     exit 1
@@ -880,10 +879,11 @@ checkContentShell(){
 
 runFinishScript(){
     ln -s /media/RACHEL/rachel/modules/$m/rachel-index.php /media/RACHEL/rachel/modules/$m/index.htmlf 2>/dev/null
-    bash $rachelWWW/modules/$m/finish_install.sh
+    bash $rachelWWW/modules/$m/finish_install.sh 2>/dev/null
 }
 
 addModule(){
+    noInstall=1
     if [[ -f /tmp/module.lst ]]; then
         echo; printStatus "Your selected module list:"
         # Sort/unique the module list
@@ -919,12 +919,14 @@ addModule(){
         while read m; do
             echo; printStatus "Downloading $m"
             rsync -avz --delete-after $RSYNCDIR/rachelmods/$m $rachelWWW/modules/
-            commandStatus
+            echo; printStatus "Fixing file and directory permissions"
+            find /media/RACHEL/rachel/modules/$m -type d -print0 | xargs -0 chmod 0755
+            find /media/RACHEL/rachel/modules/$m -type f -print0 | xargs -0 chmod 0644
             runFinishScript
+            if [[ $m == *-kalite || $m == *-wiki* ]]; then echo noInstall=0; fi
             printGood "Done."
         done < /tmp/module.lst
-        find /media/RACHEL/rachel/modules/ -type d -print0 | xargs -0 chmod 0755
-        find /media/RACHEL/rachel/modules/ -type f -print0 | xargs -0 chmod 0644
+        echo; printStatus "Checking permissions on all the copied directories and files."
     else
         noInstall=1
     fi
@@ -954,8 +956,6 @@ addMultipleModules(){
         echo; printStatus "Here is list of your current partitions and their mountpoints (if applicable):"
         lsblk|grep -v mmc|grep -v sda
         echo; printQuestion "What is the full path to your custom module list file (example: /media/usb/customList.modules)?"; read option
-        # grep -qs $option /proc/mounts
-        # if [[ $? != 0 ]]; then
         if [[ ! -f "$option" ]]; then
             echo; printError "The folder location does not exist!  Try mounting a partition and trying again."
             cleanup
@@ -977,11 +977,12 @@ contentUpdate(){
     while IFS= read -r m; do
         echo; printStatus "Downloading $m"
         rsync -rltzuv --delete-after --exclude-from "$rachelScriptsDir/rsyncExclude.list" $RSYNCDIR/rachelmods/$m $rachelWWW/modules/
+        echo; printStatus "Fixing file and directory permissions"
+        find /media/RACHEL/rachel/modules/$m -type d -print0 | xargs -0 chmod 0755
+        find /media/RACHEL/rachel/modules/$m -type f -print0 | xargs -0 chmod 0644
         runFinishScript
         printGood "Done."
     done <<< "$MODULELIST"
-    find /media/RACHEL/rachel/modules/ -type d -print0 | xargs -0 chmod 0755
-    find /media/RACHEL/rachel/modules/ -type f -print0 | xargs -0 chmod 0644
 }
 
 removeKALite(){
@@ -1558,8 +1559,8 @@ repairFirmware(){
     rebootCAP
 }
 
-repairKalite(){
-    echo; printStatus "Fixing KA-Lite"
+resetKalite(){
+    echo; printStatus "Resetting KA-Lite to default settings."
     # Fixing KA-Lite 
     # cp -f /media/RACHEL/kacontent/assessmentitems.sqlite /usr/share/kalite/assessment/khan/.
     cp -f $kaliteContentDir/assessmentitems.sqlite /usr/share/kalite/assessment/khan/.
@@ -1850,6 +1851,7 @@ updateRachelFolders(){
 }
 
 contentModuleListInstall(){
+    noInstall=1
     while read m; do
         [[ $m =~ ^# ]] && continue # skip comments
         [[ -z $m ]] && continue    # skip blanks
@@ -1859,15 +1861,21 @@ contentModuleListInstall(){
         # (i.e. LAN or USB)
         if [[ $RSYNCDIR == $rsyncOnline ]]; then
             rsync -avz --del $RSYNCDIR/rachelmods/$m $rachelWWW/modules/
+            echo; printStatus "Fixing $m file and directory permissions"
+            find /media/RACHEL/rachel/modules/$m -type d -print0 | xargs -0 chmod 0755
+            find /media/RACHEL/rachel/modules/$m -type f -print0 | xargs -0 chmod 0644
+            if [[ $m == *-kalite || $m == *-wiki* ]]; then echo noInstall=1; fi
         else
             rsync -av --del $RSYNCDIR/rachelmods/$m $rachelWWW/modules/
+            echo; printStatus "Fixing $m file and directory permissions"
+            find /media/RACHEL/rachel/modules/$m -type d -print0 | xargs -0 chmod 0755
+            find /media/RACHEL/rachel/modules/$m -type f -print0 | xargs -0 chmod 0644
+            if [[ $m == *-kalite || $m == *-wiki* ]]; then echo noInstall=0; fi
         fi
         commandStatus
         runFinishScript
         printGood "Done."
     done < $1
-    find /media/RACHEL/rachel/modules/ -type d -print0 | xargs -0 chmod 0755
-    find /media/RACHEL/rachel/modules/ -type f -print0 | xargs -0 chmod 0644
 }
 
 buildRACHEL(){
@@ -2142,6 +2150,20 @@ whatToDo(){
 
 # Interactive mode menu
 interactiveMode(){
+    # Create temp directories
+    mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir 2>/dev/null
+    # Check OS and CAP version
+    osCheck
+    capCheck
+    rachelPartitionCheck
+    # Determine the operational mode - ONLINE or OFFLINE
+    opMode
+    # Build the hash list 
+    buildHashList
+    # Change directory into $installTmpDir
+    cd $installTmpDir
+    echo; printStatus "If needed, you may EXIT the interactive script at anytime, press Ctrl-C"
+
     echo; printQuestion "What you would like to do:"
     echo "  - [Check-for-Updates] for configure script, all installed modules, KA Lite, "
     echo "  - [Install-Upgrade-KALite]"
@@ -2222,11 +2244,13 @@ interactiveMode(){
             updateModuleNames
             checkContentShell
             addMultipleModules
-            kaliteCheckFiles
-            # update rachelKiwixStart.sh
-            createKiwixRepairScript
-            # restart kiwix
-            $rootDir/rachel-scripts/rachelKiwixStart.sh
+            if [[ $noInstall != 1 ]]; then
+                kaliteCheckFiles
+                # update rachelKiwixStart.sh
+                createKiwixRepairScript
+                # restart kiwix
+                $rootDir/rachel-scripts/rachelKiwixStart.sh
+            fi
             whatToDo
             ;;
 
@@ -2253,7 +2277,7 @@ interactiveMode(){
             echo "  - [Uninstall-ESP] removes ESP service"
             echo "  - [Update-Content-Shell] updates the RACHEL contentshell from GitHub"
             echo "  - [KA-Lite-Diagnostics] displays diangostic info on the KA Lite install"
-            echo "  - [Repair-KA-Lite] repairs KA Lite's mislocation of the assessment file; runs 'kalite manage setup' as well"
+            echo "  - [Reset-KA-Lite] repairs KA Lite's mislocation of the assessment file; runs 'kalite manage setup' as well"
             echo "  - [Repair-Kiwix-Library] rebuilds the Kiwix Library"
             echo "  - [Repair-Firmware] repairs an install of a CAP after a firmware upgrade"
             echo "  - [Repair-Bugs] provides general bug fixes (run when requested)"
@@ -2263,7 +2287,7 @@ interactiveMode(){
             echo "  - [Testing] script"
             echo "  - Return to [Main Menu]"
             echo
-            select util in "Base-Install" "Install-Battery-Watcher" "Enable-Wifi" "Disable-Wifi" "Disable-Reset-Button" "Download-OFFLINE-Content" "Download-KA-Contentpacks" "Uninstall-ESP" "Update-Content-Shell" "KA-Lite-Diagnostics" "Repair-KA-Lite" "Repair-Kiwix-Library" "Repair-Firmware" "Repair-Bugs" "Sanitize" "Change-Package-Repo" "Check-MD5" "Test" "Main-Menu"; do
+            select util in "Base-Install" "Install-Battery-Watcher" "Enable-Wifi" "Disable-Wifi" "Disable-Reset-Button" "Download-OFFLINE-Content" "Download-KA-Contentpacks" "Uninstall-ESP" "Update-Content-Shell" "KA-Lite-Diagnostics" "Reset-KA-Lite" "Repair-Kiwix-Library" "Repair-Firmware" "Repair-Bugs" "Sanitize" "Change-Package-Repo" "Check-MD5" "Test" "Main-Menu"; do
                 case $util in
                     Base-Install)
                     newInstall
@@ -2319,8 +2343,8 @@ interactiveMode(){
                     break
                     ;;
 
-                    Repair-KA-Lite)
-                    repairKalite
+                    Reset-KA-Lite)
+                    resetKalite
                     break
                     ;;
 
@@ -2452,19 +2476,6 @@ if [[ $1 == "--help" || $1 == "-h" ]]; then
     printHelp
 elif [[ $1 == "" ]]; then
     # DEFAULT Interactive Mode
-    # Create temp directories
-    mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir 2>/dev/null
-    # Check OS and CAP version
-    osCheck
-    capCheck
-    rachelPartitionCheck
-    # Determine the operational mode - ONLINE or OFFLINE
-    opMode
-    # Build the hash list 
-    buildHashList
-    # Change directory into $installTmpDir
-    cd $installTmpDir
-    echo; printStatus "If needed, you may EXIT the interactive script at anytime, press Ctrl-C"
     interactiveMode
 elif [[ $1 == "--version" ]]; then
     # Print version only, if requested
@@ -2496,7 +2507,7 @@ else
     loggingAndRachelStart
     # MAIN MENU
     IAM=${0##*/} # Short basename
-    while getopts ":b:inrtuz" opt
+    while getopts ":b:dinrtuz" opt
     do sc=0 #no option or 1 option arguments
         case $opt in
         (b) # Build - Quick build
@@ -2520,20 +2531,11 @@ else
             exit
             sc=1 #2 args
             ;;
+        (d) # Debug mode
+            set -x
+            interactiveMode
+            ;;
         (i) # Interactive mode
-            # Create temp directories
-            mkdir -p $installTmpDir $rachelTmpDir $rachelRecoveryDir 2>/dev/null
-            # Check OS and CAP version
-            osCheck
-            capCheck
-            rachelPartitionCheck
-            # Determine the operational mode - ONLINE or OFFLINE
-            opMode
-            # Build the hash list 
-            buildHashList
-            # Change directory into $installTmpDir
-            cd $installTmpDir
-            echo; printStatus "If needed, you may EXIT the interactive script at anytime, press Ctrl-C"
             interactiveMode
             ;;
         (n) # Scratch install mode
