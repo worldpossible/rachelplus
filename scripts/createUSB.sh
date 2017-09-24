@@ -199,7 +199,7 @@ sanitize(){
 	rm -rf /var/log/rachel-install* /var/log/RACHEL/* /var/log/rachel/*
 	# Clean previous cached logins from ssh
 	rm -f /root/.ssh/known_hosts
-	# Clean off ka-lite_content.zip (if exists)
+	# Clean off old KA Lite files (if exists)
 	rm -f /media/RACHEL/ka-lite_content.zip
 	# Clean previous files from running the generate_recovery.sh script 
 	rm -rf /recovery/20* $rachelRecoveryDir/20*

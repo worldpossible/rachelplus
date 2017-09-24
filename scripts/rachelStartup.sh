@@ -5,16 +5,36 @@ rm -f /var/log/rachel/rachel-scripts.log
 exec 1>> /var/log/rachel/rachel-scripts.log 2>&1
 echo $(date) - Starting RACHEL script
 
+# Check if battery firmware update completed successfully
+if [[ ! $(grep "All Done , Ready to reboot" /root/battery_log) ]]; then
+		if [[ ! $(grep "Battery firmware update failed" /root/battery_log) ]]; then
+			rm /etc/BATTERY_EDIT_DONE
+			if [[ ! -f /root/badUpdate ]]; then x=1; else x=$(cat /root/badUpdate); x=$((x+1)); fi
+			echo $x > /root/badUpdate
+			if [[ $x -ge 3 ]]; then
+				echo $(date) - Battery fix exceeded maximum tries...not attempting again
+				echo $(date) - Battery firmware update failed >> /root/battery_log
+				rm /root/badUpdate 2>/dev/null
+			else
+				echo $(date) - Battery fix failed - executing again
+				bash /etc/battery_solve.sh
+			fi
+		fi
+else
+	echo $(date) - Battery fix confirmed successful
+	rm /root/badUpdate 2>/dev/null
+fi
+
 # First boot
 if [[ -f /root/rachel-scripts/firstboot.sh ]]; then
-    echo $(date) - Running "firstboot" script
-    bash /root/rachel-scripts/firstboot.sh
+	echo $(date) - Running "firstboot" script
+	bash /root/rachel-scripts/firstboot.sh
 fi
 
 # Run once
 if [[ -f /media/RACHEL/runonce.sh ]]; then
-    echo $(date) - Running "runonce" script
-    bash /media/RACHEL/runonce.sh
+	echo $(date) - Running "runonce" script
+	bash /media/RACHEL/runonce.sh
 fi
 
 # Start kiwix on boot
@@ -24,7 +44,7 @@ bash /root/rachel-scripts/rachelKiwixStart.sh
 # Start kalite at boot time
 echo $(date) - Starting kalite
 sleep 20 # kalite needs full network to start up
-         # (any way to speed up the network boot?)
+		 # (any way to speed up the network boot?)
 sudo /usr/bin/kalite start
 
 # Start battery monitoring
